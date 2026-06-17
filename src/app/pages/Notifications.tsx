@@ -18,98 +18,9 @@ interface Notification {
   };
 }
 
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: "1",
-    type: "congestion",
-    title: "백령도 혼잡도 증가",
-    message: "내일 방문 예정인 백령도의 혼잡도가 '보통'에서 '혼잡'으로 변경됐어요. 이른 시간에 방문하시면 더 여유롭게 즐기실 수 있어요.",
-    time: "10분 전",
-    isRead: false,
-    severity: "warning",
-    relatedBooking: {
-      id: "book-1",
-      destination: "백령도",
-      date: "2026-05-25",
-    },
-  },
-  {
-    id: "2",
-    type: "ferry",
-    title: "덕적도행 여객선 지연",
-    message: "덕적도행 14:00 출발 여객선이 기상 악화로 30분 지연 출발 예정이에요.",
-    time: "1시간 전",
-    isRead: false,
-    severity: "critical",
-    relatedBooking: {
-      id: "book-2",
-      destination: "덕적도",
-      date: "2026-05-24",
-    },
-  },
-  {
-    id: "3",
-    type: "weather",
-    title: "영흥도 소나기 예보",
-    message: "영흥도 여행 당일(5/26) 오후에 소나기 예보가 있어요. 우산 챙기는 거 잊지 마세요!",
-    time: "3시간 전",
-    isRead: false,
-    severity: "info",
-    relatedBooking: {
-      id: "book-3",
-      destination: "영흥도",
-      date: "2026-05-26",
-    },
-  },
-  {
-    id: "4",
-    type: "booking",
-    title: "자월도 예약 완료",
-    message: "자월도 여행 예약이 확정됐어요! 출발 1시간 전까지 선착장에 도착해주세요.",
-    time: "5시간 전",
-    isRead: true,
-    severity: "info",
-    relatedBooking: {
-      id: "book-4",
-      destination: "자월도",
-      date: "2026-05-30",
-    },
-  },
-  {
-    id: "5",
-    type: "ferry",
-    title: "대청도행 운항 정상화",
-    message: "대청도행 여객선 운항이 정상화됐어요.",
-    time: "1일 전",
-    isRead: true,
-    severity: "info",
-    relatedBooking: {
-      id: "book-5",
-      destination: "대청도",
-      date: "2026-05-23",
-    },
-  },
-];
-
 export function Notifications() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("notifications");
-    if (saved) {
-      setNotifications(JSON.parse(saved));
-    } else {
-      setNotifications(INITIAL_NOTIFICATIONS);
-      localStorage.setItem("notifications", JSON.stringify(INITIAL_NOTIFICATIONS));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (notifications.length > 0) {
-      localStorage.setItem("notifications", JSON.stringify(notifications));
-    }
-  }, [notifications]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 

@@ -2,39 +2,32 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { Ship, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { auth } from "../../lib/auth";
 
 export function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "" });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.email || !formData.password) {
       toast.error("이메일과 비밀번호를 입력해주세요");
       return;
     }
-
-    // Mock login
-    const user = {
-      id: "1",
-      name: "홍길동",
-      email: formData.email,
-      phone: "010-1234-5678",
-      joinDate: new Date().toISOString(),
-    };
-
-    localStorage.setItem("user", JSON.stringify(user));
+    setLoading(true);
+    const { error } = await auth.signIn(formData.email, formData.password);
+    setLoading(false);
+    if (error) {
+      toast.error(auth.localizedError(error.message));
+      return;
+    }
     toast.success("로그인됐어요! 반가워요");
     navigate("/");
   };
 
   const handleSocialLogin = (provider: "kakao" | "naver" | "google") => {
-    // 소셜 로그인 시 회원가입 페이지로 이동
     navigate(`/signup?method=${provider}`);
   };
 
@@ -105,43 +98,12 @@ export function Login() {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold active:scale-95 transition-transform"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold active:scale-95 transition-transform disabled:opacity-60"
           >
-            로그인
+            {loading ? "로그인 중..." : "로그인"}
           </button>
         </form>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-sm text-gray-500">또는</span>
-          <div className="flex-1 h-px bg-gray-200" />
-        </div>
-
-        {/* Social Login */}
-        <div className="space-y-3">
-          <button
-            onClick={() => handleSocialLogin("kakao")}
-            className="w-full bg-[#FEE500] text-gray-900 py-3 rounded-xl font-semibold active:scale-95 transition-transform flex items-center justify-center gap-2"
-          >
-            <div className="w-5 h-5 bg-gray-900 rounded-full" />
-            카카오로 시작하기
-          </button>
-          <button
-            onClick={() => handleSocialLogin("naver")}
-            className="w-full bg-[#03C75A] text-white py-3 rounded-xl font-semibold active:scale-95 transition-transform flex items-center justify-center gap-2"
-          >
-            <div className="w-5 h-5 bg-white rounded-sm" />
-            네이버로 시작하기
-          </button>
-          <button
-            onClick={() => handleSocialLogin("google")}
-            className="w-full bg-white border-2 border-gray-300 text-gray-900 py-3 rounded-xl font-semibold active:scale-95 transition-transform flex items-center justify-center gap-2"
-          >
-            <div className="w-5 h-5 bg-gradient-to-br from-red-500 via-yellow-500 to-blue-500 rounded-full" />
-            구글로 시작하기
-          </button>
-        </div>
       </div>
 
       {/* Footer */}

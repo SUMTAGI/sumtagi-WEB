@@ -2,34 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { ChevronLeft, Plus, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { checklistService } from "../../lib/checklistService";
 
 interface ChecklistItem {
   id: string;
   text: string;
-  completed: boolean;
+  is_checked: boolean;
   category: string;
 }
-
-const DEFAULT_ITEMS: Omit<ChecklistItem, "id" | "completed">[] = [
-  { text: "선크림", category: "필수품" },
-  { text: "멀미약", category: "필수품" },
-  { text: "모자", category: "필수품" },
-  { text: "선글라스", category: "필수품" },
-  { text: "우산 또는 우비", category: "필수품" },
-  { text: "간편한 신발", category: "필수품" },
-  { text: "수건", category: "필수품" },
-  { text: "세면도구", category: "필수품" },
-  { text: "상비약", category: "필수품" },
-  { text: "보조배터리", category: "전자기기" },
-  { text: "충전기", category: "전자기기" },
-  { text: "카메라", category: "전자기기" },
-  { text: "수영복", category: "선택사항" },
-  { text: "스노클링 장비", category: "선택사항" },
-  { text: "간식", category: "선택사항" },
-  { text: "여객선 예매 확인", category: "예약 확인" },
-  { text: "숙소 예약 확인", category: "예약 확인" },
-  { text: "체험 예약 확인", category: "예약 확인" },
-];
 
 export function Checklist() {
   const navigate = useNavigate();
@@ -38,68 +18,38 @@ export function Checklist() {
   const [selectedCategory, setSelectedCategory] = useState("필수품");
 
   useEffect(() => {
-    const saved = localStorage.getItem("checklist");
-    if (saved) {
-      setItems(JSON.parse(saved));
-    } else {
-      const defaultItems = DEFAULT_ITEMS.map((item, index) => ({
-        ...item,
-        id: `default-${index}`,
-        completed: false,
-      }));
-      setItems(defaultItems);
-      localStorage.setItem("checklist", JSON.stringify(defaultItems));
-    }
+    checklistService.getItems().then(data => setItems(data as ChecklistItem[]));
   }, []);
 
-  const saveItems = (updatedItems: ChecklistItem[]) => {
-    setItems(updatedItems);
-    localStorage.setItem("checklist", JSON.stringify(updatedItems));
+  const toggleItem = async (item: ChecklistItem) => {
+    await checklistService.toggle(item.id, item.is_checked);
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_checked: !i.is_checked } : i));
   };
 
-  const toggleItem = (id: string) => {
-    const updatedItems = items.map(item =>
-      item.id === id ? { ...item, completed: !item.completed } : item
-    );
-    saveItems(updatedItems);
-  };
-
-  const deleteItem = (id: string) => {
-    const updatedItems = items.filter(item => item.id !== id);
-    saveItems(updatedItems);
+  const deleteItem = async (id: string) => {
+    await checklistService.deleteItem(id);
+    setItems(prev => prev.filter(i => i.id !== id));
     toast.success("항목이 삭제됐어요");
   };
 
-  const addItem = () => {
-    if (!newItemText.trim()) {
-      toast.error("항목을 입력해주세요");
-      return;
-    }
-
-    const newItem: ChecklistItem = {
-      id: `custom-${Date.now()}`,
-      text: newItemText,
-      completed: false,
-      category: selectedCategory,
-    };
-
-    saveItems([...items, newItem]);
+  const addItem = async () => {
+    if (!newItemText.trim()) { toast.error("항목을 입력해주세요"); return; }
+    await checklistService.addItem(newItemText, selectedCategory);
+    const data = await checklistService.getItems();
+    setItems(data as ChecklistItem[]);
     setNewItemText("");
     toast.success("항목이 추가됐어요");
   };
 
-  const resetChecklist = () => {
-    const defaultItems = DEFAULT_ITEMS.map((item, index) => ({
-      ...item,
-      id: `default-${index}`,
-      completed: false,
-    }));
-    saveItems(defaultItems);
+  const resetChecklist = async () => {
+    await checklistService.reset();
+    const data = await checklistService.getItems();
+    setItems(data as ChecklistItem[]);
     toast.success("체크리스트가 초기화됐어요");
   };
 
   const categories = Array.from(new Set(items.map(item => item.category)));
-  const completedCount = items.filter(item => item.completed).length;
+  const completedCount = items.filter(item => item.is_checked).length;
   const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
 
   return (
@@ -182,7 +132,7 @@ export function Checklist() {
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 {category}
                 <span className="text-xs text-gray-500">
-                  ({categoryItems.filter(i => i.completed).length}/{categoryItems.length})
+                  ({categoryItems.filter(i => i.is_checked).length}/{categoryItems.length})
                 </span>
               </h3>
               <div className="space-y-2">
@@ -192,18 +142,18 @@ export function Checklist() {
                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
                   >
                     <button
-                      onClick={() => toggleItem(item.id)}
+                      onClick={() => toggleItem(item)}
                       className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all active-press ${
-                        item.completed
+                        item.is_checked
                           ? "bg-blue-600 border-blue-600"
                           : "border-gray-300 bg-white"
                       }`}
                     >
-                      {item.completed && <Check className="w-4 h-4 text-white animate-checkmark" strokeWidth={3} />}
+                      {item.is_checked && <Check className="w-4 h-4 text-white animate-checkmark" strokeWidth={3} />}
                     </button>
                     <span
                       className={`flex-1 transition-all ${
-                        item.completed
+                        item.is_checked
                           ? "text-gray-400 line-through"
                           : "text-gray-900"
                       }`}

@@ -1,110 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { ChevronLeft, Heart, MessageCircle, Share2, MapPin, Users, ThumbsUp, Send } from "lucide-react";
+import { ChevronLeft, Heart, Share2, MapPin, Send, Plus } from "lucide-react";
 import { toast } from "sonner";
-
-interface Post {
-  id: string;
-  author: string;
-  authorAvatar: string;
-  island: string;
-  content: string;
-  image?: string;
-  likes: number;
-  comments: number;
-  timestamp: string;
-  isLiked: boolean;
-  weatherReport?: {
-    condition: string;
-    congestion: "여유" | "보통" | "혼잡";
-  };
-}
-
-const MOCK_POSTS: Post[] = [
-  {
-    id: "1",
-    author: "섬여행러",
-    authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1",
-    island: "백령도",
-    content: "두무진 일몰 진짜 미쳤어요!! 꼭 가보세요 🌅",
-    image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600",
-    likes: 124,
-    comments: 18,
-    timestamp: "2시간 전",
-    isLiked: false,
-  },
-  {
-    id: "2",
-    author: "바다사랑",
-    authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=2",
-    island: "덕적도",
-    content: "오늘 서포리 해변 날씨 완전 좋아요! 사람도 많지 않고 물도 맑아요 👍",
-    likes: 89,
-    comments: 12,
-    timestamp: "3시간 전",
-    isLiked: false,
-    weatherReport: {
-      condition: "맑음 23°C",
-      congestion: "여유",
-    },
-  },
-  {
-    id: "3",
-    author: "힐링여행",
-    authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=3",
-    island: "자월도",
-    content: "자월도 큰말해변에서 캠핑 중이에요. 별이 정말 많이 보여요 ⭐",
-    image: "https://images.unsplash.com/photo-1504851149312-7a075b496cc7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600",
-    likes: 156,
-    comments: 24,
-    timestamp: "5시간 전",
-    isLiked: true,
-  },
-  {
-    id: "4",
-    author: "먹방러버",
-    authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=4",
-    island: "덕적도",
-    content: "덕적도 물회 맛집 찾았어요! 항구 근처 '바다횟집' 강추합니다",
-    likes: 67,
-    comments: 8,
-    timestamp: "1일 전",
-    isLiked: false,
-  },
-  {
-    id: "5",
-    author: "사진작가",
-    authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=5",
-    island: "백령도",
-    content: "사곶해변 일출 타임랩스 찍었어요. 날씨가 도와줘서 대박 샷 건졌습니다 📸",
-    image: "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600",
-    likes: 203,
-    comments: 31,
-    timestamp: "1일 전",
-    isLiked: false,
-  },
-];
+import { communityService } from "../../lib/communityService";
 
 export function Community() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed");
-  const [posts, setPosts] = useState(MOCK_POSTS);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [qna, setQna] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [showWrite, setShowWrite] = useState(false);
+  const [writeContent, setWriteContent] = useState("");
+  const [writeIsland, setWriteIsland] = useState("");
 
-  const toggleLike = (postId: string) => {
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          isLiked: !post.isLiked,
-          likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-        };
-      }
-      return post;
-    }));
+  const load = async () => {
+    setIsLoading(true);
+    try {
+      const [feedData, qnaData] = await Promise.all([
+        communityService.getPosts('feed'),
+        communityService.getPosts('qna'),
+      ]);
+      setPosts(feedData);
+      setQna(qnaData);
+    } catch {
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleShare = (postId: string) => {
-    toast.success("링크가 복사됐어요");
+  useEffect(() => { load(); }, []);
+
+  const toggleLike = async (post: any) => {
+    const id = post.id as string;
+    const liked = likedIds.has(id);
+    const current = (post.likes_count as number) ?? 0;
+    const next = liked ? current - 1 : current + 1;
+    setLikedIds(prev => { const s = new Set(prev); liked ? s.delete(id) : s.add(id); return s; });
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, likes_count: next } : p));
+    await communityService.updateLikes(id, next);
+  };
+
+  const handleSubmit = async () => {
+    if (!writeContent.trim()) return;
+    await communityService.createPost(writeContent, writeIsland || undefined, activeTab);
+    setWriteContent(""); setWriteIsland(""); setShowWrite(false);
+    toast.success("게시글이 등록됐어요");
+    load();
+  };
+
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 60) return `${m}분 전`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}시간 전`;
+    return `${Math.floor(h / 24)}일 전`;
   };
 
   return (
@@ -149,185 +101,116 @@ export function Community() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === "feed" ? (
-          <div className="divide-y divide-gray-200">
-            {posts.map((post, index) => (
-              <div
-                key={post.id}
-                className="p-6 bg-white animate-stagger-item"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                {/* Author Info */}
-                <div className="flex items-center gap-3 mb-3">
-                  <img
-                    src={post.authorAvatar}
-                    alt={post.author}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-900">{post.author}</div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <MapPin className="w-3 h-3" strokeWidth={2} />
-                      <span>{post.island}</span>
-                      <span>•</span>
-                      <span>{post.timestamp}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Weather Report */}
-                {post.weatherReport && (
-                  <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-blue-900">실시간 현장 정보</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-blue-700">{post.weatherReport.condition}</span>
-                        <span className={`px-2 py-0.5 rounded font-medium text-xs ${
-                          post.weatherReport.congestion === "여유" ? "bg-green-100 text-green-700" :
-                          post.weatherReport.congestion === "보통" ? "bg-yellow-100 text-yellow-700" :
-                          "bg-red-100 text-red-700"
-                        }`}>
-                          {post.weatherReport.congestion}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Content */}
-                <p className="text-gray-900 mb-3">{post.content}</p>
-
-                {/* Image */}
-                {post.image && (
-                  <img
-                    src={post.image}
-                    alt="Post"
-                    className="w-full rounded-xl mb-3"
-                  />
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => toggleLike(post.id)}
-                    className="flex items-center gap-2 text-sm font-medium active:scale-95 transition-transform"
-                  >
-                    <Heart
-                      className={`w-5 h-5 ${
-                        post.isLiked ? "fill-red-500 text-red-500" : "text-gray-500"
-                      }`}
-                      strokeWidth={2}
-                    />
-                    <span className={post.isLiked ? "text-red-500" : "text-gray-700"}>
-                      {post.likes}
-                    </span>
-                  </button>
-                  <button className="flex items-center gap-2 text-sm font-medium text-gray-700 active:scale-95 transition-transform">
-                    <MessageCircle className="w-5 h-5" strokeWidth={2} />
-                    <span>{post.comments}</span>
-                  </button>
-                  <button
-                    onClick={() => handleShare(post.id)}
-                    className="flex items-center gap-2 text-sm font-medium text-gray-700 active:scale-95 transition-transform ml-auto"
-                  >
-                    <Share2 className="w-5 h-5" strokeWidth={2} />
-                  </button>
-                </div>
-              </div>
-            ))}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
           </div>
+        ) : activeTab === "feed" ? (
+          posts.length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <p className="mb-2">아직 게시글이 없어요</p>
+              <p className="text-sm text-gray-400">첫 번째 게시글을 작성해보세요!</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {posts.map(post => (
+                <div key={post.id} className="p-6 bg-white">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 text-sm font-bold">{(post.author_name as string)?.[0] ?? '?'}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900">{post.author_name ?? '여행자'}</div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {post.island_name && <><MapPin className="w-3 h-3" strokeWidth={2} /><span>{post.island_name}</span><span>•</span></>}
+                        <span>{timeAgo(post.created_at as string)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-gray-900 mb-3">{post.content as string}</p>
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => toggleLike(post)} className="flex items-center gap-2 text-sm font-medium active:scale-95 transition-transform">
+                      <Heart className={`w-5 h-5 ${likedIds.has(post.id as string) ? "fill-red-500 text-red-500" : "text-gray-500"}`} strokeWidth={2} />
+                      <span className={likedIds.has(post.id as string) ? "text-red-500" : "text-gray-700"}>{(post.likes_count as number) ?? 0}</span>
+                    </button>
+                    <button onClick={() => toast.success("링크가 복사됐어요")} className="ml-auto text-gray-400 active:scale-95">
+                      <Share2 className="w-5 h-5" strokeWidth={2} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
-          <QnASection />
+          qna.length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <p className="mb-2">아직 질문이 없어요</p>
+              <p className="text-sm text-gray-400">궁금한 점을 질문해보세요!</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {qna.map(post => (
+                <div key={post.id} className="p-6 bg-white">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 text-sm font-bold">{(post.author_name as string)?.[0] ?? '?'}</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{post.content as string}</p>
+                      <p className="text-xs text-gray-500">{post.author_name as string} • {timeAgo(post.created_at as string)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-500 mt-2">
+                    <Heart className="w-4 h-4" strokeWidth={2} />
+                    <span>{(post.likes_count as number) ?? 0}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
+
+      {/* Write Sheet */}
+      {showWrite && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end" onClick={() => setShowWrite(false)}>
+          <div className="bg-white w-full rounded-t-2xl p-6 space-y-3" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-gray-900">{activeTab === 'feed' ? '게시글 작성' : '질문하기'}</h3>
+            {activeTab === 'feed' && (
+              <input
+                value={writeIsland}
+                onChange={e => setWriteIsland(e.target.value)}
+                placeholder="섬 이름 (선택)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
+            <textarea
+              value={writeContent}
+              onChange={e => setWriteContent(e.target.value)}
+              placeholder={activeTab === 'feed' ? '여행 중 느낀 점을 공유하세요' : '질문 내용을 입력하세요'}
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+            <button
+              onClick={handleSubmit}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold"
+            >
+              등록하기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Write Button */}
       <div className="px-6 py-4 bg-white border-t border-gray-200 flex-shrink-0">
         <button
-          onClick={() => toast.info("글쓰기 기능은 곧 추가될 예정이에요")}
+          onClick={() => setShowWrite(true)}
           className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <Send className="w-5 h-5" strokeWidth={2} />
           {activeTab === "feed" ? "게시글 작성" : "질문하기"}
         </button>
       </div>
-    </div>
-  );
-}
-
-function QnASection() {
-  const qnaItems = [
-    {
-      id: "q1",
-      author: "여행초보",
-      question: "백령도 1박2일 충분할까요?",
-      answers: 5,
-      likes: 12,
-      timestamp: "1시간 전",
-      bestAnswer: "두무진, 사곶해변 정도만 보신다면 1박2일도 괜찮아요. 하지만 여유롭게 즐기시려면 2박3일 추천드려요!",
-    },
-    {
-      id: "q2",
-      author: "맛집탐방",
-      question: "덕적도 맛집 추천해주세요",
-      answers: 8,
-      likes: 24,
-      timestamp: "3시간 전",
-      bestAnswer: "항구 근처 '바다횟집' 물회가 정말 맛있어요. 현지인들도 많이 가는 곳이에요!",
-    },
-    {
-      id: "q3",
-      author: "가족여행",
-      question: "아이랑 가기 좋은 섬 어디인가요?",
-      answers: 12,
-      likes: 31,
-      timestamp: "5시간 전",
-      bestAnswer: "덕적도나 자월도 추천해요. 해변이 넓고 파도가 잔잔해서 아이들이 놀기 좋아요.",
-    },
-  ];
-
-  return (
-    <div className="p-6 space-y-4">
-      {qnaItems.map((item) => (
-        <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="flex items-start gap-3 mb-3">
-            <img
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.id}`}
-              alt={item.author}
-              className="w-10 h-10 rounded-full"
-            />
-            <div className="flex-1">
-              <div className="font-semibold text-gray-900 mb-1">{item.question}</div>
-              <div className="text-xs text-gray-500">
-                {item.author} • {item.timestamp}
-              </div>
-            </div>
-          </div>
-
-          {item.bestAnswer && (
-            <div className="bg-blue-50 rounded-lg p-3 mb-3 border border-blue-100">
-              <div className="flex items-center gap-2 mb-2">
-                <ThumbsUp className="w-4 h-4 text-blue-600" strokeWidth={2} />
-                <span className="text-xs font-semibold text-blue-900">베스트 답변</span>
-              </div>
-              <p className="text-sm text-gray-700">{item.bestAnswer}</p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1 text-gray-600">
-              <MessageCircle className="w-4 h-4" strokeWidth={2} />
-              <span>{item.answers}개 답변</span>
-            </div>
-            <div className="flex items-center gap-1 text-gray-600">
-              <Heart className="w-4 h-4" strokeWidth={2} />
-              <span>{item.likes}</span>
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

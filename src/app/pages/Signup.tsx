@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router";
 import { Ship, Mail, Lock, User, Eye, EyeOff, ChevronLeft, Heart, Camera, UtensilsCrossed, Trees, Dog } from "lucide-react";
 import { toast } from "sonner";
+import { auth } from "../../lib/auth";
 
 type SignupMethod = "email" | "kakao" | "google" | "naver" | null;
 
@@ -61,27 +62,26 @@ export function Signup() {
     setStep(2); // Go to travel preferences
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!formData.travelStyle) {
       toast.error("여행 스타일을 선택해주세요");
       return;
     }
-
-    if (signupMethod !== "email" && !formData.nickname) {
+    if (!formData.nickname) {
       toast.error("닉네임을 입력해주세요");
       return;
     }
 
-    const user = {
-      id: Date.now().toString(),
-      nickname: formData.nickname,
-      email: signupMethod === "email" ? formData.email : `${signupMethod}_${Date.now()}@social.com`,
-      travelStyle: formData.travelStyle,
-      signupMethod: signupMethod,
-      joinDate: new Date().toISOString(),
-    };
-
-    localStorage.setItem("user", JSON.stringify(user));
+    const { error } = await auth.signUp(
+      formData.email,
+      formData.password,
+      formData.nickname,
+      formData.travelStyle,
+    );
+    if (error) {
+      toast.error(auth.localizedError(error.message));
+      return;
+    }
     toast.success("회원가입이 완료됐어요! 환영해요");
     navigate("/");
   };

@@ -1,10 +1,30 @@
-import { Outlet, Link, useLocation } from "react-router";
+import { useEffect } from "react";
+import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { MapPin, Compass, Home as HomeIcon, Calendar, User } from "lucide-react";
 import { Toaster } from "sonner";
 import { MobileFrame } from "./MobileFrame";
+import { useAuth } from "../../lib/useAuth";
 
 export function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login", { replace: true });
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <MobileFrame>
+        <div className="h-full flex items-center justify-center bg-white">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </MobileFrame>
+    );
+  }
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";

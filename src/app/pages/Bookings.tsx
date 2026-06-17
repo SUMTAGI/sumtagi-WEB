@@ -40,37 +40,13 @@ export function Bookings() {
   const [filter, setFilter] = useState<"all" | "confirmed" | "cancelled">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "itinerary" | "experience">("all");
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
-
-  const loadBookings = () => {
-    const stored = localStorage.getItem("bookings");
-    if (stored) {
-      const allBookings = JSON.parse(stored);
-      // Sort by bookedAt, most recent first
-      const sorted = allBookings.sort((a: Booking, b: Booking) =>
-        new Date(b.bookedAt).getTime() - new Date(a.bookedAt).getTime()
-      );
-      setBookings(sorted);
-    }
-  };
-
   const handleCancelBooking = (bookingId: string) => {
-    const updated = bookings.map(booking =>
-      booking.id === bookingId
-        ? { ...booking, status: "cancelled" as const }
-        : booking
-    );
-    setBookings(updated);
-    localStorage.setItem("bookings", JSON.stringify(updated));
+    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: "cancelled" as const } : b));
     toast.success("예약이 취소됐어요");
   };
 
   const handleDeleteBooking = (bookingId: string) => {
-    const updated = bookings.filter(booking => booking.id !== bookingId);
-    setBookings(updated);
-    localStorage.setItem("bookings", JSON.stringify(updated));
+    setBookings(prev => prev.filter(b => b.id !== bookingId));
     toast.success("예약 내역이 삭제됐어요");
   };
 

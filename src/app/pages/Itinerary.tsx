@@ -4,6 +4,7 @@ import { Ship, MapPin, Hotel, UtensilsCrossed, Users, DollarSign, Download, Shar
 import type { GeneratedItinerary, Activity } from "../utils/itineraryGenerator";
 import { toast } from "sonner";
 import { RouteMap } from "../components/RouteMap";
+import { tripService } from "../../lib/tripService";
 
 export function Itinerary() {
   const { id } = useParams();
@@ -14,8 +15,7 @@ export function Itinerary() {
 
   useEffect(() => {
     if (!id) return;
-
-    const stored = localStorage.getItem(`itinerary_${id}`);
+    const stored = localStorage.getItem(`plan_${id}`) ?? localStorage.getItem(`itinerary_${id}`);
     if (stored) {
       const data = JSON.parse(stored);
       setItinerary(data);
@@ -25,46 +25,26 @@ export function Itinerary() {
     }
   }, [id, navigate]);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!itinerary || !id) return;
-
-    const updatedItinerary = { ...itinerary, confirmed: true };
-    setItinerary(updatedItinerary);
+    await tripService.confirmTrip(id);
+    const updated = { ...itinerary, confirmed: true };
+    setItinerary(updated);
     setIsConfirmed(true);
-    localStorage.setItem(`itinerary_${id}`, JSON.stringify(updatedItinerary));
-    localStorage.setItem('currentItineraryId', id);
+    localStorage.setItem(`plan_${id}`, JSON.stringify(updated));
     toast.success("일정이 확정됐어요! 홈에서 확인하세요");
   };
 
   const handleBookActivity = (activity: Activity) => {
-    if (activity.bookingStatus === "booked") {
-      toast.info("이미 예약된 항목입니다");
-      return;
-    }
-
-    const bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
-    bookings.push({
-      id: `booking-${Date.now()}`,
-      itineraryId: id,
-      activity,
-      bookedAt: new Date().toISOString(),
-      status: "confirmed",
-    });
-    localStorage.setItem("bookings", JSON.stringify(bookings));
-
+    if (activity.bookingStatus === "booked") { toast.info("이미 예약된 항목입니다"); return; }
     if (itinerary) {
-      const updatedItinerary = { ...itinerary };
-      updatedItinerary.days.forEach(day => {
-        day.activities.forEach(act => {
-          if (act.id === activity.id) {
-            act.bookingStatus = "booked";
-          }
-        });
+      const updated = { ...itinerary };
+      updated.days.forEach(day => {
+        day.activities.forEach(act => { if (act.id === activity.id) act.bookingStatus = "booked"; });
       });
-      setItinerary(updatedItinerary);
-      localStorage.setItem(`itinerary_${id}`, JSON.stringify(updatedItinerary));
+      setItinerary(updated);
+      localStorage.setItem(`plan_${id}`, JSON.stringify(updated));
     }
-
     toast.success(`${activity.title} 예약 완료`);
   };
 

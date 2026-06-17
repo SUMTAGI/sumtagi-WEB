@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Calendar, Users, Heart, Compass, Sparkles, ChevronRight } from "lucide-react";
 import { generateItinerary } from "../utils/itineraryGenerator";
+import { tripService } from "../../lib/tripService";
 
 export function PlanTrip() {
   const navigate = useNavigate();
@@ -15,13 +16,13 @@ export function PlanTrip() {
     budget: "보통",
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const itinerary = generateItinerary(formData);
-    const itineraryId = Date.now().toString();
-
-    localStorage.setItem(`itinerary_${itineraryId}`, JSON.stringify(itinerary));
-
-    navigate(`/itinerary/${itineraryId}`);
+    const title = `${(formData.islands ?? []).join(', ') || '섬'} 여행`;
+    const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands);
+    const tripId = trip?.id ?? Date.now().toString();
+    localStorage.setItem(`plan_${tripId}`, JSON.stringify(itinerary));
+    navigate(`/itinerary/${tripId}`);
   };
 
   const handleIslandToggle = (island: string) => {

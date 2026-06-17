@@ -1,46 +1,25 @@
 import { Link } from "react-router";
-import { Ship, MapPin, Calendar, Sparkles, Clock, Shield, ChevronRight, Star, Heart, Bell, Camera, Users, DollarSign, Award } from "lucide-react";
+import { Ship, MapPin, Calendar, Sparkles, Shield, ChevronRight, Star, Heart, Bell, Camera, Users, DollarSign } from "lucide-react";
 import { useState, useEffect } from "react";
 import { WeatherWidget, WeeklyForecast } from "../components/WeatherWidget";
 import { getOverallWeather, getOverallForecast } from "../utils/weatherData";
-import { getRecommendedIslands, getTravelStyleMessage } from "../utils/islandRecommendations";
+import { tripService } from "../../lib/tripService";
+import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../lib/useAuth";
 
 export function Home() {
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const { user, displayName } = useAuth();
+  const [unreadNotifications] = useState(0);
   const [confirmedItinerary, setConfirmedItinerary] = useState<any>(null);
-  const [recommendedIslands, setRecommendedIslands] = useState<any[]>([]);
-  const [userTravelStyle, setUserTravelStyle] = useState<string>("");
+  const [confirmedTripId, setConfirmedTripId] = useState<string | null>(null);
 
   useEffect(() => {
-    const currentId = localStorage.getItem('currentItineraryId');
-    if (currentId) {
-      const stored = localStorage.getItem(`itinerary_${currentId}`);
-      if (stored) {
-        const data = JSON.parse(stored);
-        if (data.confirmed) {
-          setConfirmedItinerary(data);
-        }
+    tripService.getLatestConfirmedTrip().then(trip => {
+      if (trip) {
+        setConfirmedItinerary({ ...trip, startDate: trip.start_date, islands: trip.islands ?? [] });
+        setConfirmedTripId(trip.id);
       }
-    }
-
-    // Load unread notifications count
-    const savedNotifications = localStorage.getItem("notifications");
-    if (savedNotifications) {
-      const notifications = JSON.parse(savedNotifications);
-      const unreadCount = notifications.filter((n: any) => !n.isRead).length;
-      setUnreadNotifications(unreadCount);
-    }
-
-    // Load user's travel style and get recommendations
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      if (user.travelStyle) {
-        setUserTravelStyle(user.travelStyle);
-        const recommendations = getRecommendedIslands(user.travelStyle);
-        setRecommendedIslands(recommendations);
-      }
-    }
+    });
   }, []);
 
   const getDDay = (startDate: string) => {
@@ -104,7 +83,7 @@ export function Home() {
                     ) : null;
                   })()}
                   <Link
-                    to={`/itinerary/${localStorage.getItem('currentItineraryId')}`}
+                    to={`/itinerary/${confirmedTripId}`}
                     className="text-xs text-blue-100 underline"
                   >
                     전체보기
@@ -247,54 +226,6 @@ export function Home() {
         </div>
       </section>
 
-      {/* Island Recommendations */}
-      {recommendedIslands.length > 0 && (
-        <section className="px-6 py-6 bg-gradient-to-br from-blue-50 to-blue-100">
-          <div className="flex items-center gap-2 mb-3">
-            <Award className="w-5 h-5 text-blue-600" strokeWidth={2} />
-            <h2 className="text-lg font-bold text-gray-900">맞춤 섬 추천</h2>
-          </div>
-          <p className="text-sm text-blue-700 mb-4">
-            {getTravelStyleMessage(userTravelStyle)}
-          </p>
-          <div className="space-y-3">
-            {recommendedIslands.map((island, index) => (
-              <Link
-                key={island.id}
-                to={`/island/${island.id}`}
-                className="block animate-stagger-item"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-blue-200 active:scale-98 transition-transform">
-                  <div className="flex gap-3">
-                    <img
-                      src={island.image}
-                      alt={island.name}
-                      className="w-24 h-24 object-cover"
-                    />
-                    <div className="flex-1 py-3 pr-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-bold text-gray-900">{island.name}</h3>
-                        <div className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                          {island.matchScore}/10
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-2">{island.reason}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {island.features.slice(0, 2).map((feature: string, idx: number) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">
-                            {feature}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

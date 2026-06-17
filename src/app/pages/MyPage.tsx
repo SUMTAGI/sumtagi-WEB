@@ -1,30 +1,15 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { User, Mail, Phone, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, Shield, CreditCard, MapPin, Heart, Gift, Users, Book, Ticket, AlertCircle, Clock } from "lucide-react";
+import { User, Mail, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, Shield, CreditCard, MapPin, Heart, Gift, Users, Book, Ticket, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
-
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  joinDate: string;
-  profileImage?: string;
-}
+import { useAuth } from "../../lib/useAuth";
+import { auth } from "../../lib/auth";
 
 export function MyPage() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<UserData | null>(null);
+  const { user, displayName } = useAuth();
 
-  useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) {
-      setUser(JSON.parse(stored));
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+    await auth.signOut();
     toast.success("로그아웃됐어요. 다음에 또 만나요!");
     navigate("/login");
   };
@@ -33,28 +18,10 @@ export function MyPage() {
     navigate(path);
   };
 
-  if (!user) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center bg-white px-6">
-        <User className="w-16 h-16 text-gray-300 mb-4" strokeWidth={2} />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">로그인이 필요합니다</h3>
-        <p className="text-sm text-gray-600 mb-6 text-center">
-          마이페이지를 이용하려면
-          <br />
-          로그인해주세요
-        </p>
-        <button
-          onClick={() => navigate("/login")}
-          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium active:scale-95 transition-transform"
-        >
-          로그인하기
-        </button>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   const daysSinceJoin = Math.floor(
-    (new Date().getTime() - new Date(user.joinDate).getTime()) / (1000 * 60 * 60 * 24)
+    (new Date().getTime() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)
   );
 
   return (
@@ -82,7 +49,7 @@ export function MyPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold text-white mb-1">{user.name}</h2>
+              <h2 className="text-xl font-bold text-white mb-1">{displayName}</h2>
               <p className="text-sm text-blue-100">{user.email}</p>
             </div>
           </div>
@@ -110,13 +77,7 @@ export function MyPage() {
             <MenuItem
               icon={<Mail className="w-5 h-5" strokeWidth={2} />}
               label="이메일"
-              value={user.email}
-              onClick={() => handleMenuClick("/profile-edit")}
-            />
-            <MenuItem
-              icon={<Phone className="w-5 h-5" strokeWidth={2} />}
-              label="전화번호"
-              value={user.phone}
+              value={user.email ?? ''}
               onClick={() => handleMenuClick("/profile-edit")}
             />
             <MenuItem

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { ChevronLeft, Plus, Calendar, MapPin, Image, Edit2, Trash2, Camera } from "lucide-react";
+import { ChevronLeft, Plus, Calendar, MapPin, Image, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { diaryService } from "../../lib/diaryService";
 
 interface DiaryEntry {
   id: string;
@@ -9,8 +10,7 @@ interface DiaryEntry {
   island: string;
   title: string;
   content: string;
-  photos: string[];
-  createdAt: string;
+  created_at: string;
 }
 
 export function Diary() {
@@ -23,88 +23,49 @@ export function Diary() {
     island: "",
     title: "",
     content: "",
-    photos: [] as string[],
   });
 
-  useEffect(() => {
-    const saved = localStorage.getItem("diary");
-    if (saved) {
-      setEntries(JSON.parse(saved));
-    }
-  }, []);
-
-  const saveEntries = (updatedEntries: DiaryEntry[]) => {
-    setEntries(updatedEntries);
-    localStorage.setItem("diary", JSON.stringify(updatedEntries));
+  const load = async () => {
+    const data = await diaryService.getEntries();
+    setEntries(data as DiaryEntry[]);
   };
 
-  const handleSave = () => {
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async () => {
     if (!newEntry.title || !newEntry.content || !newEntry.island) {
       toast.error("모든 항목을 입력해주세요");
       return;
     }
-
     if (editingId) {
-      // Edit existing
-      const updatedEntries = entries.map(entry =>
-        entry.id === editingId
-          ? { ...entry, ...newEntry }
-          : entry
-      );
-      saveEntries(updatedEntries);
+      await diaryService.updateEntry(editingId, newEntry.date, newEntry.island, newEntry.title, newEntry.content);
       toast.success("다이어리가 수정됐어요");
     } else {
-      // Create new
-      const entry: DiaryEntry = {
-        id: `diary-${Date.now()}`,
-        ...newEntry,
-        createdAt: new Date().toISOString(),
-      };
-      saveEntries([entry, ...entries]);
+      await diaryService.addEntry(newEntry.date, newEntry.island, newEntry.title, newEntry.content);
       toast.success("다이어리가 저장됐어요");
     }
-
-    setNewEntry({
-      date: new Date().toISOString().split('T')[0],
-      island: "",
-      title: "",
-      content: "",
-      photos: [],
-    });
+    await load();
+    setNewEntry({ date: new Date().toISOString().split('T')[0], island: "", title: "", content: "" });
     setIsWriting(false);
     setEditingId(null);
   };
 
   const handleEdit = (entry: DiaryEntry) => {
-    setNewEntry({
-      date: entry.date,
-      island: entry.island,
-      title: entry.title,
-      content: entry.content,
-      photos: entry.photos,
-    });
+    setNewEntry({ date: entry.date, island: entry.island, title: entry.title, content: entry.content });
     setEditingId(entry.id);
     setIsWriting(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("정말 삭제하시겠어요?")) {
-      saveEntries(entries.filter(entry => entry.id !== id));
+      await diaryService.deleteEntry(id);
+      setEntries(prev => prev.filter(e => e.id !== id));
       toast.success("다이어리가 삭제됐어요");
     }
   };
 
-  const handleAddPhoto = () => {
-    // Mock photo URL
-    const mockPhotoUrl = `https://images.unsplash.com/photo-${Math.floor(Math.random() * 10000000)}?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600`;
-    setNewEntry({
-      ...newEntry,
-      photos: [...newEntry.photos, mockPhotoUrl]
-    });
-  };
-
   const groupedEntries = entries.reduce((acc, entry) => {
-    const month = new Date(entry.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+    const month = new Date(entry.date + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
     if (!acc[month]) acc[month] = [];
     acc[month].push(entry);
     return acc;
@@ -234,42 +195,6 @@ export function Diary() {
                 />
               </div>
 
-              {/* Photos */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">사진</label>
-                {newEntry.photos.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    {newEntry.photos.map((photo, idx) => (
-                      <div key={idx} className="relative aspect-square">
-                        <img
-                          src={photo}
-                          alt={`Photo ${idx + 1}`}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                        <button
-                          onClick={() => {
-                            setNewEntry({
-                              ...newEntry,
-                              photos: newEntry.photos.filter((_, i) => i !== idx)
-                            });
-                          }}
-                          className="absolute top-1 right-1 w-6 h-6 bg-black/50 rounded-full text-white flex items-center justify-center"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <button
-                  onClick={handleAddPhoto}
-                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                >
-                  <Camera className="w-5 h-5" strokeWidth={2} />
-                  사진 추가
-                </button>
-              </div>
-
               {/* Actions */}
               <div className="flex gap-2 pt-2">
                 <button
@@ -282,13 +207,7 @@ export function Diary() {
                   onClick={() => {
                     setIsWriting(false);
                     setEditingId(null);
-                    setNewEntry({
-                      date: new Date().toISOString().split('T')[0],
-                      island: "",
-                      title: "",
-                      content: "",
-                      photos: [],
-                    });
+                    setNewEntry({ date: new Date().toISOString().split('T')[0], island: "", title: "", content: "" });
                   }}
                   className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold active:scale-95 transition-transform"
                 >
@@ -347,26 +266,6 @@ function DiaryCard({
             </button>
           </div>
         </div>
-
-        {/* Photos */}
-        {entry.photos.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {entry.photos.slice(0, 3).map((photo, idx) => (
-              <div key={idx} className="relative aspect-square">
-                <img
-                  src={photo}
-                  alt={`Photo ${idx + 1}`}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-                {idx === 2 && entry.photos.length > 3 && (
-                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center text-white font-semibold">
-                    +{entry.photos.length - 3}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Content */}
         <p className={`text-sm text-gray-700 whitespace-pre-wrap ${!isExpanded && "line-clamp-3"}`}>

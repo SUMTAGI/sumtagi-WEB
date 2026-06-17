@@ -50,20 +50,8 @@ export function GroupTrip() {
     endDate: "",
   });
 
-  useEffect(() => {
-    const saved = localStorage.getItem("groupTrips");
-    if (saved) {
-      const loadedGroups = JSON.parse(saved);
-      setGroups(loadedGroups);
-      if (loadedGroups.length > 0) {
-        setActiveGroupId(loadedGroups[0].id);
-      }
-    }
-  }, []);
-
   const saveGroups = (updatedGroups: GroupTrip[]) => {
     setGroups(updatedGroups);
-    localStorage.setItem("groupTrips", JSON.stringify(updatedGroups));
   };
 
   const createGroup = () => {

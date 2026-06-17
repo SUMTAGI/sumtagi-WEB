@@ -2,112 +2,54 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { ChevronLeft, Plus, DollarSign, TrendingUp, TrendingDown, Ship, Hotel, UtensilsCrossed, Camera, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { budgetService } from "../../lib/budgetService";
+
+type Category = "교통" | "숙박" | "식사" | "체험" | "기타";
 
 interface Expense {
   id: string;
-  category: "교통" | "숙박" | "식사" | "체험" | "기타";
+  category: Category;
   amount: number;
   description: string;
-  date: string;
-}
-
-interface BudgetData {
-  totalBudget: number;
-  expenses: Expense[];
+  created_at: string;
 }
 
 export function Budget() {
   const navigate = useNavigate();
-  const [budgetData, setBudgetData] = useState<BudgetData>({
-    totalBudget: 0,
-    expenses: [],
-  });
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [totalBudget, setTotalBudget] = useState(500000);
   const [showAddExpense, setShowAddExpense] = useState(false);
-  const [newExpense, setNewExpense] = useState({
-    category: "식사" as Expense["category"],
-    amount: "",
-    description: "",
-  });
+  const [newExpense, setNewExpense] = useState({ category: "식사" as Category, amount: "", description: "" });
 
   useEffect(() => {
-    const saved = localStorage.getItem("budget");
-    if (saved) {
-      setBudgetData(JSON.parse(saved));
-    } else {
-      // 현재 확정된 일정에서 예상 비용 가져오기
-      const currentId = localStorage.getItem('currentItineraryId');
-      if (currentId) {
-        const stored = localStorage.getItem(`itinerary_${currentId}`);
-        if (stored) {
-          const itinerary = JSON.parse(stored);
-          setBudgetData({
-            totalBudget: itinerary.totalCost || 500000,
-            expenses: [],
-          });
-        }
-      } else {
-        setBudgetData({
-          totalBudget: 500000,
-          expenses: [],
-        });
-      }
-    }
+    budgetService.getExpenses().then(data => setExpenses(data as Expense[]));
   }, []);
 
-  const saveBudget = (data: BudgetData) => {
-    setBudgetData(data);
-    localStorage.setItem("budget", JSON.stringify(data));
-  };
-
-  const addExpense = () => {
-    if (!newExpense.amount || !newExpense.description) {
-      toast.error("모든 항목을 입력해주세요");
-      return;
-    }
-
-    const expense: Expense = {
-      id: `expense-${Date.now()}`,
-      category: newExpense.category,
-      amount: parseInt(newExpense.amount),
-      description: newExpense.description,
-      date: new Date().toISOString(),
-    };
-
-    saveBudget({
-      ...budgetData,
-      expenses: [...budgetData.expenses, expense],
-    });
-
-    setNewExpense({
-      category: "식사",
-      amount: "",
-      description: "",
-    });
+  const addExpense = async () => {
+    if (!newExpense.amount || !newExpense.description) { toast.error("모든 항목을 입력해주세요"); return; }
+    await budgetService.addExpense(newExpense.category, parseInt(newExpense.amount), newExpense.description);
+    const data = await budgetService.getExpenses();
+    setExpenses(data as Expense[]);
+    setNewExpense({ category: "식사", amount: "", description: "" });
     setShowAddExpense(false);
     toast.success("지출이 추가됐어요");
   };
 
-  const deleteExpense = (id: string) => {
-    saveBudget({
-      ...budgetData,
-      expenses: budgetData.expenses.filter(e => e.id !== id),
-    });
+  const deleteExpense = async (id: string) => {
+    await budgetService.deleteExpense(id);
+    setExpenses(prev => prev.filter(e => e.id !== id));
     toast.success("지출이 삭제됐어요");
   };
 
-  const updateBudget = (newBudget: number) => {
-    saveBudget({
-      ...budgetData,
-      totalBudget: newBudget,
-    });
-    toast.success("예산이 업데이트됐어요");
+  const updateBudget = (newB: number) => {
+    setTotalBudget(newB);
   };
 
-  const totalExpense = budgetData.expenses.reduce((sum, e) => sum + e.amount, 0);
-  const remaining = budgetData.totalBudget - totalExpense;
-  const progress = budgetData.totalBudget > 0 ? (totalExpense / budgetData.totalBudget) * 100 : 0;
+  const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const remaining = totalBudget - totalExpense;
+  const progress = totalBudget > 0 ? (totalExpense / totalBudget) * 100 : 0;
 
-  const categoryExpenses = budgetData.expenses.reduce((acc, expense) => {
+  const categoryExpenses = expenses.reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
     return acc;
   }, {} as Record<string, number>);
@@ -157,7 +99,7 @@ export function Budget() {
           <div className="flex items-center gap-2">
             <input
               type="number"
-              value={budgetData.totalBudget}
+              value={totalBudget}
               onChange={(e) => updateBudget(parseInt(e.target.value) || 0)}
               className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-3 py-2 text-2xl font-bold text-white w-full focus:outline-none focus:ring-2 focus:ring-white/50"
             />
@@ -215,7 +157,7 @@ export function Budget() {
                 </div>
                 <div className="text-lg font-bold">{amount.toLocaleString()}원</div>
                 <div className="text-xs opacity-80">
-                  {budgetData.totalBudget > 0 ? Math.round((amount / budgetData.totalBudget) * 100) : 0}%
+                  {totalBudget > 0 ? Math.round((amount / totalBudget) * 100) : 0}%
                 </div>
               </div>
             ))}
@@ -295,7 +237,7 @@ export function Budget() {
 
         {/* Expenses */}
         <div className="space-y-3">
-          {budgetData.expenses.length === 0 ? (
+          {expenses.length === 0 ? (
             <div className="text-center py-12">
               <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" strokeWidth={2} />
               <p className="text-gray-500 mb-4">아직 지출 내역이 없어요</p>
@@ -307,7 +249,7 @@ export function Budget() {
               </button>
             </div>
           ) : (
-            budgetData.expenses.map((expense) => (
+            expenses.map((expense) => (
               <div key={expense.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                 <div className="flex items-start gap-3">
                   <div className={`p-2 rounded-lg ${getCategoryColor(expense.category)}`}>
@@ -318,11 +260,9 @@ export function Budget() {
                       <div>
                         <div className="font-semibold text-gray-900">{expense.description}</div>
                         <div className="text-xs text-gray-500 mt-0.5">
-                          {new Date(expense.date).toLocaleDateString('ko-KR', {
+                          {new Date(expense.created_at).toLocaleDateString('ko-KR', {
                             month: 'long',
                             day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
                           })}
                         </div>
                       </div>

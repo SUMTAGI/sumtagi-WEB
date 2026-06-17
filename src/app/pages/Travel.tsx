@@ -1,81 +1,44 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Calendar, Ship, Sparkles, XCircle, MapPin, Trash2, CheckCircle, Clock, ListChecks } from "lucide-react";
+import { Calendar, Ship, Sparkles, MapPin, Trash2, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { ListSkeleton } from "../components/SkeletonLoader";
-
-interface Booking {
-  id: string;
-  itineraryId: string;
-  activity: Activity;
-  bookedAt: string;
-  status: "confirmed" | "cancelled" | "pending";
-}
+import { tripService } from "../../lib/tripService";
 
 export function Travel() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"plan" | "bookings">("plan");
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [currentItinerary, setCurrentItinerary] = useState<any>(null);
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
+  const [confirmedTrips, setConfirmedTrips] = useState<any[]>([]);
   const [checklistProgress, setChecklistProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load current itinerary
-    const currentId = localStorage.getItem('currentItineraryId');
-    if (currentId) {
-      const stored = localStorage.getItem(`itinerary_${currentId}`);
-      if (stored) {
-        const data = JSON.parse(stored);
-        if (data.confirmed) {
-          setCurrentItinerary(data);
-        }
+    const load = async () => {
+      const [trip, progress] = await Promise.all([
+        tripService.getLatestConfirmedTrip(),
+        tripService.getChecklistProgress(),
+      ]);
+      if (trip) {
+        setCurrentItinerary({ ...trip, startDate: trip.start_date, islands: trip.islands ?? [] });
+        setCurrentTripId(trip.id);
       }
-    }
-
-    // Load checklist progress
-    const checklistItems = JSON.parse(localStorage.getItem("checklistItems") || "[]");
-    if (checklistItems.length > 0) {
-      const completed = checklistItems.filter((item: any) => item.checked).length;
-      setChecklistProgress(Math.round((completed / checklistItems.length) * 100));
-    }
-
-    if (activeTab === "bookings") {
-      loadBookings();
-    }
-
-    const timer = setTimeout(() => setIsLoading(false), 700);
-    return () => clearTimeout(timer);
+      setChecklistProgress(progress);
+      if (activeTab === 'bookings') {
+        const trips = await tripService.getVisitedTrips();
+        setConfirmedTrips(trips);
+      }
+      setIsLoading(false);
+    };
+    load();
   }, [activeTab]);
 
-  const loadBookings = () => {
-    const stored = localStorage.getItem("bookings");
-    if (stored) {
-      setBookings(JSON.parse(stored));
-    }
+  const handleDeleteTrip = async (tripId: string) => {
+    await tripService.deleteTrip(tripId);
+    setConfirmedTrips(prev => prev.filter(t => t.id !== tripId));
+    toast.success("여행 내역이 삭제됐어요");
   };
-
-
-  const handleCancelBooking = (bookingId: string) => {
-    const updated = bookings.map(booking =>
-      booking.id === bookingId
-        ? { ...booking, status: "cancelled" as const }
-        : booking
-    );
-    setBookings(updated);
-    localStorage.setItem("bookings", JSON.stringify(updated));
-    toast.success("예약이 취소됐어요");
-  };
-
-  const handleDeleteBooking = (bookingId: string) => {
-    const updated = bookings.filter(booking => booking.id !== bookingId);
-    setBookings(updated);
-    localStorage.setItem("bookings", JSON.stringify(updated));
-    toast.success("예약 내역이 삭제됐어요");
-  };
-
-  const confirmedBookings = bookings.filter(b => b.status === "confirmed");
-  const totalCost = confirmedBookings.reduce((sum, b) => sum + (b.activity.price || 0), 0);
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -122,12 +85,7 @@ export function Travel() {
         >
           <div className="flex items-center justify-center gap-2">
             <Ship className="w-5 h-5" strokeWidth={2} />
-            <span>예약 관리</span>
-            {confirmedBookings.length > 0 && (
-              <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {confirmedBookings.length}
-              </span>
-            )}
+            <span>지난 여행</span>
           </div>
           {activeTab === "bookings" && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
@@ -170,7 +128,7 @@ export function Travel() {
                     <span>{currentItinerary.islands.join(', ')}</span>
                   </div>
                   <Link
-                    to={`/itinerary/${localStorage.getItem('currentItineraryId')}`}
+                    to={`/itinerary/${currentTripId}`}
                     className="inline-block bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold active:scale-95 transition-transform"
                   >
                     일정 전체보기
@@ -254,77 +212,35 @@ export function Travel() {
           )
         ) : (
           <div className="px-6 py-4">
-            {bookings.length === 0 ? (
+            {confirmedTrips.length === 0 ? (
               <div className="text-center py-12">
                 <Ship className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">예약 내역이 없어요</h3>
-                <p className="text-sm text-gray-600">
-                  일정을 생성하고 예약해보세요
-                </p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">지난 여행이 없어요</h3>
+                <p className="text-sm text-gray-600">여행을 다녀오면 여기에 기록돼요</p>
               </div>
             ) : (
-              <>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-blue-50 rounded-xl p-3">
-                    <p className="text-xs text-blue-600 mb-1">확정 예약</p>
-                    <p className="text-2xl font-bold text-blue-700">{confirmedBookings.length}</p>
-                  </div>
-                  <div className="bg-blue-50 rounded-xl p-3">
-                    <p className="text-xs text-blue-600 mb-1">총 금액</p>
-                    <p className="text-2xl font-bold text-blue-700">{Math.floor(totalCost / 10000)}만</p>
-                  </div>
-                </div>
-
-                {/* Travel Route Map */}
-                {confirmedBookings.length > 0 && (
-                  <div className="mb-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-100">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                      <Ship className="w-4 h-4" strokeWidth={2} />
-                      여행 경로
-                    </h3>
-                    <div className="relative h-32 bg-white/50 rounded-lg overflow-hidden">
-                      <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="xMidYMid meet">
-                        <defs>
-                          <marker id="arrow-travel" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                            <polygon points="0 0, 6 3, 0 6" fill="#3b82f6" opacity="0.7" />
-                          </marker>
-                        </defs>
-
-                        {/* Route line */}
-                        <line x1="15" y1="20" x2="85" y2="20" stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" opacity="0.4" markerEnd="url(#arrow-travel)" />
-
-                        {/* Start point */}
-                        <circle cx="15" cy="20" r="3" fill="#ef4444" stroke="white" strokeWidth="1.5" />
-                        <text x="15" y="32" fontSize="4" fill="#374151" textAnchor="middle" fontWeight="600">
-                          {confirmedBookings[0].activity.title.includes("인천항") ? "인천항" :
-                           confirmedBookings[0].activity.title.includes("대부도") ? "대부도" : "출발"}
-                        </text>
-
-                        {/* End point */}
-                        <circle cx="85" cy="20" r="3" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
-                        <text x="85" y="32" fontSize="4" fill="#374151" textAnchor="middle" fontWeight="600">
-                          {confirmedBookings[0].activity.location}
-                        </text>
-                      </svg>
+              <div className="space-y-3">
+                {confirmedTrips.map(trip => (
+                  <div key={trip.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{trip.title ?? '여행'}</h4>
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3" strokeWidth={2} />
+                          {(trip.islands ?? []).join(', ') || '섬 정보 없음'}
+                        </p>
+                      </div>
+                      <button onClick={() => handleDeleteTrip(trip.id)} className="p-1 text-gray-400 hover:text-red-500">
+                        <Trash2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
                     </div>
-                    <p className="text-xs text-blue-700 mt-2 text-center">
-                      {confirmedBookings[0].activity.title.includes("인천항") ? "인천항" :
-                       confirmedBookings[0].activity.title.includes("대부도") ? "대부도" : "출발"} → {confirmedBookings.map(b => b.activity.location).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
-                    </p>
+                    <div className="flex items-center justify-between text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
+                      <span>{trip.start_date} ~ {trip.end_date}</span>
+                      <Link to={`/itinerary/${trip.id}`} className="text-blue-600 font-medium">일정보기</Link>
+                    </div>
                   </div>
-                )}
-
-                <div className="space-y-3">
-                  {bookings.map((booking) => (
-                    <BookingCardCompact
-                      key={booking.id}
-                      booking={booking}
-                      onCancel={handleCancelBooking}
-                      onDelete={handleDeleteBooking}
-                    />
-                  ))}
-                </div>
-              </>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -334,68 +250,3 @@ export function Travel() {
   );
 }
 
-function BookingCardCompact({
-  booking,
-  onCancel,
-  onDelete
-}: {
-  booking: Booking;
-  onCancel: (id: string) => void;
-  onDelete: (id: string) => void;
-}) {
-  const [showActions, setShowActions] = useState(false);
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex-1">
-          <h4 className="font-semibold text-gray-900 text-sm mb-1">{booking.activity.title}</h4>
-          <p className="text-xs text-gray-600 flex items-center gap-1">
-            <MapPin className="w-3 h-3" strokeWidth={2} />
-            {booking.activity.location}
-          </p>
-        </div>
-        <span className={`text-xs px-2 py-1 rounded-full ${
-          booking.status === "confirmed" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-        }`}>
-          {booking.status === "confirmed" ? "확정" : "취소"}
-        </span>
-      </div>
-
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-        <span className="font-bold text-blue-600">{booking.activity.price?.toLocaleString()}원</span>
-        <button
-          onClick={() => setShowActions(!showActions)}
-          className="text-sm text-blue-600 font-medium"
-        >
-          {showActions ? "닫기" : "관리"}
-        </button>
-      </div>
-
-      {showActions && (
-        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-          {booking.status === "confirmed" && (
-            <button
-              onClick={() => onCancel(booking.id)}
-              className="flex-1 px-3 py-2 border border-red-300 text-red-700 rounded-lg text-sm active:scale-95 transition-transform"
-            >
-              취소
-            </button>
-          )}
-          <button
-            onClick={() => onDelete(booking.id)}
-            className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm active:scale-95 transition-transform"
-          >
-            삭제
-          </button>
-          <Link
-            to={`/itinerary/${booking.itineraryId}`}
-            className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm text-center active:scale-95 transition-transform"
-          >
-            일정보기
-          </Link>
-        </div>
-      )}
-    </div>
-  );
-}

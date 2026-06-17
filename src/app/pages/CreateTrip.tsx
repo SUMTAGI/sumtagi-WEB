@@ -4,6 +4,7 @@ import { ChevronLeft, Calendar, CheckCircle } from "lucide-react";
 import { generateItinerary } from "../utils/itineraryGenerator";
 import { toast } from "sonner";
 import { Confetti } from "../components/Confetti";
+import { tripService } from "../../lib/tripService";
 
 export function CreateTrip() {
   const navigate = useNavigate();
@@ -79,18 +80,15 @@ export function CreateTrip() {
     setFormData({ ...formData, endDate: selectedDate });
   };
 
-  const handleSubmit = () => {
-    // 일정 생성
+  const handleSubmit = async () => {
     const itinerary = generateItinerary(formData);
-    const itineraryId = Date.now().toString();
-    localStorage.setItem(`itinerary_${itineraryId}`, JSON.stringify(itinerary));
-    localStorage.setItem('currentItineraryId', itineraryId);
-
+    const title = `${formData.islands.join(', ')} 여행`;
+    const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands);
+    const tripId = trip?.id ?? Date.now().toString();
+    localStorage.setItem(`plan_${tripId}`, JSON.stringify(itinerary));
     toast.success("일정이 생성됐어요!");
     setShowConfetti(true);
-    setTimeout(() => {
-      navigate(`/itinerary/${itineraryId}`);
-    }, 2000);
+    setTimeout(() => { navigate(`/itinerary/${tripId}`); }, 2000);
   };
 
   const canProceed = () => {
