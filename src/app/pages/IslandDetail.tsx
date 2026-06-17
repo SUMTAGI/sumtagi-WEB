@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { getWeatherForIsland } from "../utils/weatherData";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
 import { getIslandById, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
+import { favoritesService } from "../../lib/favoritesService";
 
 export function IslandDetail() {
   const { id } = useParams();
@@ -17,9 +18,13 @@ export function IslandDetail() {
   useEffect(() => {
     if (!id) return;
     setIsLoading(true);
-    getIslandById(id)
-      .then(setIsland)
-      .finally(() => setIsLoading(false));
+    Promise.all([
+      getIslandById(id),
+      favoritesService.isFavorite(id),
+    ]).then(([islandData, fav]) => {
+      setIsland(islandData);
+      setIsFavorite(fav);
+    }).finally(() => setIsLoading(false));
   }, [id]);
 
   if (isLoading) {
@@ -43,9 +48,16 @@ export function IslandDetail() {
 
   const weather = getWeatherForIsland(island.name);
 
-  const handleFavorite = () => {
+  const handleFavorite = async () => {
+    if (!id) return;
+    if (isFavorite) {
+      await favoritesService.removeFavorite(id);
+      toast.success("찜 목록에서 제거됐어요");
+    } else {
+      await favoritesService.addFavorite(id);
+      toast.success("찜 목록에 추가됐어요");
+    }
     setIsFavorite(!isFavorite);
-    toast.success(isFavorite ? "즐겨찾기에서 제거됐어요" : "즐겨찾기에 추가됐어요");
   };
 
   const handleShare = () => {

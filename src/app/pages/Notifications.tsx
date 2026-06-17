@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { ChevronLeft, Bell, AlertTriangle, Ship, Users, Cloud, CheckCircle, X } from "lucide-react";
 import { toast } from "sonner";
+import { notificationService } from "../../lib/notificationService";
 
 interface Notification {
   id: string;
@@ -20,22 +21,27 @@ interface Notification {
 
 export function Notifications() {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  useEffect(() => {
+    notificationService.getAll().then(data => setNotifications(data));
+  }, []);
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const handleMarkAsRead = async (id: string) => {
+    await notificationService.markRead(id);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  const handleMarkAllAsRead = async () => {
+    await notificationService.markAllRead();
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     toast.success("모든 알림을 읽음으로 표시했어요");
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    await notificationService.delete(id);
     setNotifications(prev => prev.filter(n => n.id !== id));
     toast.success("알림이 삭제됐어요");
   };
@@ -132,8 +138,8 @@ function NotificationCard({
 
   return (
     <div
-      className={`px-6 py-4 ${!notification.isRead ? "bg-blue-50/30" : "bg-white"}`}
-      onClick={() => !notification.isRead && onMarkAsRead(notification.id)}
+      className={`px-6 py-4 ${!notification.is_read ? "bg-blue-50/30" : "bg-white"}`}
+      onClick={() => !notification.is_read && onMarkAsRead(notification.id)}
     >
       <div className="flex gap-3">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getIconColor()}`}>
@@ -142,7 +148,7 @@ function NotificationCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className={`font-semibold text-gray-900 ${!notification.isRead ? "font-bold" : ""}`}>
+            <h3 className={`font-semibold text-gray-900 ${!notification.is_read ? "font-bold" : ""}`}>
               {notification.title}
             </h3>
             <button
@@ -173,7 +179,7 @@ function NotificationCard({
 
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500">{notification.time}</span>
-            {!notification.isRead && (
+            {!notification.is_read && (
               <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
             )}
           </div>
