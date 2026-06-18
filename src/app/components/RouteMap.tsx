@@ -1,112 +1,105 @@
-import { MapPin, Ship } from "lucide-react";
+import { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
+import L from "leaflet";
 
 interface RouteMapProps {
   islands: string[];
   departurePort?: string;
 }
 
+const islandCoords: Record<string, { lat: number; lng: number }> = {
+  "인천항":   { lat: 37.4744, lng: 126.6169 },
+  "대부도":   { lat: 37.2173, lng: 126.5589 },
+  "백령도":   { lat: 37.9685, lng: 124.6902 },
+  "대청도":   { lat: 37.8371, lng: 124.7182 },
+  "소청도":   { lat: 37.7625, lng: 124.7431 },
+  "연평도":   { lat: 37.6736, lng: 125.6814 },
+  "덕적도":   { lat: 37.2269, lng: 126.1432 },
+  "자월도":   { lat: 37.2589, lng: 126.3083 },
+  "승봉도":   { lat: 37.1669, lng: 126.1611 },
+  "대이작도": { lat: 37.1667, lng: 126.2833 },
+  "소이작도": { lat: 37.1500, lng: 126.2917 },
+  "풍도":     { lat: 37.0647, lng: 126.2636 },
+  "육도":     { lat: 37.0036, lng: 126.3547 },
+};
+
+function makeStopIcon(index: number, isPort: boolean) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      width:22px;height:22px;
+      background:${isPort ? "#ef4444" : "#3b82f6"};
+      border:2px solid white;
+      border-radius:50%;
+      box-shadow:0 1px 4px rgba(0,0,0,0.3);
+      display:flex;align-items:center;justify-content:center;
+      color:white;font-size:10px;font-weight:700;
+    ">${isPort ? "출" : index}</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+}
+
+function AutoFit({ positions }: { positions: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (positions.length > 1) {
+      map.fitBounds(L.latLngBounds(positions), { padding: [24, 24] });
+    }
+  }, [map, positions]);
+  return null;
+}
+
 export function RouteMap({ islands, departurePort = "인천항" }: RouteMapProps) {
   if (islands.length === 0) return null;
 
-  const positions = [
-    { name: "인천항", x: 20, y: 50 },
-    { name: "대부도", x: 30, y: 65 },
-    { name: "백령도", x: 80, y: 20 },
-    { name: "대청도", x: 75, y: 30 },
-    { name: "소청도", x: 78, y: 25 },
-    { name: "연평도", x: 72, y: 35 },
-    { name: "덕적도", x: 50, y: 60 },
-    { name: "자월도", x: 55, y: 70 },
-    { name: "승봉도", x: 60, y: 65 },
-    { name: "대이작도", x: 58, y: 72 },
-    { name: "소이작도", x: 62, y: 75 },
-    { name: "풍도", x: 65, y: 78 },
-    { name: "육도", x: 68, y: 80 },
+  const portCoord = islandCoords[departurePort];
+  const stops = islands.map(name => islandCoords[name]).filter(Boolean);
+
+  if (!portCoord || stops.length === 0) return null;
+
+  const routePositions: [number, number][] = [
+    [portCoord.lat, portCoord.lng],
+    ...stops.map(c => [c.lat, c.lng] as [number, number]),
+    [portCoord.lat, portCoord.lng],
   ];
 
-  const getPosition = (island: string) => {
-    return positions.find(p => p.name === island) || positions.find(p => p.name === "인천항")!;
-  };
-
-  const portPos = getPosition(departurePort);
-  const islandPositions = islands.map(island => getPosition(island));
-
   return (
-    <div className="relative w-full aspect-square bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg overflow-hidden border border-blue-200">
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
-        <defs>
-          <marker
-            id="arrowhead"
-            markerWidth="10"
-            markerHeight="10"
-            refX="9"
-            refY="3"
-            orient="auto"
-          >
-            <polygon points="0 0, 10 3, 0 6" fill="#3b82f6" />
-          </marker>
-        </defs>
+    <div className="w-full">
+    <div className="w-full rounded-lg overflow-hidden border border-blue-200" style={{ height: 240 }}>
+      <MapContainer
+        center={[portCoord.lat, portCoord.lng]}
+        zoom={8}
+        style={{ height: "100%", width: "100%" }}
+        zoomControl={false}
+        scrollWheelZoom={false}
+        dragging={false}
+        attributionControl={false}
+      >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        <path
-          d={`M ${portPos.x} ${portPos.y} ${islandPositions.map(pos => `L ${pos.x} ${pos.y}`).join(' ')} L ${portPos.x} ${portPos.y}`}
-          stroke="#3b82f6"
-          strokeWidth="0.5"
-          fill="none"
-          strokeDasharray="2,2"
-          markerEnd="url(#arrowhead)"
+        <AutoFit positions={routePositions} />
+
+        <Polyline
+          positions={routePositions}
+          pathOptions={{ color: "#3b82f6", weight: 2, dashArray: "6,5", opacity: 0.85 }}
         />
 
-        <circle
-          cx={portPos.x}
-          cy={portPos.y}
-          r="3"
-          fill={departurePort === "대부도" ? "#f97316" : "#ef4444"}
-          stroke="white"
-          strokeWidth="1"
+        <Marker
+          position={[portCoord.lat, portCoord.lng]}
+          icon={makeStopIcon(0, true)}
         />
 
-        {islandPositions.map((pos, index) => (
-          <circle
-            key={index}
-            cx={pos.x}
-            cy={pos.y}
-            r="2.5"
-            fill="#3b82f6"
-            stroke="white"
-            strokeWidth="1"
+        {stops.map((coord, i) => (
+          <Marker
+            key={i}
+            position={[coord.lat, coord.lng]}
+            icon={makeStopIcon(i + 1, false)}
           />
         ))}
-      </svg>
-
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute flex flex-col items-center"
-          style={{ left: `${portPos.x}%`, top: `${portPos.y}%`, transform: 'translate(-50%, -120%)' }}
-        >
-          <div className={`${departurePort === "대부도" ? "bg-orange-500" : "bg-red-600"} text-white px-2 py-1 rounded text-xs font-medium whitespace-nowrap shadow-sm`}>
-            {portPos.name}
-          </div>
-        </div>
-
-        {islandPositions.map((pos, index) => (
-          <div
-            key={index}
-            className="absolute flex flex-col items-center"
-            style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -120%)' }}
-          >
-            <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium whitespace-nowrap shadow-sm">
-              {pos.name}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-sm border border-blue-200">
-        <div className="flex items-center gap-2 text-xs">
-          <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
-          <span className="text-gray-700">여행 경로</span>
-        </div>
-      </div>
+      </MapContainer>
+    </div>
+    <p className="text-right text-xs text-gray-400 mt-1">© OpenStreetMap contributors</p>
     </div>
   );
 }
