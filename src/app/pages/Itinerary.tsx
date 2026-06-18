@@ -21,7 +21,14 @@ export function Itinerary() {
       setItinerary(data);
       setIsConfirmed(data.confirmed || false);
     } else {
-      navigate("/plan");
+      tripService.getTripById(id).then(data => {
+        if (data) {
+          setItinerary({ ...data, startDate: data.start_date, islands: data.islands ?? [] });
+          setIsConfirmed(data.confirmed || false);
+        } else {
+          navigate("/travel");
+        }
+      });
     }
   }, [id, navigate]);
 
@@ -32,7 +39,8 @@ export function Itinerary() {
     setItinerary(updated);
     setIsConfirmed(true);
     localStorage.setItem(`plan_${id}`, JSON.stringify(updated));
-    toast.success("일정이 확정됐어요! 홈에서 확인하세요");
+    toast.success("일정이 확정됐어요!");
+    navigate("/travel");
   };
 
   const handleBookActivity = (activity: Activity) => {
@@ -71,11 +79,11 @@ export function Itinerary() {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-blue-700/80"></div>
         <div className="relative z-10">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/travel")}
             className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
           >
             <ChevronLeft className="w-5 h-5" strokeWidth={2} />
-            <span className="text-sm">홈으로</span>
+            <span className="text-sm">여행으로</span>
           </button>
           <h1 className="text-xl font-bold mb-2">{itinerary.title}</h1>
           <div className="flex flex-wrap gap-3 text-sm text-blue-100">
@@ -209,7 +217,7 @@ export function Itinerary() {
               일정 확정하기
             </button>
             <p className="text-xs text-gray-600 text-center mt-2">
-              확정하면 홈 화면에서 일정을 바로 확인할 수 있어요
+              확정하면 여행 탭에서 일정을 바로 확인할 수 있어요
             </p>
           </div>
         )}
@@ -222,7 +230,7 @@ export function Itinerary() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-green-900 mb-1">일정이 확정됐어요</p>
-                <p className="text-xs text-green-700">홈 화면에서 일정을 확인하세요</p>
+                <p className="text-xs text-green-700">여행 탭에서 일정을 확인하세요</p>
               </div>
             </div>
           </div>

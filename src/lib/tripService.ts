@@ -17,7 +17,6 @@ export const tripService = {
     await supabase.from('trips').update({ confirmed: true }).eq('id', tripId)
   },
 
-
   getLatestConfirmedTrip: async () => {
     const id = await uid()
     if (!id) return null
@@ -25,6 +24,23 @@ export const tripService = {
       .from('trips').select()
       .eq('user_id', id).eq('confirmed', true)
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    return data
+  },
+
+  getUpcomingTrip: async () => {
+    const id = await uid()
+    if (!id) return null
+    const today = new Date().toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('trips').select()
+      .eq('user_id', id)
+      .gte('start_date', today)
+      .order('start_date', { ascending: true }).limit(1).maybeSingle()
+    return data
+  },
+
+  getTripById: async (tripId: string) => {
+    const { data } = await supabase.from('trips').select().eq('id', tripId).maybeSingle()
     return data
   },
 

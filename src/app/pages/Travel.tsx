@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Calendar, Ship, Sparkles, MapPin, Trash2, ListChecks } from "lucide-react";
+import { Calendar, Ship, Sparkles, MapPin, Trash2, ListChecks, Info, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ListSkeleton } from "../components/SkeletonLoader";
 import { tripService } from "../../lib/tripService";
@@ -17,7 +17,7 @@ export function Travel() {
   useEffect(() => {
     const load = async () => {
       const [trip, progress] = await Promise.all([
-        tripService.getLatestConfirmedTrip(),
+        tripService.getUpcomingTrip(),
         tripService.getChecklistProgress(),
       ]);
       if (trip) {
@@ -62,9 +62,7 @@ export function Travel() {
         <button
           onClick={() => setActiveTab("plan")}
           className={`flex-1 py-3 font-medium transition-colors relative ${
-            activeTab === "plan"
-              ? "text-blue-600"
-              : "text-gray-500"
+            activeTab === "plan" ? "text-blue-600" : "text-gray-500"
           }`}
         >
           <div className="flex items-center justify-center gap-2">
@@ -78,9 +76,7 @@ export function Travel() {
         <button
           onClick={() => setActiveTab("bookings")}
           className={`flex-1 py-3 font-medium transition-colors relative ${
-            activeTab === "bookings"
-              ? "text-blue-600"
-              : "text-gray-500"
+            activeTab === "bookings" ? "text-blue-600" : "text-gray-500"
           }`}
         >
           <div className="flex items-center justify-center gap-2">
@@ -127,14 +123,35 @@ export function Travel() {
                     <MapPin className="w-4 h-4" strokeWidth={2} />
                     <span>{currentItinerary.islands.join(', ')}</span>
                   </div>
-                  <Link
-                    to={`/itinerary/${currentTripId}`}
-                    className="inline-block bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold active:scale-95 transition-transform"
-                  >
-                    일정 전체보기
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/itinerary/${currentTripId}`}
+                      className="inline-block bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold active:scale-95 transition-transform"
+                    >
+                      일정 전체보기
+                    </Link>
+                    {!currentItinerary.confirmed && (
+                      <span className="bg-white/20 border border-white/50 text-white text-sm font-semibold px-3 py-2 rounded-lg">
+                        미확정
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Unconfirmed Banner */}
+              {!currentItinerary.confirmed && (
+                <Link
+                  to={`/itinerary/${currentTripId}`}
+                  className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4"
+                >
+                  <Info className="w-5 h-5 text-amber-600 flex-shrink-0" strokeWidth={2} />
+                  <p className="flex-1 text-sm text-amber-800">
+                    일정이 아직 미확정이에요. 열어서 확정하면 홈에도 표시돼요.
+                  </p>
+                  <ChevronRight className="w-4 h-4 text-amber-600 flex-shrink-0" strokeWidth={2} />
+                </Link>
+              )}
 
               {/* Preparation Status */}
               <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -249,4 +266,3 @@ export function Travel() {
     </div>
   );
 }
-
