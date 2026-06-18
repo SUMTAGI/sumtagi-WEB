@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { Ship, MapPin, Calendar, Sparkles, Shield, ChevronRight, Star, Heart, Bell, Camera, Users, DollarSign } from "lucide-react";
 import { useState, useEffect } from "react";
 import { WeatherWidget, WeeklyForecast } from "../components/WeatherWidget";
-import { getOverallWeather, getOverallForecast } from "../utils/weatherData";
+import { fetchIncheonWeather, type WeatherResult } from "../../lib/weatherService";
 import { tripService } from "../../lib/tripService";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/useAuth";
@@ -12,6 +12,7 @@ export function Home() {
   const [unreadNotifications] = useState(0);
   const [confirmedItinerary, setConfirmedItinerary] = useState<any>(null);
   const [confirmedTripId, setConfirmedTripId] = useState<string | null>(null);
+  const [weather, setWeather] = useState<WeatherResult | null>(null);
 
   useEffect(() => {
     tripService.getLatestConfirmedTrip().then(trip => {
@@ -20,6 +21,7 @@ export function Home() {
         setConfirmedTripId(trip.id);
       }
     });
+    fetchIncheonWeather().then(setWeather);
   }, []);
 
   const getDDay = (startDate: string) => {
@@ -180,10 +182,17 @@ export function Home() {
         </div>
 
         {/* Weather Widget */}
-        <WeatherWidget data={getOverallWeather()} />
+        <WeatherWidget data={{
+          island: '인천 앞바다',
+          temp: weather?.current.temp ?? 22,
+          condition: weather?.current.condition ?? '맑음',
+          waveHeight: weather?.current.waveHeight ?? 0.5,
+          windSpeed: weather?.current.windSpeed ?? 3,
+          ferryStatus: weather?.current.ferryStatus ?? '정상',
+        }} />
 
         {/* Weekly Forecast */}
-        <WeeklyForecast forecast={getOverallForecast()} />
+        <WeeklyForecast forecast={weather?.forecast ?? []} />
       </section>
 
       {/* Popular Reviews */}
