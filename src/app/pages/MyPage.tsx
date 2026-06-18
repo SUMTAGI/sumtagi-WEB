@@ -1,12 +1,22 @@
 import { useNavigate } from "react-router";
+import { useState, useEffect } from "react";
 import { User, Mail, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, Shield, CreditCard, MapPin, Heart, Gift, Users, Book, Ticket, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
 import { auth } from "../../lib/auth";
+import { tripService } from "../../lib/tripService";
 
 export function MyPage() {
   const navigate = useNavigate();
   const { user, displayName } = useAuth();
+  const [tripCount, setTripCount] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([tripService.getTripCount(), tripService.getMyReviewCount()])
+      .then(([t, r]) => { setTripCount(t); setReviewCount(r); });
+  }, [user]);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -57,8 +67,8 @@ export function MyPage() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3">
             <StatCard label="가입일" value={`${daysSinceJoin}일전`} />
-            <StatCard label="예약" value="3건" />
-            <StatCard label="리뷰" value="0개" />
+            <StatCard label="예약" value={`${tripCount}건`} />
+            <StatCard label="리뷰" value={`${reviewCount}개`} />
           </div>
         </div>
       </div>

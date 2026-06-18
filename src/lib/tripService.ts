@@ -44,6 +44,20 @@ export const tripService = {
     await supabase.from('trips').delete().eq('id', id)
   },
 
+  getTripCount: async () => {
+    const id = await uid()
+    if (!id) return 0
+    const { count } = await supabase.from('trips').select('*', { count: 'exact', head: true }).eq('user_id', id)
+    return count ?? 0
+  },
+
+  getMyReviewCount: async () => {
+    const id = await uid()
+    if (!id) return 0
+    const { count } = await supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('user_id', id)
+    return count ?? 0
+  },
+
   getChecklistProgress: async () => {
     const id = await uid()
     if (!id) return 0
