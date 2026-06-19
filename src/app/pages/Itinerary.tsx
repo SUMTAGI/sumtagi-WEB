@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Ship, MapPin, Hotel, UtensilsCrossed, Users, DollarSign, Download, Share2, ChevronLeft } from "lucide-react";
+import { Ship, MapPin, Hotel, UtensilsCrossed, Users, DollarSign, Download, Share2, ChevronLeft, Trash2 } from "lucide-react";
 import type { GeneratedItinerary, Activity } from "../utils/itineraryGenerator";
 import { toast } from "sonner";
 import { RouteMap } from "../components/RouteMap";
@@ -31,6 +31,15 @@ export function Itinerary() {
       });
     }
   }, [id, navigate]);
+
+  const handleDelete = async () => {
+    if (!id || !window.confirm("일정을 삭제하면 복구할 수 없어요. 삭제할까요?")) return;
+    await tripService.deleteTrip(id);
+    localStorage.removeItem(`plan_${id}`);
+    localStorage.removeItem(`itinerary_${id}`);
+    toast.success("일정이 삭제됐어요");
+    navigate("/travel");
+  };
 
   const handleConfirm = async () => {
     if (!itinerary || !id) return;
@@ -97,7 +106,7 @@ export function Itinerary() {
             </div>
             <div className="flex items-center gap-1">
               <DollarSign className="w-4 h-4" strokeWidth={2} />
-              <span>{itinerary.totalCost.toLocaleString()}원</span>
+              <span>{(itinerary.totalCost ?? 0).toLocaleString()}원</span>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
@@ -114,6 +123,13 @@ export function Itinerary() {
             >
               <Share2 className="w-4 h-4" strokeWidth={2} />
               공유
+            </button>
+            <button
+              onClick={handleDelete}
+              className="bg-red-500/30 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" strokeWidth={2} />
+              삭제
             </button>
           </div>
         </div>
@@ -200,7 +216,7 @@ export function Itinerary() {
             <div className="border-t border-gray-200 pt-2 mt-2">
               <BudgetItemMobile
                 label="총 예산"
-                amount={itinerary.totalCost}
+                amount={itinerary.totalCost ?? 0}
                 isTotal
               />
             </div>

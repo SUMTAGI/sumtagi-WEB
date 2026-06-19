@@ -34,6 +34,16 @@ export function Travel() {
     load();
   }, [activeTab]);
 
+  const handleDeleteCurrentTrip = async () => {
+    if (!currentTripId || !window.confirm("진행 중인 일정을 삭제할까요? 복구할 수 없어요.")) return;
+    await tripService.deleteTrip(currentTripId);
+    localStorage.removeItem(`plan_${currentTripId}`);
+    localStorage.removeItem(`itinerary_${currentTripId}`);
+    setCurrentItinerary(null);
+    setCurrentTripId(null);
+    toast.success("일정이 삭제됐어요");
+  };
+
   const handleDeleteTrip = async (tripId: string) => {
     await tripService.deleteTrip(tripId);
     setConfirmedTrips(prev => prev.filter(t => t.id !== tripId));
@@ -104,6 +114,7 @@ export function Travel() {
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold text-lg">다가오는 여행</h3>
+                    <div className="flex items-center gap-2">
                     {(() => {
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
@@ -117,6 +128,10 @@ export function Travel() {
                         </div>
                       ) : null;
                     })()}
+                    <button onClick={handleDeleteCurrentTrip} className="p-1 text-white/60 hover:text-white active:scale-95 transition-all">
+                      <Trash2 className="w-4 h-4" strokeWidth={2} />
+                    </button>
+                    </div>
                   </div>
                   <h2 className="text-xl font-bold mb-2">{currentItinerary.title}</h2>
                   <div className="flex items-center gap-2 text-sm text-blue-100 mb-4">

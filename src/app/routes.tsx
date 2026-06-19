@@ -32,6 +32,7 @@ import { Schedule } from "./pages/Schedule";
 import { Coupons } from "./pages/Coupons";
 import { Diary } from "./pages/Diary";
 import { GroupTrip } from "./pages/GroupTrip";
+import { GroupJoin } from "./pages/GroupJoin";
 import { AppSettings } from "./pages/AppSettings";
 import { Support } from "./pages/Support";
 
@@ -89,6 +90,7 @@ export const router = createBrowserRouter([
       { path: "coupons", Component: Coupons },
       { path: "diary", Component: Diary },
       { path: "group-trip", Component: GroupTrip },
+      { path: "group-join/:code", Component: GroupJoin },
       { path: "app-settings", Component: AppSettings },
       { path: "support", Component: Support },
       { path: "*", Component: NotFound },
