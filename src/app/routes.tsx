@@ -15,8 +15,6 @@ import { NotificationSettings } from "./pages/NotificationSettings";
 import { PaymentMethods } from "./pages/PaymentMethods";
 import { VisitedIslands } from "./pages/VisitedIslands";
 import { Favorites } from "./pages/Favorites";
-import { Reviews } from "./pages/Reviews";
-import { ReviewDetail } from "./pages/ReviewDetail";
 import { Notifications } from "./pages/Notifications";
 import { CreateTrip } from "./pages/CreateTrip";
 import { NotFound } from "./pages/NotFound";
@@ -75,8 +73,6 @@ export const router = createBrowserRouter([
       { path: "payment-methods", Component: PaymentMethods },
       { path: "visited-islands", Component: VisitedIslands },
       { path: "favorites", Component: Favorites },
-      { path: "reviews", Component: Reviews },
-      { path: "review/:id", Component: ReviewDetail },
       { path: "notifications", Component: Notifications },
       { path: "create-trip", Component: CreateTrip },
       { path: "experiences", Component: Experiences },

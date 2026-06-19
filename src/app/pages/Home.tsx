@@ -7,12 +7,23 @@ import { tripService } from "../../lib/tripService";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/useAuth";
 
+interface ReviewData {
+  id: string;
+  author: string;
+  location: string;
+  rating: number;
+  preview: string;
+  image: string;
+  likes: number;
+}
+
 export function Home() {
   const { user, displayName } = useAuth();
   const [unreadNotifications] = useState(0);
   const [confirmedItinerary, setConfirmedItinerary] = useState<any>(null);
   const [confirmedTripId, setConfirmedTripId] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherResult | null>(null);
+  const [popularReviews, setPopularReviews] = useState<ReviewData[]>([]);
 
   useEffect(() => {
     tripService.getLatestConfirmedTrip().then(trip => {
@@ -22,6 +33,27 @@ export function Home() {
       }
     });
     fetchIncheonWeather().then(setWeather);
+
+    supabase
+      .from('reviews')
+      .select('id, rating, content, images, likes_count, profiles(nickname), islands(name, image)')
+      .order('likes_count', { ascending: false })
+      .limit(3)
+      .then(({ data }) => {
+        if (data) {
+          setPopularReviews(
+            data.map((r: any) => ({
+              id: r.id,
+              author: r.profiles?.nickname ?? '여행자',
+              location: r.islands?.name ?? '',
+              rating: r.rating,
+              preview: r.content ?? '',
+              image: r.images?.[0] ?? r.islands?.image ?? '',
+              likes: r.likes_count,
+            }))
+          );
+        }
+      });
   }, []);
 
   const getDDay = (startDate: string) => {
@@ -149,7 +181,7 @@ export function Home() {
           <Link to="/community">
             <FeatureCardMobile
               icon={<Users className="w-5 h-5 text-blue-600" strokeWidth={2} />}
-              title="커뮤니티"
+              title="리뷰"
             />
           </Link>
           <Link to="/checklist">
@@ -199,39 +231,19 @@ export function Home() {
       <section className="px-6 py-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">인기 리뷰</h2>
-          <Link to="/reviews" className="flex items-center gap-1 text-sm text-blue-600 font-medium">
+          <Link to="/community" className="flex items-center gap-1 text-sm text-blue-600 font-medium">
             전체보기
             <ChevronRight className="w-4 h-4" strokeWidth={2} />
           </Link>
         </div>
         <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory">
-          <ReviewCardMobile
-            id="1"
-            author="김여행"
-            location="백령도"
-            rating={5}
-            preview="두무진의 절경이 정말 압권이었어요. 일몰은 꼭 보세요!"
-            image="https://images.unsplash.com/photo-1635355942488-a8bdb5a0803e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400"
-            likes={124}
-          />
-          <ReviewCardMobile
-            id="2"
-            author="박바다"
-            location="덕적도"
-            rating={5}
-            preview="서포리 해변의 투명한 바다에 감탄했어요. 가족 여행 최고!"
-            image="https://images.unsplash.com/photo-1662898069390-badabf2d65df?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400"
-            likes={98}
-          />
-          <ReviewCardMobile
-            id="3"
-            author="이섬순"
-            location="영흥도"
-            rating={4}
-            preview="당일치기로 다녀오기 딱 좋았어요. 해산물도 맛있고!"
-            image="https://images.unsplash.com/photo-1628412071389-6e8f7a7a4e6e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400"
-            likes={87}
-          />
+          {popularReviews.length > 0 ? (
+            popularReviews.map(review => (
+              <ReviewCardMobile key={review.id} {...review} />
+            ))
+          ) : (
+            <p className="text-sm text-gray-400 py-4">아직 리뷰가 없어요.</p>
+          )}
         </div>
       </section>
 
@@ -258,8 +270,8 @@ function ReviewCardMobile({ id, author, location, rating, preview, image, likes 
   likes: number;
 }) {
   return (
-    <Link to={`/review/${id}`} className="flex-shrink-0 w-64 snap-start">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden active:scale-98 transition-transform">
+    <div className="flex-shrink-0 w-64 snap-start">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="relative h-32">
           <img
             src={image}
@@ -296,7 +308,7 @@ function ReviewCardMobile({ id, author, location, rating, preview, image, likes 
           <p className="text-sm text-gray-600 line-clamp-2">{preview}</p>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 

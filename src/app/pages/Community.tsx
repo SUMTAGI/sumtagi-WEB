@@ -250,8 +250,8 @@ export function Community() {
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900">커뮤니티</h1>
-          <p className="text-xs text-gray-500">여행자들과 소통하세요</p>
+          <h1 className="text-lg font-bold text-gray-900">리뷰 & Q&A</h1>
+          <p className="text-xs text-gray-500">섬 여행 리뷰와 질문을 공유하세요</p>
         </div>
         <Link
           to={`/community/write?type=${activeTab}`}
@@ -269,7 +269,7 @@ export function Community() {
             activeTab === "feed" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
           }`}
         >
-          실시간 피드
+          리뷰
         </button>
         <button
           onClick={() => setActiveTab("qna")}
@@ -315,8 +315,12 @@ export function Community() {
         ) : currentPosts.length === 0 ? (
           <div className="text-center py-16">
             <MessageCircle className="w-14 h-14 text-gray-200 mx-auto mb-3" strokeWidth={2} />
-            <p className="font-medium text-gray-500">아직 게시글이 없어요</p>
-            <p className="text-sm text-gray-400 mt-1">첫 번째 글을 작성해보세요!</p>
+            <p className="font-medium text-gray-500">
+              {activeTab === 'feed' ? '아직 리뷰가 없어요' : '아직 질문이 없어요'}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              {activeTab === 'feed' ? '첫 번째 리뷰를 남겨보세요!' : '궁금한 점을 물어보세요!'}
+            </p>
           </div>
         ) : (
           <div>{currentPosts.map(post => renderPost(post))}</div>

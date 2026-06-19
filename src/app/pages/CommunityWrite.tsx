@@ -58,7 +58,7 @@ export function CommunityWrite() {
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
         <h1 className="flex-1 text-lg font-bold text-gray-900">
-          {type === 'feed' ? '게시글 작성' : '질문하기'}
+          {type === 'feed' ? '리뷰 작성' : '질문하기'}
         </h1>
         <button
           onClick={handleSubmit}
@@ -98,7 +98,7 @@ export function CommunityWrite() {
           <input
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder={type === 'feed' ? '어떤 여행이었나요?' : '무엇이 궁금한가요?'}
+            placeholder={type === 'feed' ? '어떤 섬을 다녀오셨나요?' : '무엇이 궁금한가요?'}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -113,7 +113,7 @@ export function CommunityWrite() {
             onChange={e => setContent(e.target.value)}
             placeholder={
               type === 'feed'
-                ? '여행 중 느낀 점, 팁, 후기를 자유롭게 공유해보세요'
+                ? '다녀온 섬에 대한 솔직한 리뷰를 남겨보세요'
                 : '섬 여행에 대해 궁금한 점을 자유롭게 물어보세요'
             }
             rows={8}
