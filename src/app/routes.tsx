@@ -25,6 +25,7 @@ import { Experiences, ExperienceDetail } from "./pages/Experiences";
 import { Checklist } from "./pages/Checklist";
 import { Budget } from "./pages/Budget";
 import { Community } from "./pages/Community";
+import { CommunityWrite } from "./pages/CommunityWrite";
 import { Packages } from "./pages/Packages";
 import { Events } from "./pages/Events";
 import { Emergency } from "./pages/Emergency";
@@ -83,6 +84,7 @@ export const router = createBrowserRouter([
       { path: "checklist", Component: Checklist },
       { path: "budget", Component: Budget },
       { path: "community", Component: Community },
+      { path: "community/write", Component: CommunityWrite },
       { path: "packages", Component: Packages },
       { path: "events", Component: Events },
       { path: "emergency", Component: Emergency },
