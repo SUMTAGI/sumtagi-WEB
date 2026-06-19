@@ -1,17 +1,29 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router";
-import { Ship, MapPin, Hotel, UtensilsCrossed, Users, DollarSign, Download, Share2, ChevronLeft, Trash2 } from "lucide-react";
+import { useParams, useNavigate, useSearchParams } from "react-router";
+import {
+  Ship, MapPin, Hotel, UtensilsCrossed, Users, DollarSign,
+  Download, Share2, ChevronLeft, Trash2, Pencil, Check, X, Plus,
+} from "lucide-react";
 import type { GeneratedItinerary, Activity } from "../utils/itineraryGenerator";
 import { toast } from "sonner";
 import { RouteMap } from "../components/RouteMap";
 import { tripService } from "../../lib/tripService";
 
+const TYPE_OPTIONS: Activity["type"][] = ["ferry", "attraction", "accommodation", "meal"];
+const TYPE_LABEL: Record<Activity["type"], string> = {
+  ferry: "여객선", attraction: "관광", accommodation: "숙박", meal: "식사",
+};
+
 export function Itinerary() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null);
   const [selectedDay, setSelectedDay] = useState(0);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(searchParams.get("edit") === "true");
+  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [newAct, setNewAct] = useState<Partial<Activity>>({ type: "attraction", time: "", title: "", location: "", description: "", price: undefined });
 
   useEffect(() => {
     if (!id) return;
@@ -32,6 +44,82 @@ export function Itinerary() {
     }
   }, [id, navigate]);
 
+  const persistItinerary = (updated: GeneratedItinerary) => {
+    const totalCost = updated.days.reduce((sum, day) =>
+      sum + day.activities.reduce((s, a) => s + (a.price ?? 0), 0), 0
+    );
+    const final = { ...updated, totalCost };
+    setItinerary(final);
+    localStorage.setItem(`plan_${id}`, JSON.stringify(final));
+    return final;
+  };
+
+  const handleSaveEdit = () => {
+    if (!itinerary) return;
+    persistItinerary(itinerary);
+    setIsEditMode(false);
+    toast.success("일정이 저장됐어요");
+  };
+
+  const handleUpdateActivity = (activityId: string, updates: Partial<Activity>) => {
+    setItinerary(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        days: prev.days.map((day, di) =>
+          di !== selectedDay ? day : {
+            ...day,
+            activities: day.activities.map(a => a.id === activityId ? { ...a, ...updates } : a),
+          }
+        ),
+      };
+    });
+  };
+
+  const handleDeleteActivity = (activityId: string) => {
+    setItinerary(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        days: prev.days.map((day, di) =>
+          di !== selectedDay ? day : {
+            ...day,
+            activities: day.activities.filter(a => a.id !== activityId),
+          }
+        ),
+      };
+    });
+  };
+
+  const handleAddActivity = () => {
+    if (!newAct.title || !newAct.time) { toast.error("시간과 이름을 입력해주세요"); return; }
+    const activity: Activity = {
+      id: `act_${Date.now()}`,
+      type: newAct.type ?? "attraction",
+      time: newAct.time!,
+      title: newAct.title!,
+      location: newAct.location ?? "",
+      description: newAct.description ?? "",
+      duration: 60,
+      price: newAct.price ? Number(newAct.price) : undefined,
+    };
+    setItinerary(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        days: prev.days.map((day, di) =>
+          di !== selectedDay ? day : {
+            ...day,
+            activities: [...day.activities, activity].sort((a, b) => a.time.localeCompare(b.time)),
+          }
+        ),
+      };
+    });
+    setNewAct({ type: "attraction", time: "", title: "", location: "", description: "", price: undefined });
+    setShowAddSheet(false);
+    toast.success("활동이 추가됐어요");
+  };
+
   const handleDelete = async () => {
     if (!id || !window.confirm("일정을 삭제하면 복구할 수 없어요. 삭제할까요?")) return;
     await tripService.deleteTrip(id);
@@ -44,10 +132,8 @@ export function Itinerary() {
   const handleConfirm = async () => {
     if (!itinerary || !id) return;
     await tripService.confirmTrip(id);
-    const updated = { ...itinerary, confirmed: true };
-    setItinerary(updated);
+    const updated = persistItinerary({ ...itinerary, confirmed: true });
     setIsConfirmed(true);
-    localStorage.setItem(`plan_${id}`, JSON.stringify(updated));
     toast.success("일정이 확정됐어요!");
     navigate("/travel");
   };
@@ -59,8 +145,7 @@ export function Itinerary() {
       updated.days.forEach(day => {
         day.activities.forEach(act => { if (act.id === activity.id) act.bookingStatus = "booked"; });
       });
-      setItinerary(updated);
-      localStorage.setItem(`plan_${id}`, JSON.stringify(updated));
+      persistItinerary(updated);
     }
     toast.success(`${activity.title} 예약 완료`);
   };
@@ -77,24 +162,33 @@ export function Itinerary() {
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Header with Background */}
+      {/* Header */}
       <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 text-white px-6 py-4 flex-shrink-0 overflow-hidden">
         <div
           className="absolute inset-0 opacity-20 bg-cover bg-center"
-          style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1633775362313-fed93ef8e824?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600')`,
-          }}
+          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1633775362313-fed93ef8e824?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-blue-700/80"></div>
         <div className="relative z-10">
           <button
-            onClick={() => navigate("/travel")}
+            onClick={() => { if (isEditMode) { handleSaveEdit(); } else { navigate("/travel"); } }}
             className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
           >
             <ChevronLeft className="w-5 h-5" strokeWidth={2} />
-            <span className="text-sm">여행으로</span>
+            <span className="text-sm">{isEditMode ? "저장 후 나가기" : "여행으로"}</span>
           </button>
-          <h1 className="text-xl font-bold mb-2">{itinerary.title}</h1>
+          <div className="flex items-start justify-between mb-2">
+            <h1 className="text-xl font-bold flex-1">{itinerary.title}</h1>
+            <button
+              onClick={isEditMode ? handleSaveEdit : () => setIsEditMode(true)}
+              className={`ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold active:scale-95 transition-all ${
+                isEditMode ? "bg-green-400/90 text-white" : "bg-white/20 backdrop-blur-sm text-white"
+              }`}
+            >
+              {isEditMode ? <Check className="w-4 h-4" strokeWidth={2.5} /> : <Pencil className="w-4 h-4" strokeWidth={2} />}
+              {isEditMode ? "저장" : "편집"}
+            </button>
+          </div>
           <div className="flex flex-wrap gap-3 text-sm text-blue-100">
             <div className="flex items-center gap-1">
               <Ship className="w-4 h-4" strokeWidth={2} />
@@ -109,29 +203,34 @@ export function Itinerary() {
               <span>{(itinerary.totalCost ?? 0).toLocaleString()}원</span>
             </div>
           </div>
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={() => toast.success("일정표 다운로드 시작")}
-              className="flex-1 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"
-            >
-              <Download className="w-4 h-4" strokeWidth={2} />
-              다운로드
-            </button>
-            <button
-              onClick={() => toast.success("링크 복사됨")}
-              className="flex-1 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"
-            >
-              <Share2 className="w-4 h-4" strokeWidth={2} />
-              공유
-            </button>
-            <button
-              onClick={handleDelete}
-              className="bg-red-500/30 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" strokeWidth={2} />
-              삭제
-            </button>
-          </div>
+          {!isEditMode && (
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => toast.success("일정표 다운로드 시작")}
+                className="flex-1 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" strokeWidth={2} />
+                다운로드
+              </button>
+              <button
+                onClick={() => toast.success("링크 복사됨")}
+                className="flex-1 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"
+              >
+                <Share2 className="w-4 h-4" strokeWidth={2} />
+                공유
+              </button>
+              <button
+                onClick={handleDelete}
+                className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                삭제
+              </button>
+            </div>
+          )}
+          {isEditMode && (
+            <p className="mt-3 text-xs text-blue-200">활동을 탭해서 수정하거나 아래 + 버튼으로 추가하세요</p>
+          )}
         </div>
       </div>
 
@@ -143,9 +242,7 @@ export function Itinerary() {
               key={day.date}
               onClick={() => setSelectedDay(index)}
               className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-all flex-shrink-0 ${
-                selectedDay === index
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 active:scale-95"
+                selectedDay === index ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 active:scale-95"
               }`}
             >
               Day {day.dayNumber}
@@ -158,15 +255,9 @@ export function Itinerary() {
       <div className="flex-1 overflow-y-auto">
         {/* Day Header */}
         <div className="bg-white px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900 mb-1">
-            Day {currentDay.dayNumber}
-          </h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Day {currentDay.dayNumber}</h2>
           <p className="text-sm text-gray-600">
-            {new Date(currentDay.date).toLocaleDateString('ko-KR', {
-              month: 'long',
-              day: 'numeric',
-              weekday: 'short'
-            })}
+            {new Date(currentDay.date).toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" })}
           </p>
         </div>
 
@@ -177,81 +268,178 @@ export function Itinerary() {
               key={activity.id}
               activity={activity}
               isLast={index === currentDay.activities.length - 1}
+              editMode={isEditMode}
               onBook={handleBookActivity}
+              onUpdate={(updates) => handleUpdateActivity(activity.id, updates)}
+              onDelete={() => handleDeleteActivity(activity.id)}
             />
           ))}
-        </div>
 
-        {/* Map Section */}
-        <div className="px-6 py-6 bg-white mt-4">
-          <h3 className="font-semibold text-gray-900 mb-3">여행 경로</h3>
-          <RouteMap islands={itinerary.islands} departurePort={itinerary.departurePort} />
-          <p className="text-xs text-gray-600 mt-2 text-center">
-            {[itinerary.departurePort || "인천항", ...itinerary.islands, itinerary.departurePort || "인천항"].join(" → ")}
-          </p>
-        </div>
-
-        {/* Budget Summary */}
-        <div className="px-6 py-6 bg-gray-50">
-          <h3 className="font-semibold text-gray-900 mb-3">예산 요약</h3>
-          <div className="bg-white rounded-xl p-4 space-y-2">
-            <BudgetItemMobile
-              label="여객선"
-              amount={itinerary.days.reduce((sum, day) =>
-                sum + day.activities.filter(a => a.type === "ferry").reduce((s, a) => s + (a.price || 0), 0), 0
-              )}
-            />
-            <BudgetItemMobile
-              label="숙박"
-              amount={itinerary.days.reduce((sum, day) =>
-                sum + day.activities.filter(a => a.type === "accommodation").reduce((s, a) => s + (a.price || 0), 0), 0
-              )}
-            />
-            <BudgetItemMobile
-              label="식사"
-              amount={itinerary.days.reduce((sum, day) =>
-                sum + day.activities.filter(a => a.type === "meal").reduce((s, a) => s + (a.price || 0), 0), 0
-              )}
-            />
-            <div className="border-t border-gray-200 pt-2 mt-2">
-              <BudgetItemMobile
-                label="총 예산"
-                amount={itinerary.totalCost ?? 0}
-                isTotal
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Confirm Button */}
-        {!isConfirmed && (
-          <div className="px-6 py-6">
+          {isEditMode && (
             <button
-              onClick={handleConfirm}
-              className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold active:scale-95 transition-transform"
+              onClick={() => setShowAddSheet(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blue-300 text-blue-600 rounded-xl font-medium active:scale-95 transition-transform"
             >
-              일정 확정하기
+              <Plus className="w-5 h-5" strokeWidth={2} />
+              활동 추가
             </button>
-            <p className="text-xs text-gray-600 text-center mt-2">
-              확정하면 여행 탭에서 일정을 바로 확인할 수 있어요
-            </p>
-          </div>
-        )}
+          )}
+        </div>
 
-        {isConfirmed && (
-          <div className="px-6 py-6">
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <Ship className="w-5 h-5 text-white" strokeWidth={2} />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-green-900 mb-1">일정이 확정됐어요</p>
-                <p className="text-xs text-green-700">여행 탭에서 일정을 확인하세요</p>
+        {!isEditMode && (
+          <>
+            {/* Map */}
+            <div className="px-6 py-6 bg-white mt-4">
+              <h3 className="font-semibold text-gray-900 mb-3">여행 경로</h3>
+              <RouteMap islands={itinerary.islands} departurePort={itinerary.departurePort} />
+              <p className="text-xs text-gray-600 mt-2 text-center">
+                {[itinerary.departurePort || "인천항", ...itinerary.islands, itinerary.departurePort || "인천항"].join(" → ")}
+              </p>
+            </div>
+
+            {/* Budget */}
+            <div className="px-6 py-6 bg-gray-50">
+              <h3 className="font-semibold text-gray-900 mb-3">예산 요약</h3>
+              <div className="bg-white rounded-xl p-4 space-y-2">
+                {(["ferry", "accommodation", "meal"] as Activity["type"][]).map(type => (
+                  <BudgetItemMobile
+                    key={type}
+                    label={TYPE_LABEL[type]}
+                    amount={itinerary.days.reduce((sum, day) =>
+                      sum + day.activities.filter(a => a.type === type).reduce((s, a) => s + (a.price ?? 0), 0), 0
+                    )}
+                  />
+                ))}
+                <div className="border-t border-gray-200 pt-2 mt-2">
+                  <BudgetItemMobile label="총 예산" amount={itinerary.totalCost ?? 0} isTotal />
+                </div>
               </div>
             </div>
-          </div>
+
+            {!isConfirmed && (
+              <div className="px-6 py-6">
+                <button
+                  onClick={handleConfirm}
+                  className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold active:scale-95 transition-transform"
+                >
+                  일정 확정하기
+                </button>
+                <p className="text-xs text-gray-600 text-center mt-2">확정하면 여행 탭에서 일정을 바로 확인할 수 있어요</p>
+              </div>
+            )}
+
+            {isConfirmed && (
+              <div className="px-6 py-6">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Ship className="w-5 h-5 text-white" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-900 mb-1">일정이 확정됐어요</p>
+                    <p className="text-xs text-green-700">여행 탭에서 일정을 확인하세요</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      {/* Add Activity Sheet */}
+      {showAddSheet && (
+        <div className="absolute inset-0 bg-black/50 flex items-end z-50" onClick={() => setShowAddSheet(false)}>
+          <div className="bg-white rounded-t-2xl w-full p-6 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">활동 추가</h3>
+              <button onClick={() => setShowAddSheet(false)} className="p-1 text-gray-400">
+                <X className="w-5 h-5" strokeWidth={2} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">유형</label>
+                <div className="flex gap-2">
+                  {TYPE_OPTIONS.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setNewAct(p => ({ ...p, type: t }))}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                        newAct.type === t ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {TYPE_LABEL[t]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">시간 *</label>
+                  <input
+                    type="text"
+                    value={newAct.time ?? ""}
+                    onChange={e => setNewAct(p => ({ ...p, time: e.target.value }))}
+                    placeholder="09:00"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">가격 (원)</label>
+                  <input
+                    type="number"
+                    value={newAct.price ?? ""}
+                    onChange={e => setNewAct(p => ({ ...p, price: e.target.value ? Number(e.target.value) : undefined }))}
+                    placeholder="0"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">이름 *</label>
+                <input
+                  type="text"
+                  value={newAct.title ?? ""}
+                  onChange={e => setNewAct(p => ({ ...p, title: e.target.value }))}
+                  placeholder="예: 백령도 두무진 트레킹"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">장소</label>
+                <input
+                  type="text"
+                  value={newAct.location ?? ""}
+                  onChange={e => setNewAct(p => ({ ...p, location: e.target.value }))}
+                  placeholder="예: 백령도 두무진"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">설명</label>
+                <textarea
+                  value={newAct.description ?? ""}
+                  onChange={e => setNewAct(p => ({ ...p, description: e.target.value }))}
+                  placeholder="간단한 메모를 남겨보세요"
+                  rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddActivity}
+              className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl font-semibold active:scale-95 transition-transform"
+            >
+              추가하기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -259,31 +447,31 @@ export function Itinerary() {
 function ActivityCardMobile({
   activity,
   isLast,
-  onBook
+  editMode,
+  onBook,
+  onUpdate,
+  onDelete,
 }: {
   activity: Activity;
   isLast: boolean;
+  editMode: boolean;
   onBook: (activity: Activity) => void;
+  onUpdate: (updates: Partial<Activity>) => void;
+  onDelete: () => void;
 }) {
-  const getIcon = () => {
-    switch (activity.type) {
-      case "ferry": return <Ship className="w-5 h-5" strokeWidth={2} />;
-      case "accommodation": return <Hotel className="w-5 h-5" strokeWidth={2} />;
-      case "meal": return <UtensilsCrossed className="w-5 h-5" strokeWidth={2} />;
-      case "attraction": return <MapPin className="w-5 h-5" strokeWidth={2} />;
-      default: return null;
-    }
-  };
+  const typeColor = {
+    ferry: "bg-blue-100 text-blue-600",
+    accommodation: "bg-purple-100 text-purple-600",
+    meal: "bg-orange-100 text-orange-600",
+    attraction: "bg-green-100 text-green-600",
+  }[activity.type] ?? "bg-gray-100 text-gray-600";
 
-  const getTypeColor = () => {
-    switch (activity.type) {
-      case "ferry": return "bg-blue-100 text-blue-600";
-      case "accommodation": return "bg-purple-100 text-purple-600";
-      case "meal": return "bg-orange-100 text-orange-600";
-      case "attraction": return "bg-green-100 text-green-600";
-      default: return "bg-gray-100 text-gray-600";
-    }
-  };
+  const typeIcon = {
+    ferry: <Ship className="w-5 h-5" strokeWidth={2} />,
+    accommodation: <Hotel className="w-5 h-5" strokeWidth={2} />,
+    meal: <UtensilsCrossed className="w-5 h-5" strokeWidth={2} />,
+    attraction: <MapPin className="w-5 h-5" strokeWidth={2} />,
+  }[activity.type];
 
   const canBook = activity.type === "ferry" || activity.type === "accommodation";
 
@@ -291,57 +479,100 @@ function ActivityCardMobile({
     <div className="relative">
       <div className="flex gap-3">
         <div className="flex flex-col items-center flex-shrink-0">
-          <div className={`w-10 h-10 rounded-full ${getTypeColor()} flex items-center justify-center`}>
-            {getIcon()}
+          <div className={`w-10 h-10 rounded-full ${typeColor} flex items-center justify-center`}>
+            {typeIcon}
           </div>
           {!isLast && <div className="w-0.5 flex-1 bg-gray-200 mt-2" />}
         </div>
 
         <div className="flex-1 pb-6">
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-start justify-between mb-2">
-              <div className="text-sm font-semibold text-blue-600">{activity.time}</div>
-              {activity.congestionLevel && (
-                <span className={`text-xs px-2 py-1 rounded ${
-                  activity.congestionLevel === "low" ? "bg-green-100 text-green-700" :
-                  activity.congestionLevel === "medium" ? "bg-yellow-100 text-yellow-700" :
-                  "bg-red-100 text-red-700"
-                }`}>
-                  {activity.congestionLevel === "low" ? "여유" :
-                   activity.congestionLevel === "medium" ? "보통" : "혼잡"}
-                </span>
-              )}
-            </div>
-
-            <h4 className="font-semibold text-gray-900 mb-1">{activity.title}</h4>
-            <p className="text-sm text-gray-600 mb-3">{activity.description}</p>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <MapPin className="w-3 h-3" strokeWidth={2} />
-                <span>{activity.location}</span>
+          {editMode ? (
+            <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-200 space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-blue-500">{TYPE_LABEL[activity.type]}</span>
+                <button
+                  onClick={onDelete}
+                  className="p-1 text-red-400 hover:text-red-600 active:scale-95 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" strokeWidth={2} />
+                </button>
               </div>
-              {activity.price && (
-                <span className="text-sm font-semibold text-gray-900">
-                  {activity.price.toLocaleString()}원
-                </span>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={activity.time}
+                  onChange={e => onUpdate({ time: e.target.value })}
+                  placeholder="시간"
+                  className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <input
+                  type="number"
+                  value={activity.price ?? ""}
+                  onChange={e => onUpdate({ price: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="가격 (원)"
+                  className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <input
+                type="text"
+                value={activity.title}
+                onChange={e => onUpdate({ title: e.target.value })}
+                placeholder="이름"
+                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <input
+                type="text"
+                value={activity.location}
+                onChange={e => onUpdate({ location: e.target.value })}
+                placeholder="장소"
+                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <textarea
+                value={activity.description}
+                onChange={e => onUpdate({ description: e.target.value })}
+                placeholder="설명"
+                rows={2}
+                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+              />
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between mb-2">
+                <div className="text-sm font-semibold text-blue-600">{activity.time}</div>
+                {activity.congestionLevel && (
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    activity.congestionLevel === "low" ? "bg-green-100 text-green-700" :
+                    activity.congestionLevel === "medium" ? "bg-yellow-100 text-yellow-700" :
+                    "bg-red-100 text-red-700"
+                  }`}>
+                    {activity.congestionLevel === "low" ? "여유" : activity.congestionLevel === "medium" ? "보통" : "혼잡"}
+                  </span>
+                )}
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-1">{activity.title}</h4>
+              <p className="text-sm text-gray-600 mb-3">{activity.description}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <MapPin className="w-3 h-3" strokeWidth={2} />
+                  <span>{activity.location}</span>
+                </div>
+                {activity.price && (
+                  <span className="text-sm font-semibold text-gray-900">{activity.price.toLocaleString()}원</span>
+                )}
+              </div>
+              {canBook && (
+                <button
+                  onClick={() => onBook(activity)}
+                  disabled={activity.bookingStatus === "booked"}
+                  className={`w-full mt-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    activity.bookingStatus === "booked" ? "bg-gray-100 text-gray-500" : "bg-blue-600 text-white active:scale-95"
+                  }`}
+                >
+                  {activity.bookingStatus === "booked" ? "예약완료" : "예약하기"}
+                </button>
               )}
             </div>
-
-            {canBook && (
-              <button
-                onClick={() => onBook(activity)}
-                disabled={activity.bookingStatus === "booked"}
-                className={`w-full mt-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  activity.bookingStatus === "booked"
-                    ? "bg-gray-100 text-gray-500"
-                    : "bg-blue-600 text-white active:scale-95"
-                }`}
-              >
-                {activity.bookingStatus === "booked" ? "예약완료" : "예약하기"}
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -352,9 +583,7 @@ function BudgetItemMobile({ label, amount, isTotal = false }: { label: string; a
   return (
     <div className={`flex justify-between items-center ${isTotal ? "font-bold text-base" : "text-sm"}`}>
       <span className="text-gray-700">{label}</span>
-      <span className={isTotal ? "text-blue-600" : "text-gray-900"}>
-        {amount.toLocaleString()}원
-      </span>
+      <span className={isTotal ? "text-blue-600" : "text-gray-900"}>{amount.toLocaleString()}원</span>
     </div>
   );
 }

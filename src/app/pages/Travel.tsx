@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Calendar, Ship, Sparkles, MapPin, Trash2, ListChecks, Info, ChevronRight } from "lucide-react";
+import { Calendar, Ship, Sparkles, MapPin, Trash2, Pencil, ListChecks, Info, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ListSkeleton } from "../components/SkeletonLoader";
 import { tripService } from "../../lib/tripService";
@@ -128,6 +128,12 @@ export function Travel() {
                         </div>
                       ) : null;
                     })()}
+                    <Link
+                      to={`/itinerary/${currentTripId}?edit=true`}
+                      className="p-1 text-white/60 hover:text-white active:scale-95 transition-all"
+                    >
+                      <Pencil className="w-4 h-4" strokeWidth={2} />
+                    </Link>
                     <button onClick={handleDeleteCurrentTrip} className="p-1 text-white/60 hover:text-white active:scale-95 transition-all">
                       <Trash2 className="w-4 h-4" strokeWidth={2} />
                     </button>
