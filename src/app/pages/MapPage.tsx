@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Ship, ChevronRight } from "lucide-react";
+import { getIslands } from "../../lib/api/islands";
 
-interface Island {
+interface MapIsland {
   id: string;
   name: string;
   lat: number;
@@ -14,20 +15,9 @@ interface Island {
   isPort?: boolean;
 }
 
-const islands: Island[] = [
+const PORTS: MapIsland[] = [
   { id: "incheon", name: "인천항", lat: 37.4744, lng: 126.6169, color: "#ef4444", ferryTime: "-", description: "인천 연안여객터미널", isPort: true },
   { id: "daebu", name: "대부도항", lat: 37.2173, lng: 126.5589, color: "#f97316", ferryTime: "-", description: "방아머리여객터미널", isPort: true },
-  { id: "baengnyeong", name: "백령도", lat: 37.9685, lng: 124.6902, color: "#3b82f6", ferryTime: "4시간", description: "서해 최북단 섬" },
-  { id: "daecheong", name: "대청도", lat: 37.8371, lng: 124.7182, color: "#3b82f6", ferryTime: "4시간", description: "모래사막의 섬" },
-  { id: "socheong", name: "소청도", lat: 37.7625, lng: 124.7431, color: "#3b82f6", ferryTime: "4시간", description: "작은 섬" },
-  { id: "yeonpyeong", name: "연평도", lat: 37.6736, lng: 125.6814, color: "#3b82f6", ferryTime: "3.5시간", description: "조기의 섬" },
-  { id: "deokjeok", name: "덕적도", lat: 37.2269, lng: 126.1432, color: "#3b82f6", ferryTime: "2.5시간", description: "서포리 해변" },
-  { id: "jawol", name: "자월도", lat: 37.2589, lng: 126.3083, color: "#3b82f6", ferryTime: "2.5시간", description: "한적한 어촌" },
-  { id: "seungbong", name: "승봉도", lat: 37.1669, lng: 126.1611, color: "#3b82f6", ferryTime: "2시간", description: "작은 섬" },
-  { id: "daeijak", name: "대이작도", lat: 37.1667, lng: 126.2833, color: "#3b82f6", ferryTime: "2시간", description: "큰 이작도" },
-  { id: "soijak", name: "소이작도", lat: 37.1500, lng: 126.2917, color: "#3b82f6", ferryTime: "2시간", description: "작은 이작도" },
-  { id: "pungdo", name: "풍도", lat: 37.0647, lng: 126.2636, color: "#3b82f6", ferryTime: "2.5시간", description: "동백꽃의 섬" },
-  { id: "yukdo", name: "육도", lat: 37.0036, lng: 126.3547, color: "#3b82f6", ferryTime: "3시간", description: "작은 섬" },
 ];
 
 const ferryRoutes: [string, string][] = [
@@ -48,6 +38,9 @@ const ferryRoutes: [string, string][] = [
   ["daebu", "yukdo"],
   ["deokjeok", "jawol"],
   ["jawol", "daeijak"],
+  ["incheon", "yeonghung"],
+  ["incheon", "guleop"],
+  ["yeonghung", "seonjae"],
 ];
 
 function makeIcon(color: string, isPort: boolean, isSelected: boolean) {
@@ -68,7 +61,7 @@ function makeIcon(color: string, isPort: boolean, isSelected: boolean) {
   });
 }
 
-function FitBounds({ islands }: { islands: Island[] }) {
+function FitBounds({ islands }: { islands: MapIsland[] }) {
   const map = useMap();
   const bounds = L.latLngBounds(islands.map(i => [i.lat, i.lng]));
   map.fitBounds(bounds, { padding: [40, 40] });
@@ -76,8 +69,27 @@ function FitBounds({ islands }: { islands: Island[] }) {
 }
 
 export function MapPage() {
-  const [selectedIsland, setSelectedIsland] = useState<Island | null>(null);
+  const [islands, setIslands] = useState<MapIsland[]>(PORTS);
+  const [selectedIsland, setSelectedIsland] = useState<MapIsland | null>(null);
   const [showRoutes, setShowRoutes] = useState(true);
+
+  useEffect(() => {
+    getIslands().then(data => {
+      const mapIslands: MapIsland[] = data
+        .filter(i => i.lat != null && i.lng != null)
+        .map(i => ({
+          id: i.id,
+          name: i.name,
+          lat: i.lat!,
+          lng: i.lng!,
+          color: "#3b82f6",
+          ferryTime: i.ferry_time ?? '',
+          description: i.description ?? '',
+          isPort: false,
+        }));
+      setIslands([...PORTS, ...mapIslands]);
+    });
+  }, []);
 
   const getIsland = (id: string) => islands.find(i => i.id === id);
 
@@ -118,7 +130,7 @@ export function MapPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <FitBounds islands={islands} />
+          {islands.length > 0 && <FitBounds islands={islands} />}
 
           {showRoutes && ferryRoutes.map(([fromId, toId], i) => {
             const from = getIsland(fromId);

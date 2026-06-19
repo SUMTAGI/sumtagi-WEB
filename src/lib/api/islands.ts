@@ -12,6 +12,8 @@ export interface Island {
   best_season: string
   image: string
   ports: string[]
+  lat?: number
+  lng?: number
 }
 
 export interface Attraction {
