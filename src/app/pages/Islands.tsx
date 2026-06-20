@@ -3,9 +3,11 @@ import { Link } from "react-router";
 import { Ship, Clock, TrendingUp, Search } from "lucide-react";
 import { CardGridSkeleton } from "../components/SkeletonLoader";
 import { getIslands, type Island } from "../../lib/api/islands";
+import { getAllIslandsCongestion, type IslandCongestionData } from "../../lib/api/congestion";
 
 export function Islands() {
   const [islands, setIslands] = useState<Island[]>([]);
+  const [congestionMap, setCongestionMap] = useState<Record<string, IslandCongestionData>>({});
   const [portFilter, setPortFilter] = useState<"all" | "인천항" | "대부도">("all");
   const [congestionFilter, setCongestionFilter] = useState<"all" | "low" | "medium" | "high">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -13,13 +15,19 @@ export function Islands() {
 
   useEffect(() => {
     getIslands()
-      .then(setIslands)
+      .then(data => { setIslands(data); return data; })
       .finally(() => setIsLoading(false));
+    getAllIslandsCongestion()
+      .then(setCongestionMap)
+      .catch(() => {});
   }, []);
+
+  const effectiveCongestion = (island: Island) =>
+    (congestionMap[island.id]?.todayLevel ?? island.congestion);
 
   const filteredIslands = islands.filter(island => {
     const portMatch = portFilter === "all" || island.ports.includes(portFilter);
-    const congestionMatch = congestionFilter === "all" || island.congestion === congestionFilter;
+    const congestionMatch = congestionFilter === "all" || effectiveCongestion(island) === congestionFilter;
     const searchMatch = searchQuery === "" ||
       island.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       island.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -68,9 +76,9 @@ export function Islands() {
           <p className="text-xs font-medium text-gray-500 mb-2">혼잡도</p>
           <div className="grid grid-cols-4 gap-2">
             <FilterButton active={congestionFilter === "all"} onClick={() => setCongestionFilter("all")} label="전체" count={islands.length} />
-            <FilterButton active={congestionFilter === "low"} onClick={() => setCongestionFilter("low")} label="여유" color="green" count={islands.filter(i => i.congestion === "low").length} />
-            <FilterButton active={congestionFilter === "medium"} onClick={() => setCongestionFilter("medium")} label="보통" color="yellow" count={islands.filter(i => i.congestion === "medium").length} />
-            <FilterButton active={congestionFilter === "high"} onClick={() => setCongestionFilter("high")} label="혼잡" color="red" count={islands.filter(i => i.congestion === "high").length} />
+            <FilterButton active={congestionFilter === "low"} onClick={() => setCongestionFilter("low")} label="여유" color="green" count={islands.filter(i => effectiveCongestion(i) === "low").length} />
+            <FilterButton active={congestionFilter === "medium"} onClick={() => setCongestionFilter("medium")} label="보통" color="yellow" count={islands.filter(i => effectiveCongestion(i) === "medium").length} />
+            <FilterButton active={congestionFilter === "high"} onClick={() => setCongestionFilter("high")} label="혼잡" color="red" count={islands.filter(i => effectiveCongestion(i) === "high").length} />
           </div>
         </div>
       </div>
@@ -82,7 +90,7 @@ export function Islands() {
           <div className="space-y-4">
             {filteredIslands.map((island, index) => (
               <div key={island.id} className="animate-stagger-item" style={{ animationDelay: `${index * 0.05}s` }}>
-                <IslandCardMobile island={island} />
+                <IslandCardMobile island={island} congestionLevel={effectiveCongestion(island)} />
               </div>
             ))}
             {filteredIslands.length === 0 && (
@@ -129,14 +137,14 @@ function FilterButton({
   );
 }
 
-function IslandCardMobile({ island }: { island: Island }) {
+function IslandCardMobile({ island, congestionLevel }: { island: Island; congestionLevel: 'low' | 'medium' | 'high' }) {
   const getCongestionBadge = () => {
     const config = {
       low: { label: "여유", color: "bg-green-500 text-white" },
       medium: { label: "보통", color: "bg-yellow-500 text-white" },
       high: { label: "혼잡", color: "bg-red-500 text-white" },
     };
-    const { label, color } = config[island.congestion];
+    const { label, color } = config[congestionLevel];
     return <span className={`text-xs px-2 py-1 rounded font-medium ${color}`}>{label}</span>;
   };
 

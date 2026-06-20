@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router";
-import { ChevronLeft, Ship, Clock, MapPin, Camera, Star, Heart, Share2, Waves, Wind, Sun } from "lucide-react";
+import { ChevronLeft, Ship, Clock, MapPin, Camera, Star, Heart, Share2, Waves, Wind, Sun, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getWeatherForIsland } from "../utils/weatherData";
@@ -7,6 +7,7 @@ import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
 import { getIslandById, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
 import { favoritesService } from "../../lib/favoritesService";
 import { getFerryScheduleForIsland, type FerrySchedule } from "../../lib/api/ferry";
+import { getIslandCongestion, type IslandCongestionData } from "../../lib/api/congestion";
 
 export function IslandDetail() {
   const { id } = useParams();
@@ -17,6 +18,8 @@ export function IslandDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [ferrySchedule, setFerrySchedule] = useState<FerrySchedule[]>([]);
   const [ferryLoading, setFerryLoading] = useState(true);
+  const [congestion, setCongestion] = useState<IslandCongestionData | null>(null);
+  const [congestionLoading, setCongestionLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
@@ -32,8 +35,13 @@ export function IslandDetail() {
           .then(setFerrySchedule)
           .catch(() => {})
           .finally(() => setFerryLoading(false));
+        getIslandCongestion(id!)
+          .then(setCongestion)
+          .catch(() => {})
+          .finally(() => setCongestionLoading(false));
       } else {
         setFerryLoading(false);
+        setCongestionLoading(false);
       }
     }).finally(() => setIsLoading(false));
   }, [id]);
@@ -205,6 +213,54 @@ export function IslandDetail() {
               );
             })}
           </div>
+        )}
+      </div>
+
+      {/* 혼잡도 예측 */}
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+        <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
+          <Users className="w-4 h-4 text-blue-600" strokeWidth={2} />
+          향후 7일 혼잡도 예측
+        </h3>
+        {congestionLoading ? (
+          <div className="h-20 flex items-center justify-center">
+            <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+          </div>
+        ) : !congestion ? (
+          <p className="text-sm text-gray-400 flex items-center gap-1.5">
+            <span className="text-gray-300">ℹ</span>
+            이 섬은 혼잡도 예측 데이터가 없어요
+          </p>
+        ) : (
+          <>
+            <div className="flex gap-1">
+              {congestion.forecast.map((f) => {
+                const bg = f.level === 'high' ? 'bg-red-50' : f.level === 'medium' ? 'bg-yellow-50' : 'bg-green-50'
+                const barColor = f.level === 'high' ? 'bg-red-400' : f.level === 'medium' ? 'bg-yellow-400' : 'bg-green-400'
+                const textColor = f.level === 'high' ? 'text-red-700' : f.level === 'medium' ? 'text-yellow-700' : 'text-green-700'
+                return (
+                  <div key={f.date} className={`flex-1 ${bg} rounded-xl py-2.5 px-1 flex flex-col items-center gap-1.5`}>
+                    <span className={`text-[10px] font-semibold ${textColor}`}>{f.dayLabel}</span>
+                    <div className="w-1.5 h-10 bg-gray-100 rounded-full overflow-hidden flex flex-col justify-end">
+                      <div
+                        className={`w-full rounded-full ${barColor} transition-all`}
+                        style={{ height: `${Math.max(f.rate * 100, 8)}%` }}
+                      />
+                    </div>
+                    <span className={`text-[9px] font-medium ${textColor}`}>{Math.round(f.rate * 100)}%</span>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex gap-3 mt-2">
+              {([['bg-green-400', '여유'], ['bg-yellow-400', '보통'], ['bg-red-400', '혼잡']] as const).map(([color, label]) => (
+                <div key={label} className="flex items-center gap-1">
+                  <div className={`w-2 h-2 rounded-full ${color}`} />
+                  <span className="text-xs text-gray-500">{label}</span>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
