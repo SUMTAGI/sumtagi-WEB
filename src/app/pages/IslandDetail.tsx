@@ -6,6 +6,7 @@ import { getWeatherForIsland } from "../utils/weatherData";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
 import { getIslandById, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
 import { favoritesService } from "../../lib/favoritesService";
+import { getFerryScheduleForIsland, type FerrySchedule } from "../../lib/api/ferry";
 
 export function IslandDetail() {
   const { id } = useParams();
@@ -14,6 +15,8 @@ export function IslandDetail() {
   const [activeTab, setActiveTab] = useState<"info" | "restaurant" | "accommodation">("info");
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [ferrySchedule, setFerrySchedule] = useState<FerrySchedule[]>([]);
+  const [ferryLoading, setFerryLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
@@ -24,6 +27,14 @@ export function IslandDetail() {
     ]).then(([islandData, fav]) => {
       setIsland(islandData);
       setIsFavorite(fav);
+      if (islandData) {
+        getFerryScheduleForIsland(id!)
+          .then(setFerrySchedule)
+          .catch(() => {})
+          .finally(() => setFerryLoading(false));
+      } else {
+        setFerryLoading(false);
+      }
     }).finally(() => setIsLoading(false));
   }, [id]);
 
@@ -155,6 +166,46 @@ export function IslandDetail() {
             <div className="text-lg font-bold text-blue-600">{island.ferry_price.toLocaleString()}원</div>
           </div>
         </div>
+      </div>
+
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2">
+            <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
+            오늘 출발 여객선
+          </h3>
+          <span className="text-xs text-gray-400">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}</span>
+        </div>
+        {ferryLoading ? (
+          <div className="flex gap-2">
+            {[1,2,3].map(i => <div key={i} className="h-16 w-28 bg-gray-100 rounded-xl animate-pulse" />)}
+          </div>
+        ) : ferrySchedule.length === 0 ? (
+          <p className="text-sm text-gray-400">오늘 운항 정보가 없어요</p>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {ferrySchedule.map((f, i) => {
+              const isCancelled = f.status.includes('결항');
+              const isDone = f.status === '완료';
+              const isActive = f.status.includes('출항') || f.status.includes('운항') || f.status.includes('항중') || f.status.includes('도착');
+              return (
+                <div key={i} className={`flex-shrink-0 w-28 rounded-xl p-3 border ${
+                  isCancelled ? 'bg-red-50 border-red-200' : isDone ? 'bg-gray-50 border-gray-200' : isActive ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'
+                }`}>
+                  <div className={`text-xs font-semibold mb-1 ${
+                    isCancelled ? 'text-red-600' : isDone ? 'text-gray-400' : isActive ? 'text-green-600' : 'text-blue-600'
+                  }`}>
+                    {f.status}
+                  </div>
+                  <div className={`text-lg font-bold ${isCancelled ? 'text-red-400 line-through' : isDone ? 'text-gray-400' : 'text-gray-900'}`}>
+                    {f.departureTime}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5 truncate">{f.ferryName}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">

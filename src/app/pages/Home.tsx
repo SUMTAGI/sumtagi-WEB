@@ -6,6 +6,7 @@ import { fetchIncheonWeather, type WeatherResult } from "../../lib/weatherServic
 import { tripService } from "../../lib/tripService";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/useAuth";
+import { getHomeFerryStatus, type FerryRouteStatus } from "../../lib/api/ferry";
 
 interface ReviewData {
   id: string;
@@ -24,6 +25,8 @@ export function Home() {
   const [confirmedTripId, setConfirmedTripId] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [popularReviews, setPopularReviews] = useState<ReviewData[]>([]);
+  const [ferryStatus, setFerryStatus] = useState<FerryRouteStatus[]>([]);
+  const [showFerryModal, setShowFerryModal] = useState(false);
 
   useEffect(() => {
     tripService.getLatestConfirmedTrip().then(trip => {
@@ -33,6 +36,7 @@ export function Home() {
       }
     });
     fetchIncheonWeather().then(setWeather);
+    getHomeFerryStatus().then(setFerryStatus).catch(() => {});
 
     supabase
       .from('reviews')
@@ -204,12 +208,15 @@ export function Home() {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">실시간 운항 현황</h3>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <button onClick={() => setShowFerryModal(true)} className="text-xs text-blue-600 font-medium">전체보기</button>
+            </div>
           </div>
           <div className="space-y-2">
-            <StatusItem island="백령도" status="정상" />
-            <StatusItem island="덕적도" status="정상" />
-            <StatusItem island="영흥도" status="정상" />
+            {(ferryStatus.length > 0 ? ferryStatus.slice(0, 3) : ['백령도', '덕적도', '영흥도'].map(name => ({ islandName: name, status: '확인중' }))).map((s) => (
+              <StatusItem key={s.islandName} island={s.islandName} status={s.status} />
+            ))}
           </div>
         </div>
 
@@ -247,15 +254,42 @@ export function Home() {
         </div>
       </section>
 
+      {showFerryModal && (
+        <div className="fixed inset-0 z-50 flex items-end" onClick={() => setShowFerryModal(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative w-full bg-white rounded-t-2xl p-6 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">전체 운항 현황</h3>
+              <button onClick={() => setShowFerryModal(false)} className="text-gray-400 text-2xl leading-none">&times;</button>
+            </div>
+            <div className="space-y-3">
+              {ferryStatus.map((s) => (
+                <div key={s.islandName} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                  <span className="text-gray-800 font-medium">{s.islandName}</span>
+                  <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
+                    s.status === '결항' ? 'bg-red-100 text-red-700' :
+                    s.status === '운항없음' ? 'bg-gray-100 text-gray-400' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    {s.status === '정상' ? '정상 운항' : s.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function StatusItem({ island, status }: { island: string; status: string }) {
+  const color = status === '결항' ? 'text-red-600' : status === '운항없음' ? 'text-gray-400' : status === '확인중' ? 'text-gray-400' : 'text-green-600';
+  const label = status === '정상' ? '정상 운항' : status === '결항' ? '결항' : status === '운항없음' ? '운항없음' : '확인중...';
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-gray-700">{island}</span>
-      <span className="text-green-600 font-medium">{status} 운항</span>
+      <span className={`font-medium ${color}`}>{label}</span>
     </div>
   );
 }
