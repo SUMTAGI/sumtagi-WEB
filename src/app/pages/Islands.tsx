@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Ship, Clock, TrendingUp, Search } from "lucide-react";
+import { Ship, Clock, Search } from "lucide-react";
 import { CardGridSkeleton } from "../components/SkeletonLoader";
 import { getIslands, type Island } from "../../lib/api/islands";
 import { getAllIslandsCongestion, type IslandCongestionData } from "../../lib/api/congestion";
@@ -120,11 +120,11 @@ function FilterButton({
   active: boolean; onClick: () => void; label: string; color?: "blue" | "green" | "yellow" | "red" | "orange"; count: number;
 }) {
   const colors = {
-    blue: active ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700",
-    green: active ? "bg-green-500 text-white" : "bg-green-100 text-green-700",
-    yellow: active ? "bg-yellow-500 text-white" : "bg-yellow-100 text-yellow-800",
-    red: active ? "bg-red-500 text-white" : "bg-gray-100 text-gray-700",
-    orange: active ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-700",
+    blue:   active ? "bg-blue-500 text-white"   : "bg-gray-100 text-gray-700",
+    green:  active ? "bg-green-500 text-white"  : "bg-gray-100 text-gray-700",
+    yellow: active ? "bg-yellow-500 text-white" : "bg-gray-100 text-gray-700",
+    red:    active ? "bg-blue-600 text-white"  : "bg-gray-100 text-gray-700",
+    orange: active ? "bg-blue-300 text-white"  : "bg-gray-100 text-gray-700",
   };
 
   return (
@@ -153,14 +153,6 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
       <div className="relative h-40">
         <img src={island.image} alt={island.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-        <div className="absolute top-3 right-3">
-          {island.popularity_trend === "up" && (
-            <div className="bg-red-500 text-white px-2 py-1 rounded-full flex items-center gap-1 text-xs">
-              <TrendingUp className="w-3 h-3" strokeWidth={2} />
-              <span>인기상승</span>
-            </div>
-          )}
-        </div>
         <div className="absolute bottom-3 left-3 right-3">
           <h3 className="text-lg font-bold text-white mb-1">{island.name}</h3>
           {getCongestionBadge()}
@@ -194,7 +186,7 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
           </div>
           <div className="flex gap-1">
             {island.ports.map((port) => (
-              <span key={port} className={`text-xs px-2 py-0.5 rounded ${port === "인천항" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+              <span key={port} className={`text-xs px-2 py-0.5 rounded ${port === "인천항" ? "bg-blue-600 text-white" : "bg-blue-300 text-white"}`}>
                 {port}
               </span>
             ))}

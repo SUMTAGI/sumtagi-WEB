@@ -81,7 +81,7 @@ export async function getHomeFerryStatus(): Promise<FerryRouteStatus[]> {
   return ALL_ISLANDS.map(({ id, name }) => {
     const keyword = ROUTE_KEYWORDS[id];
     const filtered = items.filter((item) =>
-      (item.lcns_seawy_nm ?? '').includes(keyword)
+      (item.lcns_seawy_nm ?? item.nvg_seawy_nm ?? '').includes(keyword)
     );
     if (filtered.length === 0) return { islandName: name, status: '운항없음' };
     const hasCancelled = filtered.some((item) => (item.nvg_stts_nm ?? '').includes('결항'));

@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router";
 import { ChevronLeft, Ship, Clock, MapPin, Camera, Star, Heart, Share2, Waves, Wind, Sun, Users } from "lucide-react";
 import { useState, useEffect } from "react";
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 import { getWeatherForIsland } from "../utils/weatherData";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
@@ -217,13 +218,15 @@ export function IslandDetail() {
       </div>
 
       {/* 혼잡도 예측 */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
-        <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-blue-600" strokeWidth={2} />
-          향후 7일 혼잡도 예측
-        </h3>
+      <div className="px-6 py-5 bg-gradient-to-br from-slate-50 to-blue-50/50 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
+            <Users className="w-3.5 h-3.5 text-blue-600" strokeWidth={2.5} />
+          </div>
+          <h3 className="font-bold text-gray-900">향후 7일 혼잡도 예측</h3>
+        </div>
         {congestionLoading ? (
-          <div className="h-20 flex items-center justify-center">
+          <div className="h-24 flex items-center justify-center">
             <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
           </div>
         ) : !congestion ? (
@@ -233,30 +236,73 @@ export function IslandDetail() {
           </p>
         ) : (
           <>
-            <div className="flex gap-1">
-              {congestion.forecast.map((f) => {
-                const bg = f.level === 'high' ? 'bg-red-50' : f.level === 'medium' ? 'bg-yellow-50' : 'bg-green-50'
-                const barColor = f.level === 'high' ? 'bg-red-400' : f.level === 'medium' ? 'bg-yellow-400' : 'bg-green-400'
-                const textColor = f.level === 'high' ? 'text-red-700' : f.level === 'medium' ? 'text-yellow-700' : 'text-green-700'
-                return (
-                  <div key={f.date} className={`flex-1 ${bg} rounded-xl py-2.5 px-1 flex flex-col items-center gap-1.5`}>
-                    <span className={`text-[10px] font-semibold ${textColor}`}>{f.dayLabel}</span>
-                    <div className="w-1.5 h-10 bg-gray-100 rounded-full overflow-hidden flex flex-col justify-end">
-                      <div
-                        className={`w-full rounded-full ${barColor} transition-all`}
-                        style={{ height: `${Math.max(f.rate * 100, 8)}%` }}
-                      />
-                    </div>
-                    <span className={`text-[9px] font-medium ${textColor}`}>{Math.round(f.rate * 100)}%</span>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="flex gap-3 mt-2">
-              {([['bg-green-400', '여유'], ['bg-yellow-400', '보통'], ['bg-red-400', '혼잡']] as const).map(([color, label]) => (
-                <div key={label} className="flex items-center gap-1">
-                  <div className={`w-2 h-2 rounded-full ${color}`} />
-                  <span className="text-xs text-gray-500">{label}</span>
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart
+                data={congestion.forecast.map((f) => ({
+                  day: f.dayLabel,
+                  rate: Math.round(f.rate * 100),
+                  level: f.level,
+                }))}
+                margin={{ top: 10, right: 8, left: 8, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="rateGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  content={({ active, payload }: any) => {
+                    if (!active || !payload?.length) return null;
+                    const { day, rate, level } = payload[0].payload;
+                    const color = level === 'high' ? '#f87171' : level === 'medium' ? '#f59e0b' : '#34d399';
+                    const label = level === 'high' ? '혼잡' : level === 'medium' ? '보통' : '여유';
+                    return (
+                      <div className="bg-white rounded-xl shadow-lg border border-gray-100 px-3 py-2">
+                        <p className="text-xs text-gray-400 mb-0.5">{day}</p>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+                          <span className="text-sm font-bold text-gray-800">{rate}%</span>
+                          <span className="text-xs text-gray-400">{label}</span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="rate"
+                  stroke="#3b82f6"
+                  strokeWidth={2.5}
+                  fill="url(#rateGradient)"
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    const color = payload.level === 'high' ? '#f87171' : payload.level === 'medium' ? '#f59e0b' : '#34d399';
+                    return (
+                      <g key={payload.day}>
+                        <circle cx={cx} cy={cy} r={6} fill={color} stroke="white" strokeWidth={2.5} />
+                      </g>
+                    );
+                  }}
+                  activeDot={{ r: 7, strokeWidth: 2.5, stroke: 'white' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="flex gap-2 mt-3">
+              {([
+                ['#34d399', '여유'],
+                ['#f59e0b', '보통'],
+                ['#f87171', '혼잡'],
+              ] as const).map(([color, label]) => (
+                <div key={label} className="flex items-center gap-1.5 bg-white/80 rounded-full px-2.5 py-1 border border-gray-100">
+                  <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+                  <span className="text-xs text-gray-500 font-medium">{label}</span>
                 </div>
               ))}
             </div>
