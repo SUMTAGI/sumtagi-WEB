@@ -36,8 +36,22 @@ toast.success("로그인 성공!");
 navigate("/");
   };
 
-  const handleSocialLogin = (provider: "kakao" | "naver" | "google") => {
-    // 소셜 로그인 시 회원가입 페이지로 이동
+  const handleSocialLogin = async (provider: "kakao" | "naver" | "google") => {
+    if (provider === "google") {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message);
+      }
+
+      return;
+    }
+
     navigate(`/signup?method=${provider}`);
   };
 
