@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabase";
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router";
 import { Ship, Mail, Lock, User, Eye, EyeOff, ChevronLeft, Heart, Camera, UtensilsCrossed, Trees, Dog } from "lucide-react";
@@ -61,7 +62,7 @@ export function Signup() {
     setStep(2); // Go to travel preferences
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!formData.travelStyle) {
       toast.error("여행 스타일을 선택해주세요");
       return;
@@ -72,18 +73,27 @@ export function Signup() {
       return;
     }
 
-    const user = {
-      id: Date.now().toString(),
+    const { data, error } = await supabase.auth.signUp({
+  email: formData.email,
+  password: formData.password,
+  options: {
+    data: {
       nickname: formData.nickname,
-      email: signupMethod === "email" ? formData.email : `${signupMethod}_${Date.now()}@social.com`,
       travelStyle: formData.travelStyle,
       signupMethod: signupMethod,
-      joinDate: new Date().toISOString(),
-    };
+    },
+  },
+});
 
-    localStorage.setItem("user", JSON.stringify(user));
-    toast.success("회원가입이 완료됐어요! 환영해요");
-    navigate("/");
+if (error) {
+  toast.error(error.message);
+  return;
+}
+
+localStorage.setItem("user", JSON.stringify(data.user));
+localStorage.setItem("isLoggedIn", "true");
+toast.success("회원가입이 완료됐어요! 로그인해주세요.");
+navigate("/login");
   };
 
   const travelStyles = [

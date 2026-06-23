@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabase";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { Ship, Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -11,7 +12,7 @@ export function Login() {
     password: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
@@ -19,18 +20,20 @@ export function Login() {
       return;
     }
 
-    // Mock login
-    const user = {
-      id: "1",
-      name: "홍길동",
-      email: formData.email,
-      phone: "010-1234-5678",
-      joinDate: new Date().toISOString(),
-    };
+   const { data, error } = await supabase.auth.signInWithPassword({
+  email: formData.email,
+  password: formData.password,
+});
 
-    localStorage.setItem("user", JSON.stringify(user));
-    toast.success("로그인됐어요! 반가워요");
-    navigate("/");
+if (error) {
+  toast.error(error.message);
+  return;
+}
+
+localStorage.setItem("user", JSON.stringify(data.user));
+localStorage.setItem("isLoggedIn", "true");
+toast.success("로그인 성공!");
+navigate("/");
   };
 
   const handleSocialLogin = (provider: "kakao" | "naver" | "google") => {
