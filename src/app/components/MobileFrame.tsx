@@ -1,11 +1,34 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Battery, Signal, Wifi } from "lucide-react";
 
 interface MobileFrameProps {
   children: ReactNode;
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  return isMobile;
+}
+
 export function MobileFrame({ children }: MobileFrameProps) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="h-[100dvh] flex flex-col bg-white overflow-hidden">
+        {children}
+      </div>
+    );
+  }
+
   const currentTime = new Date().toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
