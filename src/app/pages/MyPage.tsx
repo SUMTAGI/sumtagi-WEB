@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { User, Mail, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, Shield, CreditCard, MapPin, Heart, Gift, Users, Book, Ticket, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
-import { auth } from "../../lib/auth";
+import { supabase } from "../lib/supabase";
 import { tripService } from "../../lib/tripService";
 
 export function MyPage() {
@@ -19,7 +19,7 @@ export function MyPage() {
   }, [user]);
 
   const handleLogout = async () => {
-    await auth.signOut();
+    await supabase.auth.signOut();
     toast.success("로그아웃됐어요. 다음에 또 만나요!");
     navigate("/login");
   };
@@ -48,9 +48,9 @@ export function MyPage() {
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {user.profileImage ? (
+              {user.user_metadata?.avatar_url ? (
                 <img
-                  src={user.profileImage}
+                  src={user.user_metadata.avatar_url}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
