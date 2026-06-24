@@ -1,97 +1,110 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/Layout";
 import { AuthLayout } from "./components/AuthLayout";
-import { Home } from "./pages/Home";
-import { Travel } from "./pages/Travel";
-import { Itinerary } from "./pages/Itinerary";
-import { Islands } from "./pages/Islands";
-import { MapPage } from "./pages/MapPage";
-import { MyPage } from "./pages/MyPage";
-import { Onboarding } from "./pages/Onboarding";
-import { Login } from "./pages/Login";
-import { Signup } from "./pages/Signup";
-import { ProfileEdit } from "./pages/ProfileEdit";
-import { NotificationSettings } from "./pages/NotificationSettings";
-import { PaymentMethods } from "./pages/PaymentMethods";
-import { VisitedIslands } from "./pages/VisitedIslands";
-import { Favorites } from "./pages/Favorites";
-import { Notifications } from "./pages/Notifications";
-import { CreateTrip } from "./pages/CreateTrip";
-import { NotFound } from "./pages/NotFound";
-import { IslandDetail } from "./pages/IslandDetail";
-import { Experiences, ExperienceDetail } from "./pages/Experiences";
-import { Checklist } from "./pages/Checklist";
-import { Budget } from "./pages/Budget";
-import { Community } from "./pages/Community";
-import { CommunityWrite } from "./pages/CommunityWrite";
-import { Packages } from "./pages/Packages";
-import { Events } from "./pages/Events";
-import { Emergency } from "./pages/Emergency";
-import { Schedule } from "./pages/Schedule";
-import { Coupons } from "./pages/Coupons";
-import { Diary } from "./pages/Diary";
-import { GroupTrip } from "./pages/GroupTrip";
-import { GroupJoin } from "./pages/GroupJoin";
-import { AppSettings } from "./pages/AppSettings";
-import { Support } from "./pages/Support";
+
+const Home = lazy(() => import("./pages/Home").then(m => ({ default: m.Home })));
+const Travel = lazy(() => import("./pages/Travel").then(m => ({ default: m.Travel })));
+const Itinerary = lazy(() => import("./pages/Itinerary").then(m => ({ default: m.Itinerary })));
+const Islands = lazy(() => import("./pages/Islands").then(m => ({ default: m.Islands })));
+const MapPage = lazy(() => import("./pages/MapPage").then(m => ({ default: m.MapPage })));
+const MyPage = lazy(() => import("./pages/MyPage").then(m => ({ default: m.MyPage })));
+const Onboarding = lazy(() => import("./pages/Onboarding").then(m => ({ default: m.Onboarding })));
+const Login = lazy(() => import("./pages/Login").then(m => ({ default: m.Login })));
+const Signup = lazy(() => import("./pages/Signup").then(m => ({ default: m.Signup })));
+const ProfileEdit = lazy(() => import("./pages/ProfileEdit").then(m => ({ default: m.ProfileEdit })));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings").then(m => ({ default: m.NotificationSettings })));
+const PaymentMethods = lazy(() => import("./pages/PaymentMethods").then(m => ({ default: m.PaymentMethods })));
+const VisitedIslands = lazy(() => import("./pages/VisitedIslands").then(m => ({ default: m.VisitedIslands })));
+const Favorites = lazy(() => import("./pages/Favorites").then(m => ({ default: m.Favorites })));
+const Notifications = lazy(() => import("./pages/Notifications").then(m => ({ default: m.Notifications })));
+const CreateTrip = lazy(() => import("./pages/CreateTrip").then(m => ({ default: m.CreateTrip })));
+const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.NotFound })));
+const IslandDetail = lazy(() => import("./pages/IslandDetail").then(m => ({ default: m.IslandDetail })));
+const Experiences = lazy(() => import("./pages/Experiences").then(m => ({ default: m.Experiences })));
+const ExperienceDetail = lazy(() => import("./pages/Experiences").then(m => ({ default: m.ExperienceDetail })));
+const Checklist = lazy(() => import("./pages/Checklist").then(m => ({ default: m.Checklist })));
+const Budget = lazy(() => import("./pages/Budget").then(m => ({ default: m.Budget })));
+const Community = lazy(() => import("./pages/Community").then(m => ({ default: m.Community })));
+const CommunityWrite = lazy(() => import("./pages/CommunityWrite").then(m => ({ default: m.CommunityWrite })));
+const Packages = lazy(() => import("./pages/Packages").then(m => ({ default: m.Packages })));
+const Events = lazy(() => import("./pages/Events").then(m => ({ default: m.Events })));
+const Emergency = lazy(() => import("./pages/Emergency").then(m => ({ default: m.Emergency })));
+const Schedule = lazy(() => import("./pages/Schedule").then(m => ({ default: m.Schedule })));
+const Coupons = lazy(() => import("./pages/Coupons").then(m => ({ default: m.Coupons })));
+const Diary = lazy(() => import("./pages/Diary").then(m => ({ default: m.Diary })));
+const GroupTrip = lazy(() => import("./pages/GroupTrip").then(m => ({ default: m.GroupTrip })));
+const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m.GroupJoin })));
+const AppSettings = lazy(() => import("./pages/AppSettings").then(m => ({ default: m.AppSettings })));
+const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
+const Bookings = lazy(() => import("./pages/Bookings").then(m => ({ default: m.Bookings })));
+const ReviewDetail = lazy(() => import("./pages/ReviewDetail").then(m => ({ default: m.ReviewDetail })));
+const Reviews = lazy(() => import("./pages/Reviews").then(m => ({ default: m.Reviews })));
+const PlanTrip = lazy(() => import("./pages/PlanTrip").then(m => ({ default: m.PlanTrip })));
+
+const Fallback = () => null;
 
 export const router = createBrowserRouter([
   {
     path: "/onboarding",
     Component: AuthLayout,
     children: [
-      { index: true, Component: Onboarding },
+      { index: true, element: <Suspense fallback={<Fallback />}><Onboarding /></Suspense> },
     ],
   },
   {
     path: "/login",
     Component: AuthLayout,
     children: [
-      { index: true, Component: Login },
+      { index: true, element: <Suspense fallback={<Fallback />}><Login /></Suspense> },
     ],
   },
   {
     path: "/signup",
     Component: AuthLayout,
     children: [
-      { index: true, Component: Signup },
+      { index: true, element: <Suspense fallback={<Fallback />}><Signup /></Suspense> },
     ],
   },
   {
     path: "/",
     Component: Layout,
     children: [
-      { index: true, Component: Home },
-      { path: "travel", Component: Travel },
-      { path: "itinerary/:id", Component: Itinerary },
-      { path: "islands", Component: Islands },
-      { path: "island/:id", Component: IslandDetail },
-      { path: "map", Component: MapPage },
-      { path: "my", Component: MyPage },
-      { path: "profile-edit", Component: ProfileEdit },
-      { path: "notification-settings", Component: NotificationSettings },
-      { path: "payment-methods", Component: PaymentMethods },
-      { path: "visited-islands", Component: VisitedIslands },
-      { path: "favorites", Component: Favorites },
-      { path: "notifications", Component: Notifications },
-      { path: "create-trip", Component: CreateTrip },
-      { path: "experiences", Component: Experiences },
-      { path: "experience/:id", Component: ExperienceDetail },
-      { path: "checklist", Component: Checklist },
-      { path: "budget", Component: Budget },
-      { path: "community", Component: Community },
-      { path: "community/write", Component: CommunityWrite },
-      { path: "packages", Component: Packages },
-      { path: "events", Component: Events },
-      { path: "emergency", Component: Emergency },
-      { path: "schedule", Component: Schedule },
-      { path: "coupons", Component: Coupons },
-      { path: "diary", Component: Diary },
-      { path: "group-trip", Component: GroupTrip },
-      { path: "group-join/:code", Component: GroupJoin },
-      { path: "app-settings", Component: AppSettings },
-      { path: "support", Component: Support },
-      { path: "*", Component: NotFound },
+      { index: true, element: <Suspense fallback={<Fallback />}><Home /></Suspense> },
+      { path: "travel", element: <Suspense fallback={<Fallback />}><Travel /></Suspense> },
+      { path: "itinerary/:id", element: <Suspense fallback={<Fallback />}><Itinerary /></Suspense> },
+      { path: "islands", element: <Suspense fallback={<Fallback />}><Islands /></Suspense> },
+      { path: "island/:id", element: <Suspense fallback={<Fallback />}><IslandDetail /></Suspense> },
+      { path: "map", element: <Suspense fallback={<Fallback />}><MapPage /></Suspense> },
+      { path: "my", element: <Suspense fallback={<Fallback />}><MyPage /></Suspense> },
+      { path: "profile-edit", element: <Suspense fallback={<Fallback />}><ProfileEdit /></Suspense> },
+      { path: "notification-settings", element: <Suspense fallback={<Fallback />}><NotificationSettings /></Suspense> },
+      { path: "payment-methods", element: <Suspense fallback={<Fallback />}><PaymentMethods /></Suspense> },
+      { path: "visited-islands", element: <Suspense fallback={<Fallback />}><VisitedIslands /></Suspense> },
+      { path: "favorites", element: <Suspense fallback={<Fallback />}><Favorites /></Suspense> },
+      { path: "notifications", element: <Suspense fallback={<Fallback />}><Notifications /></Suspense> },
+      { path: "create-trip", element: <Suspense fallback={<Fallback />}><CreateTrip /></Suspense> },
+      { path: "experiences", element: <Suspense fallback={<Fallback />}><Experiences /></Suspense> },
+      { path: "experience/:id", element: <Suspense fallback={<Fallback />}><ExperienceDetail /></Suspense> },
+      { path: "checklist", element: <Suspense fallback={<Fallback />}><Checklist /></Suspense> },
+      { path: "budget", element: <Suspense fallback={<Fallback />}><Budget /></Suspense> },
+      { path: "community", element: <Suspense fallback={<Fallback />}><Community /></Suspense> },
+      { path: "community/write", element: <Suspense fallback={<Fallback />}><CommunityWrite /></Suspense> },
+      { path: "packages", element: <Suspense fallback={<Fallback />}><Packages /></Suspense> },
+      { path: "events", element: <Suspense fallback={<Fallback />}><Events /></Suspense> },
+      { path: "emergency", element: <Suspense fallback={<Fallback />}><Emergency /></Suspense> },
+      { path: "schedule", element: <Suspense fallback={<Fallback />}><Schedule /></Suspense> },
+      { path: "coupons", element: <Suspense fallback={<Fallback />}><Coupons /></Suspense> },
+      { path: "diary", element: <Suspense fallback={<Fallback />}><Diary /></Suspense> },
+      { path: "group-trip", element: <Suspense fallback={<Fallback />}><GroupTrip /></Suspense> },
+      { path: "group-join/:code", element: <Suspense fallback={<Fallback />}><GroupJoin /></Suspense> },
+      { path: "app-settings", element: <Suspense fallback={<Fallback />}><AppSettings /></Suspense> },
+      { path: "support", element: <Suspense fallback={<Fallback />}><Support /></Suspense> },
+      { path: "bookings", element: <Suspense fallback={<Fallback />}><Bookings /></Suspense> },
+      { path: "reviews", element: <Suspense fallback={<Fallback />}><Reviews /></Suspense> },
+      { path: "review/:id", element: <Suspense fallback={<Fallback />}><ReviewDetail /></Suspense> },
+      { path: "plan-trip", element: <Suspense fallback={<Fallback />}><PlanTrip /></Suspense> },
+      { path: "*", element: <Suspense fallback={<Fallback />}><NotFound /></Suspense> },
     ],
   },
 ]);
