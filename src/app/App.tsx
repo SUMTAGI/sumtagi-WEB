@@ -6,7 +6,35 @@ import { Splash } from "./components/Splash";
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
-  const [authInitializing, setAuthInitializing] = useState(true);
+
+  const upsertProfile = async (user: any) => {
+    const metadata = user.user_metadata || {};
+
+    const nickname =
+      metadata.name ||
+      metadata.full_name ||
+      metadata.nickname ||
+      metadata.preferred_username ||
+      user.email?.split("@")[0] ||
+      "사용자";
+
+    const avatarUrl =
+      metadata.avatar_url ||
+      metadata.picture ||
+      metadata.profile_image_url ||
+      null;
+
+    const { error } = await supabase.from("profiles").upsert({
+      id: user.id,
+      nickname,
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("profiles 저장 실패:", error.message);
+    }
+  };
 
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem("hasSeenOnboarding");
@@ -17,37 +45,51 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      console.log("OAuth callback URL 확인", window.location.href);
-      console.log("search", window.location.search);
-      console.log("hash", window.location.hash);
+    const saveSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
 
-      try {
-        const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("세션 확인 실패:", error.message);
+        return;
+      }
 
-        console.log("현재세션", data.session);
-        console.log("세션에러", error);
+      if (data.session?.user) {
+        await upsertProfile(data.session.user);
 
-        if (data.session?.user) {
-          localStorage.setItem("user", JSON.stringify(data.session.user));
-          localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("user", JSON.stringify(data.session.user));
+        localStorage.setItem("isLoggedIn", "true");
+
+        if (
+          window.location.pathname === "/login" ||
+          window.location.pathname === "/auth/callback"
+        ) {
+          window.location.href = "/";
         }
-      } catch (error) {
-        console.error("initializeAuth 오류", error);
-      } finally {
-        setAuthInitializing(false);
+      } else {
+        localStorage.removeItem("user");
+        localStorage.setItem("isLoggedIn", "false");
       }
     };
 
-    initializeAuth();
+    saveSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        console.log("AUTH변경", _event, session);
-
+      async (_event, session) => {
         if (session?.user) {
+          await upsertProfile(session.user);
+
           localStorage.setItem("user", JSON.stringify(session.user));
           localStorage.setItem("isLoggedIn", "true");
+
+          if (
+            window.location.pathname === "/login" ||
+            window.location.pathname === "/auth/callback"
+          ) {
+            window.location.href = "/";
+          }
+        } else {
+          localStorage.removeItem("user");
+          localStorage.setItem("isLoggedIn", "false");
         }
       }
     );
@@ -59,14 +101,6 @@ export default function App() {
 
   if (showSplash) {
     return <Splash onComplete={() => setShowSplash(false)} />;
-  }
-
-  if (authInitializing) {
-    return (
-      <div className="h-full flex items-center justify-center bg-white text-gray-700">
-        인증 정보를 불러오는 중입니다...
-      </div>
-    );
   }
 
   return <RouterProvider router={router} />;

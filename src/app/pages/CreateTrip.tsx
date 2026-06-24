@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabase";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ChevronLeft, Calendar, CheckCircle } from "lucide-react";
@@ -79,19 +80,59 @@ export function CreateTrip() {
     setFormData({ ...formData, endDate: selectedDate });
   };
 
-  const handleSubmit = () => {
-    // 일정 생성
-    const itinerary = generateItinerary(formData);
-    const itineraryId = Date.now().toString();
-    localStorage.setItem(`itinerary_${itineraryId}`, JSON.stringify(itinerary));
-    localStorage.setItem('currentItineraryId', itineraryId);
+const handleSubmit = async () => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    toast.success("일정이 생성됐어요!");
-    setShowConfetti(true);
-    setTimeout(() => {
-      navigate(`/itinerary/${itineraryId}`);
-    }, 2000);
-  };
+  if (!user) {
+    toast.error("로그인 후 이용해주세요");
+    navigate("/login");
+    return;
+  }
+
+  const itinerary = generateItinerary(formData);
+
+  const { data, error } = await supabase
+    .from("trips")
+    .insert({
+      user_id: user.id,
+      title:
+        formData.islands.length > 0
+          ? `${formData.islands.join(", ")} 여행`
+          : "여행 일정",
+      islands: formData.islands,
+      start_date: formData.startDate,
+      end_date: formData.endDate,
+      departure_port: formData.departurePort,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    toast.error("일정 저장 실패");
+    return;
+  }
+
+  localStorage.setItem(
+    `itinerary_${data.id}`,
+    JSON.stringify(itinerary)
+  );
+
+  localStorage.setItem(
+    "currentItineraryId",
+    data.id
+  );
+
+  toast.success("일정이 생성됐어요!");
+
+  setShowConfetti(true);
+
+  setTimeout(() => {
+    navigate(`/itinerary/${data.id}`);
+  }, 2000);
+};
 
   const canProceed = () => {
     if (step === 2) return formData.startDate && formData.endDate;

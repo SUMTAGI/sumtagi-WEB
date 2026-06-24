@@ -12,7 +12,7 @@ export function Login() {
     password: "",
   });
 
- const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
@@ -20,53 +20,65 @@ export function Login() {
       return;
     }
 
-   const { data, error } = await supabase.auth.signInWithPassword({
-  email: formData.email,
-  password: formData.password,
-});
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    });
 
-if (error) {
-  toast.error(error.message);
-  return;
-}
-
-localStorage.setItem("user", JSON.stringify(data.user));
-localStorage.setItem("isLoggedIn", "true");
-toast.success("로그인 성공!");
-navigate("/");
-  };
-
-  const handleSocialLogin = async (provider: "kakao" | "naver" | "google") => {
-    if (provider === "google") {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-
-      if (error) {
-        toast.error(error.message);
-      }
-
+    if (error) {
+      toast.error(error.message);
       return;
     }
 
-    navigate(`/signup?method=${provider}`);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    localStorage.setItem("isLoggedIn", "true");
+
+    toast.success("로그인 성공!");
+    navigate("/");
+  };
+
+  const handleKakaoLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "kakao",
+      options: {
+        redirectTo: `${window.location.origin}/my`,
+        scopes: "profile_nickname profile_image",
+      },
+    });
+
+    if (error) {
+      toast.error(error.message);
+      console.error("카카오 로그인 실패:", error.message);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/my`,
+      },
+    });
+
+    if (error) {
+      toast.error(error.message);
+      console.error("구글 로그인 실패:", error.message);
+    }
   };
 
   return (
     <div className="h-full flex flex-col bg-white">
-      {/* Header */}
       <div className="px-6 py-8 text-center flex-shrink-0">
         <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <Ship className="w-10 h-10 text-white" strokeWidth={2} />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">인천 도서 여행</h1>
+
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          인천 도서 여행
+        </h1>
         <p className="text-sm text-gray-600">계정에 로그인하세요</p>
       </div>
 
-      {/* Form */}
       <div className="flex-1 px-6 overflow-y-auto">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -77,11 +89,11 @@ navigate("/");
             <input
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
               placeholder="your@email.com"
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              onFocus={(e) => e.target.classList.add("animate-input-focus")}
-              onBlur={(e) => e.target.classList.remove("animate-input-focus")}
             />
           </div>
 
@@ -90,22 +102,28 @@ navigate("/");
               <Lock className="w-4 h-4" strokeWidth={2} />
               비밀번호
             </label>
+
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 placeholder="••••••••"
                 className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                onFocus={(e) => e.target.classList.add("animate-input-focus")}
-                onBlur={(e) => e.target.classList.remove("animate-input-focus")}
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
               >
-                {showPassword ? <EyeOff className="w-5 h-5" strokeWidth={2} /> : <Eye className="w-5 h-5" strokeWidth={2} />}
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" strokeWidth={2} />
+                ) : (
+                  <Eye className="w-5 h-5" strokeWidth={2} />
+                )}
               </button>
             </div>
           </div>
@@ -128,40 +146,54 @@ navigate("/");
           </button>
         </form>
 
-        {/* Divider */}
         <div className="flex items-center gap-3 my-6">
           <div className="flex-1 h-px bg-gray-200" />
           <span className="text-sm text-gray-500">또는</span>
           <div className="flex-1 h-px bg-gray-200" />
         </div>
 
-        {/* Social Login */}
         <div className="space-y-3">
           <button
-            onClick={() => handleSocialLogin("kakao")}
+            type="button"
+            onClick={handleKakaoLogin}
             className="w-full bg-[#FEE500] text-gray-900 py-3 rounded-xl font-semibold active:scale-95 transition-transform flex items-center justify-center gap-2"
           >
-            <div className="w-5 h-5 bg-gray-900 rounded-full" />
+            <img
+            src="/icons/kakao.svg"
+            alt="Kakao"
+            className="w-5 h-5"
+            />
             카카오로 시작하기
           </button>
+
           <button
-            onClick={() => handleSocialLogin("naver")}
-            className="w-full bg-[#03C75A] text-white py-3 rounded-xl font-semibold active:scale-95 transition-transform flex items-center justify-center gap-2"
+          type="button"
+          onClick={() => toast.info("Apple 로그인은 추후 지원 예정입니다.")}
+          className="w-full bg-black text-white py-3 rounded-xl font-semibold active:scale-95 transition-transform flex items-center justify-center gap-2"
           >
-            <div className="w-5 h-5 bg-white rounded-sm" />
-            네이버로 시작하기
+            <img
+            src="/icons/apple.svg"
+            alt="Apple"
+            className="w-5 h-5"
+            />
+            Apple로 로그인
           </button>
+
           <button
-            onClick={() => handleSocialLogin("google")}
+            type="button"
+            onClick={handleGoogleLogin}
             className="w-full bg-white border-2 border-gray-300 text-gray-900 py-3 rounded-xl font-semibold active:scale-95 transition-transform flex items-center justify-center gap-2"
           >
-            <div className="w-5 h-5 bg-gradient-to-br from-red-500 via-yellow-500 to-blue-500 rounded-full" />
+            <img
+            src="/icons/google.svg"
+            alt="Google"
+            className="w-5 h-5"
+            />
             구글로 시작하기
           </button>
         </div>
       </div>
 
-      {/* Footer */}
       <div className="px-6 py-6 border-t border-gray-200 flex-shrink-0 text-center">
         <p className="text-sm text-gray-600">
           아직 계정이 없으신가요?{" "}

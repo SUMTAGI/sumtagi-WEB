@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabase";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { User, Mail, Phone, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, Shield, CreditCard, MapPin, Heart, Gift, Users, Book, Ticket, AlertCircle, Clock } from "lucide-react";
@@ -17,17 +18,41 @@ export function MyPage() {
   const [user, setUser] = useState<UserData | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) {
-      setUser(JSON.parse(stored));
-    }
-  }, []);
+  const loadUser = async () => {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    toast.success("로그아웃됐어요. 다음에 또 만나요!");
-    navigate("/login");
+    if (!authUser) return;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .single();
+
+    setUser({
+      id: authUser.id,
+      name: profile?.nickname || authUser.user_metadata?.name || "사용자",
+      email: authUser.email || "",
+      phone: "",
+      joinDate: profile?.created_at || new Date().toISOString(),
+      profileImage: profile?.avatar_url
+        ? profile.avatar_url.replace("http://", "https://")
+        : "",
+    });
   };
+
+  loadUser();
+}, []);
+
+  const handleLogout = async () => {
+  await supabase.auth.signOut();
+  localStorage.removeItem("user");
+  localStorage.setItem("isLoggedIn", "false");
+  toast.success("로그아웃됐어요. 다음에 또 만나요!");
+  navigate("/login");
+};
 
   const handleMenuClick = (path: string) => {
     navigate(path);
@@ -164,7 +189,7 @@ export function MyPage() {
             />
             <MenuItem
               icon={<MapPin className="w-5 h-5" strokeWidth={2} />}
-              label="방문한 섬"
+              label="여행 예정 섬"
               onClick={() => handleMenuClick("/visited-islands")}
             />
             <MenuItem

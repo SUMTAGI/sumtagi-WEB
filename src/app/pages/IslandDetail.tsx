@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabase";
 import { useParams, useNavigate, Link } from "react-router";
 import { ChevronLeft, Ship, Clock, MapPin, Camera, UtensilsCrossed, Hotel, Waves, Wind, Sun, Star, Heart, Share2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
@@ -253,6 +254,27 @@ export function IslandDetail() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+  const checkFavorite = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || !id) return;
+
+    const { data } = await supabase
+      .from("favorites")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("island_id", id)
+      .maybeSingle();
+
+    setIsFavorite(!!data);
+  };
+
+  checkFavorite();
+}, [id]);
+
+  useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
   }, [id]);
@@ -296,10 +318,36 @@ export function IslandDetail() {
     );
   }
 
-  const handleFavorite = () => {
-    setIsFavorite(!isFavorite);
-    toast.success(isFavorite ? "즐겨찾기에서 제거됐어요" : "즐겨찾기에 추가됐어요");
-  };
+  const handleFavorite = async () => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    toast.error("로그인 후 이용해주세요");
+    navigate("/login");
+    return;
+  }
+
+  if (isFavorite) {
+    await supabase
+      .from("favorites")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("island_id", id);
+
+    setIsFavorite(false);
+    toast.success("즐겨찾기에서 제거됐어요");
+  } else {
+    await supabase.from("favorites").insert({
+      user_id: user.id,
+      island_id: id,
+    });
+
+    setIsFavorite(true);
+    toast.success("즐겨찾기에 추가됐어요");
+  }
+};
 
   const handleShare = () => {
     toast.success("링크가 복사됐어요");
