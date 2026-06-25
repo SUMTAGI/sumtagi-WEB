@@ -114,7 +114,7 @@ export function Onboarding() {
 
   return (
     <div
-      className="bg-white relative overflow-hidden"
+      className="bg-white relative overflow-hidden h-full flex flex-col"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}

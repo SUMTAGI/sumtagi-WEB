@@ -6,10 +6,17 @@ export const tripService = {
   createTrip: async (title: string, startDate: string, endDate: string, islands: string[], plan?: object) => {
     const id = await uid()
     if (!id) return null
-    const { data } = await supabase.from('trips').insert({
+    const { data, error } = await supabase.from('trips').insert({
       user_id: id, title, start_date: startDate, end_date: endDate,
-      islands, confirmed: false, plan: plan ?? null,
+      islands, confirmed: false,
     }).select().single()
+    if (error) {
+      console.error('createTrip error:', error)
+      return null
+    }
+    if (plan && data) {
+      await supabase.from('trips').update({ plan }).eq('id', data.id)
+    }
     return data
   },
 
@@ -34,7 +41,8 @@ export const tripService = {
   getUpcomingTrip: async () => {
     const id = await uid()
     if (!id) return null
-    const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const { data } = await supabase
       .from('trips').select()
       .eq('user_id', id)
@@ -51,7 +59,8 @@ export const tripService = {
   getVisitedTrips: async () => {
     const id = await uid()
     if (!id) return []
-    const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const { data } = await supabase
       .from('trips').select()
       .eq('user_id', id).eq('confirmed', true)

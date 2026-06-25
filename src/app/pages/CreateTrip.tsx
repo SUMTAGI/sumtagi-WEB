@@ -18,6 +18,11 @@ const ISLAND_PORT_MAP: Record<string, string> = {
   "소이작도": "대부도", "풍도": "대부도", "육도": "대부도",
 };
 
+function localDateStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 export function CreateTrip() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -59,7 +64,7 @@ export function CreateTrip() {
 
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedDate = e.target.value;
-    const today = new Date().toISOString().split("T")[0];
+    const today = localDateStr();
     if (selectedDate && selectedDate < today) {
       toast.error("지나간 날짜는 선택할 수 없어요");
       setShakeStart(true);
@@ -71,7 +76,7 @@ export function CreateTrip() {
 
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedDate = e.target.value;
-    const today = new Date().toISOString().split("T")[0];
+    const today = localDateStr();
     if (selectedDate && selectedDate < today) {
       toast.error("지나간 날짜는 선택할 수 없어요");
       setShakeEnd(true);
@@ -91,12 +96,20 @@ export function CreateTrip() {
     const dataWithPort = { ...formData, departurePort: computedPort };
     const itinerary = generateItinerary(dataWithPort);
     const title = `${formData.islands.join(", ")} 여행`;
-    const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands, itinerary);
-    const tripId = trip?.id ?? Date.now().toString();
-    localStorage.setItem(`plan_${tripId}`, JSON.stringify(itinerary));
-    toast.success("일정이 생성됐어요!");
-    setShowConfetti(true);
-    setTimeout(() => { navigate(`/itinerary/${tripId}`); }, 2000);
+    try {
+      const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands, itinerary);
+      if (!trip) {
+        toast.error("일정 저장에 실패했어요. 로그인 상태를 확인해주세요.");
+        return;
+      }
+      localStorage.setItem(`plan_${trip.id}`, JSON.stringify(itinerary));
+      toast.success("일정이 생성됐어요!");
+      setShowConfetti(true);
+      setTimeout(() => { navigate(`/itinerary/${trip.id}`); }, 2000);
+    } catch (e) {
+      toast.error("일정 저장 중 오류가 발생했어요. 다시 시도해주세요.");
+      console.error("createTrip error:", e);
+    }
   };
 
   // 현재 단계 렌더: preSelected → [date(0), style(1)], 없음 → [islands(0), date(1), style(2)]
@@ -174,7 +187,7 @@ export function CreateTrip() {
             shakeStart ? "animate-shake border-red-500" : ""
           }`}
           style={{ WebkitAppearance: "none", colorScheme: "light" }}
-          min={new Date().toISOString().split("T")[0]}
+          min={localDateStr()}
         />
         {formData.startDate && (
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
@@ -198,7 +211,7 @@ export function CreateTrip() {
             shakeEnd ? "animate-shake border-red-500" : ""
           }`}
           style={{ WebkitAppearance: "none", colorScheme: "light" }}
-          min={formData.startDate || new Date().toISOString().split("T")[0]}
+          min={formData.startDate || localDateStr()}
         />
         {formData.endDate && (
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">

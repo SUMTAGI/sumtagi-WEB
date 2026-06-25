@@ -31,7 +31,12 @@ export function Home() {
   useEffect(() => {
     tripService.getLatestConfirmedTrip().then(trip => {
       if (trip) {
-        setConfirmedItinerary({ ...trip, startDate: trip.start_date, islands: trip.islands ?? [] });
+        setConfirmedItinerary({
+          ...trip,
+          startDate: trip.start_date,
+          islands: trip.islands ?? [],
+          days: trip.plan?.days ?? trip.days ?? [],
+        });
         setConfirmedTripId(trip.id);
       }
     });
@@ -133,7 +138,7 @@ export function Home() {
                 {getDDayMessage(getDDay(confirmedItinerary.startDate))}
               </p>
               <div className="space-y-1.5">
-                {confirmedItinerary.days[0]?.activities.slice(0, 3).map((activity: any, idx: number) => (
+                {confirmedItinerary.days[0]?.activities?.slice(0, 3).map((activity: any, idx: number) => (
                   <div key={idx} className="flex items-start gap-2 text-sm text-blue-50">
                     <span className="text-blue-200">{activity.time}</span>
                     <span className="flex-1">{activity.title}</span>
