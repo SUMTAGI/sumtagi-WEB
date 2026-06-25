@@ -42,8 +42,8 @@ export function GroupJoin() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+    <div className="bg-white">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="active:scale-95 transition-transform">
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
@@ -75,18 +75,18 @@ export function GroupJoin() {
 
             <div className="bg-gray-50 rounded-2xl p-4 mb-6 space-y-3">
               <div className="flex items-center gap-3 text-sm text-gray-700">
-                <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" strokeWidth={2} />
+                <MapPin className="w-4 h-4 text-blue-500" strokeWidth={2} />
                 <span>{group.destination.join(", ")}</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-700">
-                <Calendar className="w-4 h-4 text-blue-500 flex-shrink-0" strokeWidth={2} />
+                <Calendar className="w-4 h-4 text-blue-500" strokeWidth={2} />
                 <span>
                   {new Date(group.startDate).toLocaleDateString("ko-KR")} -{" "}
                   {new Date(group.endDate).toLocaleDateString("ko-KR")}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-700">
-                <Users className="w-4 h-4 text-blue-500 flex-shrink-0" strokeWidth={2} />
+                <Users className="w-4 h-4 text-blue-500" strokeWidth={2} />
                 <span>현재 참여자 {group.members.length}명</span>
               </div>
             </div>

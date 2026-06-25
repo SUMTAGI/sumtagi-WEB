@@ -55,9 +55,9 @@ export function AppSettings() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
@@ -70,7 +70,7 @@ export function AppSettings() {
       </div>
 
       {/* Settings List */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="px-6 py-6">
         {/* Display Settings */}
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">화면 설정</h3>

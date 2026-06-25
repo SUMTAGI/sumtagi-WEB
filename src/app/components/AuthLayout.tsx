@@ -5,7 +5,7 @@ import { MobileFrame } from "./MobileFrame";
 export function AuthLayout() {
   return (
     <MobileFrame>
-      <div className="h-full bg-white">
+      <div className="h-full bg-white overflow-y-auto">
         <Toaster
           position="top-center"
           toastOptions={{

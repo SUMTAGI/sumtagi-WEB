@@ -35,9 +35,9 @@ export function MyPage() {
   );
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header with Background */}
-      <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 px-6 py-8 flex-shrink-0 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 px-6 py-8 overflow-hidden">
         <div
           className="absolute inset-0 opacity-20 bg-cover bg-center"
           style={{
@@ -47,7 +47,7 @@ export function MyPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-blue-700/80"></div>
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center overflow-hidden">
               {user.user_metadata?.avatar_url ? (
                 <img
                   src={user.user_metadata.avatar_url}
@@ -74,7 +74,7 @@ export function MyPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="px-6 py-6">
         {/* Account Section */}
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">계정 정보</h3>

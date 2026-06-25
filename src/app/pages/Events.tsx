@@ -130,9 +130,9 @@ export function Events() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
@@ -145,7 +145,7 @@ export function Events() {
       </div>
 
       {/* Month Selector */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200">
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
             <button
@@ -164,7 +164,7 @@ export function Events() {
       </div>
 
       {/* Island Filter */}
-      <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {islands.map(island => (
             <button
@@ -183,7 +183,7 @@ export function Events() {
       </div>
 
       {/* Events List */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="px-6 py-4">
         {filteredEvents.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />

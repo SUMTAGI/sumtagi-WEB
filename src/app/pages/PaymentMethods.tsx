@@ -78,9 +78,9 @@ export function PaymentMethods() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/my")}
@@ -100,7 +100,7 @@ export function PaymentMethods() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="px-6 py-6">
         {methods.length === 0 ? (
           <div className="text-center py-12">
             <CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
@@ -234,7 +234,7 @@ function PaymentMethodCard({
       method.isDefault ? "border-blue-600" : "border-gray-200"
     }`}>
       <div className="flex items-start gap-3">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
           method.type === "card" ? "bg-blue-100" : "bg-green-100"
         }`}>
           <CreditCard className={`w-6 h-6 ${

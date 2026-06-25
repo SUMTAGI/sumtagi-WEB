@@ -110,7 +110,7 @@ export function Community() {
         <div className="p-4">
           {/* Author row */}
           <div className="flex items-start gap-3 mb-3">
-            <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
               <span className="text-blue-600 text-sm font-bold">
                 {(post.author_name as string)?.[0] ?? '?'}
               </span>
@@ -133,7 +133,7 @@ export function Community() {
             {isMyPost && (
               <button
                 onClick={() => handleDeletePost(id)}
-                className="text-gray-300 hover:text-red-400 transition-colors active:scale-95 flex-shrink-0"
+                className="text-gray-300 hover:text-red-400 transition-colors active:scale-95"
               >
                 <Trash2 className="w-4 h-4" strokeWidth={2} />
               </button>
@@ -202,7 +202,7 @@ export function Community() {
               <div className="space-y-3 mb-3">
                 {postComments.map((c: any) => (
                   <div key={c.id} className="flex gap-2">
-                    <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-blue-600 text-xs font-bold">
                         {c.author_name?.[0] ?? '?'}
                       </span>
@@ -231,7 +231,7 @@ export function Community() {
               />
               <button
                 onClick={() => handleAddComment(id)}
-                className="bg-blue-600 text-white w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform flex-shrink-0"
+                className="bg-blue-600 text-white w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform"
               >
                 <Send className="w-4 h-4" strokeWidth={2} />
               </button>
@@ -243,9 +243,9 @@ export function Community() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="px-4 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-4 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="active:scale-95 transition-transform">
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
@@ -262,7 +262,7 @@ export function Community() {
       </div>
 
       {/* Tabs */}
-      <div className="px-4 pt-3 pb-2 bg-white flex gap-2 flex-shrink-0">
+      <div className="px-4 pt-3 pb-2 bg-white flex gap-2">
         <button
           onClick={() => setActiveTab("feed")}
           className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
@@ -282,11 +282,11 @@ export function Community() {
       </div>
 
       {/* Island filter chips */}
-      <div className="px-4 pb-3 bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="px-4 pb-3 bg-white border-b border-gray-200">
         <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
           <button
             onClick={() => setIslandFilter(null)}
-            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
               !islandFilter ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
@@ -296,7 +296,7 @@ export function Community() {
             <button
               key={island}
               onClick={() => setIslandFilter(islandFilter === island ? null : island)}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                 islandFilter === island ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
               }`}
             >
@@ -307,7 +307,7 @@ export function Community() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {isLoading ? (
           <div className="flex items-center justify-center h-40">
             <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />

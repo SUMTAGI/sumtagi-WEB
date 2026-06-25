@@ -227,9 +227,9 @@ export function Packages() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
@@ -242,7 +242,7 @@ export function Packages() {
       </div>
 
       {/* Filters */}
-      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0 space-y-3">
+      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 space-y-3">
         <div>
           <p className="text-xs font-medium text-gray-500 mb-2">여행 기간</p>
           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -292,7 +292,7 @@ export function Packages() {
       </div>
 
       {/* Package List */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="px-6 py-4">
         <div className="space-y-4">
           {filteredPackages.map(pkg => (
             <PackageCard key={pkg.id} package={pkg} />

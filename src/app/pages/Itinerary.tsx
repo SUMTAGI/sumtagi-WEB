@@ -27,21 +27,20 @@ export function Itinerary() {
 
   useEffect(() => {
     if (!id) return;
-    const stored = localStorage.getItem(`plan_${id}`) ?? localStorage.getItem(`itinerary_${id}`);
-    if (stored) {
-      const data = JSON.parse(stored);
-      setItinerary(data);
-      setIsConfirmed(data.confirmed || false);
-    } else {
-      tripService.getTripById(id).then(data => {
-        if (data) {
-          setItinerary({ ...data, startDate: data.start_date, islands: data.islands ?? [] });
-          setIsConfirmed(data.confirmed || false);
+    tripService.getTripById(id).then(data => {
+      if (data) {
+        const plan = data.plan ?? JSON.parse(localStorage.getItem(`plan_${id}`) ?? localStorage.getItem(`itinerary_${id}`) ?? 'null');
+        if (plan) {
+          setItinerary(plan);
+          setIsConfirmed(plan.confirmed || data.confirmed || false);
         } else {
-          navigate("/travel");
+          setItinerary({ ...data, startDate: data.start_date, islands: data.islands ?? [], days: [], totalCost: 0 });
+          setIsConfirmed(data.confirmed || false);
         }
-      });
-    }
+      } else {
+        navigate("/travel");
+      }
+    });
   }, [id, navigate]);
 
   const persistItinerary = (updated: GeneratedItinerary) => {
@@ -51,6 +50,7 @@ export function Itinerary() {
     const final = { ...updated, totalCost };
     setItinerary(final);
     localStorage.setItem(`plan_${id}`, JSON.stringify(final));
+    if (id) tripService.updateTripPlan(id, final);
     return final;
   };
 
@@ -161,9 +161,9 @@ export function Itinerary() {
   const currentDay = itinerary.days[selectedDay];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 text-white px-6 py-4 flex-shrink-0 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 text-white px-6 py-4 overflow-hidden">
         <div
           className="absolute inset-0 opacity-20 bg-cover bg-center"
           style={{ backgroundImage: `url('https://images.unsplash.com/photo-1633775362313-fed93ef8e824?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600')` }}
@@ -235,13 +235,13 @@ export function Itinerary() {
       </div>
 
       {/* Day Tabs */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0 overflow-x-auto">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 overflow-x-auto">
         <div className="flex gap-2">
           {itinerary.days.map((day, index) => (
             <button
               key={day.date}
               onClick={() => setSelectedDay(index)}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-all flex-shrink-0 ${
+              className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-all ${
                 selectedDay === index ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 active:scale-95"
               }`}
             >
@@ -252,7 +252,7 @@ export function Itinerary() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {/* Day Header */}
         <div className="bg-white px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-bold text-gray-900 mb-1">Day {currentDay.dayNumber}</h2>
@@ -331,7 +331,7 @@ export function Itinerary() {
             {isConfirmed && (
               <div className="px-6 py-6">
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
                     <Ship className="w-5 h-5 text-white" strokeWidth={2} />
                   </div>
                   <div>
@@ -478,7 +478,7 @@ function ActivityCardMobile({
   return (
     <div className="relative">
       <div className="flex gap-3">
-        <div className="flex flex-col items-center flex-shrink-0">
+        <div className="flex flex-col items-center">
           <div className={`w-10 h-10 rounded-full ${typeColor} flex items-center justify-center`}>
             {typeIcon}
           </div>

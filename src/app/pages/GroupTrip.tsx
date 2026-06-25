@@ -122,14 +122,14 @@ export function GroupTrip() {
 
   if (showCreateGroup) {
     return (
-      <div className="h-full flex flex-col bg-white">
-        <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="bg-white">
+        <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
           <button onClick={() => setShowCreateGroup(false)} className="active:scale-95 transition-transform">
             <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
           </button>
           <h1 className="text-lg font-bold text-gray-900">그룹 만들기</h1>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="px-6 py-6">
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">그룹 이름</label>
@@ -171,7 +171,7 @@ export function GroupTrip() {
             </div>
           </div>
         </div>
-        <div className="px-6 py-4 bg-white border-t border-gray-200 flex-shrink-0">
+        <div className="px-6 py-4 bg-white border-t border-gray-200">
           <button
             onClick={createGroup}
             disabled={creating}
@@ -186,8 +186,8 @@ export function GroupTrip() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white relative">
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+    <div className="bg-white relative">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
@@ -239,7 +239,7 @@ export function GroupTrip() {
         </div>
       ) : (
         <>
-          <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+          <div className="px-6 py-4 bg-white border-b border-gray-200">
             <div className="flex gap-2 overflow-x-auto pb-2">
               {groups.map(group => (
                 <button
@@ -262,7 +262,7 @@ export function GroupTrip() {
           </div>
 
           {activeGroup && (
-            <div className="flex-1 overflow-y-auto">
+            <div className="">
               <div className="px-6 py-4 bg-blue-50 border-b border-blue-100">
                 <div className="flex items-center justify-between mb-3">
                   <div>

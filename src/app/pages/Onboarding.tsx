@@ -114,7 +114,7 @@ export function Onboarding() {
 
   return (
     <div
-      className="h-full flex flex-col bg-white relative overflow-hidden"
+      className="bg-white relative overflow-hidden"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -179,7 +179,7 @@ export function Onboarding() {
       </div>
 
       {/* Top Navigation */}
-      <div className="relative z-10 px-6 py-4 flex justify-between items-center flex-shrink-0">
+      <div className="relative z-10 px-6 py-4 flex justify-between items-center">
         {/* Back Button */}
         {currentSlide > 0 ? (
           <button
@@ -282,7 +282,7 @@ export function Onboarding() {
       </div>
 
       {/* Navigation */}
-      <div className="relative z-10 px-6 pb-8 flex-shrink-0">
+      <div className="relative z-10 px-6 pb-8">
         {/* Interactive Dots */}
         <div className="flex justify-center gap-2 mb-6">
           {slides.map((s, index) => (

@@ -72,9 +72,9 @@ export function Diary() {
   }, {} as Record<string, DiaryEntry[]>);
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => {
             if (isWriting) {
@@ -94,7 +94,7 @@ export function Diary() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {!isWriting ? (
           <>
             {/* Empty State */}
@@ -132,7 +132,7 @@ export function Diary() {
                 </div>
 
                 {/* Write Button */}
-                <div className="px-6 py-4 bg-white border-t border-gray-200 flex-shrink-0">
+                <div className="px-6 py-4 bg-white border-t border-gray-200">
                   <button
                     onClick={() => setIsWriting(true)}
                     className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"

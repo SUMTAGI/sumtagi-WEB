@@ -36,13 +36,13 @@ export function Islands() {
   });
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-500 text-white flex-shrink-0">
+    <div className="bg-white">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-500 text-white">
         <h1 className="text-xl font-bold mb-1">섬 둘러보기</h1>
         <p className="text-sm text-blue-100">인천의 아름다운 섬들을 탐색해보세요</p>
       </div>
 
-      <div className="px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-3 bg-white border-b border-gray-200">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" strokeWidth={2} />
           <input
@@ -63,7 +63,7 @@ export function Islands() {
         </div>
       </div>
 
-      <div className="bg-white px-6 py-4 border-b border-gray-200 flex-shrink-0 space-y-3">
+      <div className="bg-white px-6 py-4 border-b border-gray-200 space-y-3">
         <div>
           <p className="text-xs font-medium text-gray-500 mb-2">출발 항구</p>
           <div className="grid grid-cols-3 gap-2">
@@ -83,7 +83,7 @@ export function Islands() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="px-6 py-4">
         {isLoading ? (
           <CardGridSkeleton count={5} />
         ) : (

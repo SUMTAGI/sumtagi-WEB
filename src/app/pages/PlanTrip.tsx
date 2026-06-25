@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Calendar, Users, Heart, Compass, Sparkles, ChevronRight } from "lucide-react";
-import { generateItinerary } from "../utils/itineraryGenerator";
+import { generateItinerary, fetchIslandData } from "../utils/itineraryGenerator";
 import { tripService } from "../../lib/tripService";
 
 export function PlanTrip() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+
+  useEffect(() => { fetchIslandData(); }, []);
   const [formData, setFormData] = useState({
     startDate: "",
     endDate: "",
@@ -19,7 +21,7 @@ export function PlanTrip() {
   const handleSubmit = async () => {
     const itinerary = generateItinerary(formData);
     const title = `${(formData.islands ?? []).join(', ') || '섬'} 여행`;
-    const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands);
+    const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands, itinerary);
     const tripId = trip?.id ?? Date.now().toString();
     localStorage.setItem(`plan_${tripId}`, JSON.stringify(itinerary));
     navigate(`/itinerary/${tripId}`);
@@ -48,15 +50,15 @@ export function PlanTrip() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <h1 className="text-xl font-bold mb-1">여행 일정 만들기</h1>
         <p className="text-sm text-blue-100">Step {step} / 5</p>
       </div>
 
       {/* Progress Bar */}
-      <div className="bg-gray-200 h-1 flex-shrink-0">
+      <div className="bg-gray-200 h-1">
         <div
           className="bg-blue-600 h-full transition-all duration-300"
           style={{ width: `${(step / 5) * 100}%` }}
@@ -64,7 +66,7 @@ export function PlanTrip() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="px-6 py-6">
         {step === 1 && (
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-gray-900">여행 날짜를 선택해주세요</h2>
@@ -219,7 +221,7 @@ export function PlanTrip() {
       </div>
 
       {/* Bottom Actions */}
-      <div className="p-6 bg-white border-t border-gray-200 flex-shrink-0 space-y-2">
+      <div className="p-6 bg-white border-t border-gray-200 space-y-2">
         {step < 5 ? (
           <button
             onClick={() => setStep(step + 1)}

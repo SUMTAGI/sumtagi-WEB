@@ -51,9 +51,9 @@ export function CommunityWrite() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-4 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-4 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="active:scale-95 transition-transform">
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
@@ -69,7 +69,7 @@ export function CommunityWrite() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      <div className="p-5 space-y-5">
         {/* Island selector */}
         <div>
           <p className="text-sm font-medium text-gray-700 mb-2">

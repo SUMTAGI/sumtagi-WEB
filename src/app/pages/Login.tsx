@@ -41,7 +41,7 @@ export function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
-        redirectTo: `${window.location.origin}/my`,
+        redirectTo: `${window.location.origin}/`,
         scopes: "profile_nickname profile_image",
       },
     });
@@ -56,7 +56,7 @@ export function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/my`,
+        redirectTo: `${window.location.origin}/`,
       },
     });
 
@@ -67,8 +67,8 @@ export function Login() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="px-6 py-8 text-center flex-shrink-0">
+    <div className="bg-white">
+      <div className="px-6 py-8 text-center">
         <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <Ship className="w-10 h-10 text-white" strokeWidth={2} />
         </div>
@@ -79,7 +79,7 @@ export function Login() {
         <p className="text-sm text-gray-600">계정에 로그인하세요</p>
       </div>
 
-      <div className="flex-1 px-6 overflow-y-auto">
+      <div className="px-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
@@ -194,7 +194,7 @@ export function Login() {
         </div>
       </div>
 
-      <div className="px-6 py-6 border-t border-gray-200 flex-shrink-0 text-center">
+      <div className="px-6 py-6 border-t border-gray-200 text-center">
         <p className="text-sm text-gray-600">
           아직 계정이 없으신가요?{" "}
           <Link to="/signup" className="text-blue-600 font-semibold">

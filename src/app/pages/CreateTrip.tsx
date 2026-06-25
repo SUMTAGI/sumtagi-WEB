@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ChevronLeft, CheckCircle } from "lucide-react";
-import { generateItinerary } from "../utils/itineraryGenerator";
+import { generateItinerary, fetchIslandData } from "../utils/itineraryGenerator";
 import { toast } from "sonner";
 import { Confetti } from "../components/Confetti";
 import { tripService } from "../../lib/tripService";
@@ -36,6 +36,7 @@ export function CreateTrip() {
   const [preSelectedIsland, setPreSelectedIsland] = useState<string | null>(null);
 
   useEffect(() => {
+    fetchIslandData();
     const islandName = searchParams.get("name");
     if (islandName) {
       setPreSelectedIsland(islandName);
@@ -90,7 +91,7 @@ export function CreateTrip() {
     const dataWithPort = { ...formData, departurePort: computedPort };
     const itinerary = generateItinerary(dataWithPort);
     const title = `${formData.islands.join(", ")} 여행`;
-    const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands);
+    const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands, itinerary);
     const tripId = trip?.id ?? Date.now().toString();
     localStorage.setItem(`plan_${tripId}`, JSON.stringify(itinerary));
     toast.success("일정이 생성됐어요!");
@@ -314,9 +315,9 @@ export function CreateTrip() {
   );
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button
           onClick={() => step === 0 ? navigate("/travel") : setStep(step - 1)}
           className="active:scale-95 transition-transform"
@@ -332,7 +333,7 @@ export function CreateTrip() {
       </div>
 
       {/* Progress Bar */}
-      <div className="bg-white px-6 py-3 border-b border-gray-200 flex-shrink-0">
+      <div className="bg-white px-6 py-3 border-b border-gray-200">
         <div className="flex gap-2">
           {Array.from({ length: totalSteps }, (_, i) => (
             <div
@@ -344,7 +345,7 @@ export function CreateTrip() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="px-6 py-6">
         {renderStep()}
       </div>
 

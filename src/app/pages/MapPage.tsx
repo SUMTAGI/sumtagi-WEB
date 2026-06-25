@@ -192,9 +192,9 @@ export function MapPage() {
       </div>
 
       {selectedIsland && (
-        <div className="px-6 py-4 bg-white border-t border-gray-200 flex-shrink-0">
+        <div className="px-6 py-4 bg-white border-t border-gray-200">
           <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
               selectedIsland.id === "incheon" ? "bg-red-100" : selectedIsland.id === "daebu" ? "bg-orange-100" : "bg-blue-100"
             }`}>
               <div className={`w-5 h-5 rounded-full ${
@@ -217,7 +217,7 @@ export function MapPage() {
       )}
 
       {!selectedIsland && (
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex-shrink-0 max-h-44 overflow-y-auto">
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 max-h-44 overflow-y-auto">
           <p className="text-sm font-semibold text-gray-700 mb-3">섬 목록</p>
           <div className="grid grid-cols-2 gap-2">
             {islands.filter(i => !i.isPort).map((island) => (

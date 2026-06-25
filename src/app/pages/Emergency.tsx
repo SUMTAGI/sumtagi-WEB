@@ -111,9 +111,9 @@ export function Emergency() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
@@ -126,7 +126,7 @@ export function Emergency() {
       </div>
 
       {/* 119/112 Quick Access */}
-      <div className="px-6 py-4 bg-blue-50 border-b border-blue-100 flex-shrink-0">
+      <div className="px-6 py-4 bg-blue-50 border-b border-blue-100">
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => handleCall("119", "소방서")}
@@ -152,7 +152,7 @@ export function Emergency() {
       </div>
 
       {/* Island Selector */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200">
         <p className="text-sm font-medium text-gray-700 mb-2">섬 선택</p>
         <div className="flex gap-2 overflow-x-auto pb-2">
           {EMERGENCY_CONTACTS.map(contact => (
@@ -172,7 +172,7 @@ export function Emergency() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {/* Emergency Contacts */}
         <div className="px-6 py-4 bg-white border-b border-gray-200">
           <h3 className="font-semibold text-gray-900 mb-3">{selectedIsland} 연락처</h3>
@@ -237,9 +237,9 @@ export function Emergency() {
                     <div className="text-xs text-gray-500">{aid.symptoms}</div>
                   </div>
                   {expandedAid === aid.id ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" strokeWidth={2} />
+                    <ChevronUp className="w-5 h-5 text-gray-400" strokeWidth={2} />
                   ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" strokeWidth={2} />
+                    <ChevronDown className="w-5 h-5 text-gray-400" strokeWidth={2} />
                   )}
                 </button>
 
@@ -250,7 +250,7 @@ export function Emergency() {
                       <ol className="space-y-2 text-sm text-blue-800">
                         {aid.treatment.map((step, idx) => (
                           <li key={idx} className="flex gap-2">
-                            <span className="font-semibold flex-shrink-0">{idx + 1}.</span>
+                            <span className="font-semibold">{idx + 1}.</span>
                             <span>{step}</span>
                           </li>
                         ))}
@@ -267,7 +267,7 @@ export function Emergency() {
         <div className="px-6 py-4 bg-orange-50 border-t border-orange-100">
           <div className="bg-white rounded-xl p-4 border border-orange-200">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-6 h-6 text-orange-600 flex-shrink-0" strokeWidth={2} />
+              <AlertCircle className="w-6 h-6 text-orange-600" strokeWidth={2} />
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">긴급 귀항 안내</h4>
                 <ul className="space-y-1 text-sm text-gray-700">
@@ -311,7 +311,7 @@ function ContactCard({
           <div className="text-xs text-gray-500 mb-2">{subtitle}</div>
           {address && (
             <div className="flex items-start gap-1 text-xs text-gray-600 mb-2">
-              <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" strokeWidth={2} />
+              <MapPin className="w-3 h-3 mt-0.5" strokeWidth={2} />
               <span>{address}</span>
             </div>
           )}

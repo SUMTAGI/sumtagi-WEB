@@ -40,21 +40,21 @@ export function ProfileEdit() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+    <div className="bg-white">
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-3">
         <button onClick={() => navigate("/my")} className="active:scale-95 transition-transform">
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
         <h1 className="text-lg font-bold text-gray-900">프로필 수정</h1>
       </div>
 
-      <div className="px-6 py-6 flex flex-col items-center flex-shrink-0">
+      <div className="px-6 py-6 flex flex-col items-center">
         <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center">
           <User className="w-12 h-12 text-blue-600" strokeWidth={2} />
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-6 space-y-4">
+      <form onSubmit={handleSave} className="px-6 space-y-4">
         <div>
           <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
             <User className="w-4 h-4" strokeWidth={2} />닉네임
@@ -122,7 +122,7 @@ export function ProfileEdit() {
         )}
       </form>
 
-      <div className="p-6 border-t border-gray-200 flex-shrink-0">
+      <div className="p-6 border-t border-gray-200">
         <button
           onClick={handleSave}
           disabled={saving}

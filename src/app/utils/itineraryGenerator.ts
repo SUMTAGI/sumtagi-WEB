@@ -1,3 +1,5 @@
+import { supabase } from '../../lib/supabase'
+
 export interface TripFormData {
   departurePort: string;
   startDate: string;
@@ -158,7 +160,7 @@ function getDaysBetween(startDate: string, endDate: string): number {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
-function selectIslands(formData: TripFormData, numDays: number): string[] {
+function selectIslands(formData: TripFormData, numDays: number, _ferries?: FerrySchedule[]): string[] {
   if (formData.islands.length > 0) {
     return formData.islands.slice(0, Math.min(formData.islands.length, numDays));
   }
@@ -178,8 +180,8 @@ function selectIslands(formData: TripFormData, numDays: number): string[] {
   }
 }
 
-function getAttractionsForIsland(island: string, travelType: string): Attraction[] {
-  const islandAttractions = ATTRACTIONS.filter(a => a.island === island);
+function getAttractionsForIsland(island: string, travelType: string, allAttractions: Attraction[]): Attraction[] {
+  const islandAttractions = allAttractions.filter(a => a.island === island);
 
   const typeMapping: Record<string, string[]> = {
     "관광": ["자연경관", "문화", "해변"],
@@ -202,7 +204,33 @@ function getAttractionsForIsland(island: string, travelType: string): Attraction
     .slice(0, 3);
 }
 
+let _cachedFerries: FerrySchedule[] | null = null
+let _cachedAttractions: Attraction[] | null = null
+
+export async function fetchIslandData() {
+  const [ferriesRes, attractionsRes] = await Promise.all([
+    supabase.from('ferry_schedules').select('*'),
+    supabase.from('attractions').select('*'),
+  ])
+  if (ferriesRes.data?.length) {
+    _cachedFerries = ferriesRes.data.map(r => ({
+      id: r.id, from: r.from, to: r.to,
+      departureTime: r.departure_time, arrivalTime: r.arrival_time,
+      price: r.price, available: r.available,
+    }))
+  }
+  if (attractionsRes.data?.length) {
+    _cachedAttractions = attractionsRes.data.map(r => ({
+      id: r.id, name: r.name, island: r.island, category: r.category,
+      duration: r.duration, congestionLevel: r.congestion_level as Attraction['congestionLevel'],
+      description: r.description,
+    }))
+  }
+}
+
 export function generateItinerary(formData: TripFormData): GeneratedItinerary {
+  const ferries = _cachedFerries ?? FERRY_SCHEDULES
+  const allAttractions = _cachedAttractions ?? ATTRACTIONS
   const numDays = getDaysBetween(formData.startDate, formData.endDate);
   const selectedIslands = selectIslands(formData, numDays);
 
@@ -221,7 +249,7 @@ export function generateItinerary(formData: TripFormData): GeneratedItinerary {
 
     if (isFirstDay) {
       const departurePort = formData.departurePort || "인천항";
-      const ferry = FERRY_SCHEDULES.find(f => f.from === departurePort && f.to === currentIsland);
+      const ferry = ferries.find(f => f.from === departurePort && f.to === currentIsland);
       if (ferry) {
         activities.push({
           id: `act-${dayIndex}-1`,
@@ -249,7 +277,7 @@ export function generateItinerary(formData: TripFormData): GeneratedItinerary {
       });
       totalCost += 15000 * formData.travelers;
 
-      const attractions = getAttractionsForIsland(currentIsland, formData.travelType);
+      const attractions = getAttractionsForIsland(currentIsland, formData.travelType, allAttractions);
       attractions.slice(0, 2).forEach((attraction, idx) => {
         const startHour = 14 + (idx * 2);
         activities.push({
@@ -291,7 +319,7 @@ export function generateItinerary(formData: TripFormData): GeneratedItinerary {
       });
       totalCost += 10000 * formData.travelers;
 
-      const attractions = getAttractionsForIsland(currentIsland, formData.travelType);
+      const attractions = getAttractionsForIsland(currentIsland, formData.travelType, allAttractions);
       if (attractions.length > 0) {
         activities.push({
           id: `act-${dayIndex}-2`,
@@ -306,7 +334,7 @@ export function generateItinerary(formData: TripFormData): GeneratedItinerary {
       }
 
       const departurePort = formData.departurePort || "인천항";
-      const returnFerry = FERRY_SCHEDULES.find(f => f.from === currentIsland && f.to === departurePort);
+      const returnFerry = ferries.find(f => f.from === currentIsland && f.to === departurePort);
       if (returnFerry) {
         activities.push({
           id: `act-${dayIndex}-3`,
@@ -334,7 +362,7 @@ export function generateItinerary(formData: TripFormData): GeneratedItinerary {
       });
       totalCost += 10000 * formData.travelers;
 
-      const attractions = getAttractionsForIsland(currentIsland, formData.travelType);
+      const attractions = getAttractionsForIsland(currentIsland, formData.travelType, allAttractions);
       attractions.forEach((attraction, idx) => {
         const startHour = 10 + (idx * 2);
         activities.push({

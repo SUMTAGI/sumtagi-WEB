@@ -24,9 +24,9 @@ export function NotificationSettings() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button
           onClick={() => navigate("/my")}
           className="active:scale-95 transition-transform"
@@ -37,7 +37,7 @@ export function NotificationSettings() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="px-6 py-6">
         {/* Push Notifications */}
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-gray-700 mb-3 px-2">푸시 알림</h2>
@@ -144,7 +144,7 @@ function SettingItem({
           <h3 className="font-medium text-gray-900 text-sm">{label}</h3>
           <p className="text-xs text-gray-600 mt-0.5">{description}</p>
         </div>
-        <label className="relative inline-block w-11 h-6 flex-shrink-0">
+        <label className="relative inline-block w-11 h-6">
           <input
             type="checkbox"
             checked={checked}

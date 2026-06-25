@@ -3,14 +3,18 @@ import { supabase } from './supabase'
 const uid = async () => (await supabase.auth.getUser()).data.user?.id
 
 export const tripService = {
-  createTrip: async (title: string, startDate: string, endDate: string, islands: string[]) => {
+  createTrip: async (title: string, startDate: string, endDate: string, islands: string[], plan?: object) => {
     const id = await uid()
     if (!id) return null
     const { data } = await supabase.from('trips').insert({
       user_id: id, title, start_date: startDate, end_date: endDate,
-      islands, confirmed: false,
+      islands, confirmed: false, plan: plan ?? null,
     }).select().single()
     return data
+  },
+
+  updateTripPlan: async (tripId: string, plan: object) => {
+    await supabase.from('trips').update({ plan }).eq('id', tripId)
   },
 
   confirmTrip: async (tripId: string) => {

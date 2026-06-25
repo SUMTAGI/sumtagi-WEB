@@ -47,9 +47,9 @@ export function Notifications() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/")}
@@ -75,7 +75,7 @@ export function Notifications() {
       </div>
 
       {/* Notifications List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {notifications.length === 0 ? (
           <div className="text-center py-12 px-6">
             <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
@@ -142,7 +142,7 @@ function NotificationCard({
       onClick={() => !notification.is_read && onMarkAsRead(notification.id)}
     >
       <div className="flex gap-3">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getIconColor()}`}>
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getIconColor()}`}>
           {getIcon()}
         </div>
 

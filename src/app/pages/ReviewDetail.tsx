@@ -100,7 +100,7 @@ export function ReviewDetail() {
 
   if (!review) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-white px-6">
+      <div className="items-center justify-center bg-white px-6">
         <p className="text-gray-600 mb-4">리뷰를 찾을 수 없어요</p>
         <button
           onClick={() => navigate("/")}
@@ -133,9 +133,9 @@ export function ReviewDetail() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
         <button
           onClick={() => navigate("/")}
           className="active:scale-95 transition-transform"
@@ -152,7 +152,7 @@ export function ReviewDetail() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {/* Images */}
         <div className="relative">
           <div className="aspect-[4/3] bg-gray-100">
@@ -248,7 +248,7 @@ export function ReviewDetail() {
       </div>
 
       {/* Bottom Actions */}
-      <div className="px-6 py-4 bg-white border-t border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-t border-gray-200 flex items-center gap-3">
         <button
           onClick={handleLike}
           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all ${

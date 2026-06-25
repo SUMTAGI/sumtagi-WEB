@@ -50,7 +50,7 @@ export function IslandDetail() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col bg-white">
+      <div className="bg-white">
         <DetailHeaderSkeleton />
       </div>
     );
@@ -86,8 +86,8 @@ export function IslandDetail() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="relative h-64 flex-shrink-0">
+    <div className="bg-white">
+      <div className="relative h-64">
         <img src={island.image} alt={island.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
@@ -118,7 +118,7 @@ export function IslandDetail() {
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-blue-50 border-b border-blue-100 flex-shrink-0">
+      <div className="px-6 py-4 bg-blue-50 border-b border-blue-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export function IslandDetail() {
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -178,7 +178,7 @@ export function IslandDetail() {
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-gray-900 flex items-center gap-2">
             <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
@@ -199,7 +199,7 @@ export function IslandDetail() {
               const isDone = f.status === '완료';
               const isActive = f.status.includes('출항') || f.status.includes('운항') || f.status.includes('항중') || f.status.includes('도착');
               return (
-                <div key={i} className={`flex-shrink-0 w-28 rounded-xl p-3 border ${
+                <div key={i} className={`w-28 rounded-xl p-3 border ${
                   isCancelled ? 'bg-red-50 border-red-200' : isDone ? 'bg-gray-50 border-gray-200' : isActive ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'
                 }`}>
                   <div className={`text-xs font-semibold mb-1 ${
@@ -219,7 +219,7 @@ export function IslandDetail() {
       </div>
 
       {/* 혼잡도 예측 */}
-      <div className="px-6 py-5 bg-gradient-to-br from-slate-50 to-blue-50/50 border-b border-gray-100 flex-shrink-0">
+      <div className="px-6 py-5 bg-gradient-to-br from-slate-50 to-blue-50/50 border-b border-gray-100">
         <div className="flex items-center gap-2.5 mb-4">
           <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
             <Users className="w-3.5 h-3.5 text-blue-600" strokeWidth={2.5} />
@@ -242,7 +242,7 @@ export function IslandDetail() {
         )}
       </div>
 
-      <div className="px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-3 bg-white border-b border-gray-200">
         <div className="flex gap-2">
           {(["info", "restaurant", "accommodation"] as const).map((tab) => (
             <button
@@ -256,7 +256,7 @@ export function IslandDetail() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="px-6 py-6">
         {activeTab === "info" && (
           <div className="space-y-6">
             <section>
@@ -271,7 +271,7 @@ export function IslandDetail() {
                   {island.attractions.map((attraction) => (
                     <div key={attraction.id} className="bg-gray-50 rounded-xl p-4">
                       <div className="flex gap-3">
-                        <img src={attraction.image} alt={attraction.name} className="w-24 h-24 object-cover rounded-lg flex-shrink-0" />
+                        <img src={attraction.image} alt={attraction.name} className="w-24 h-24 object-cover rounded-lg" />
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-1">
                             <h4 className="font-semibold text-gray-900">{attraction.name}</h4>
@@ -324,7 +324,7 @@ export function IslandDetail() {
             ) : island.restaurants.map((restaurant) => (
               <div key={restaurant.id} className="bg-gray-50 rounded-xl p-4">
                 <div className="flex gap-3">
-                  <img src={restaurant.image} alt={restaurant.name} className="w-24 h-24 object-cover rounded-lg flex-shrink-0" />
+                  <img src={restaurant.image} alt={restaurant.name} className="w-24 h-24 object-cover rounded-lg" />
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-1">
                       <h4 className="font-semibold text-gray-900">{restaurant.name}</h4>
@@ -349,7 +349,7 @@ export function IslandDetail() {
             ) : island.accommodations.map((hotel) => (
               <div key={hotel.id} className="bg-gray-50 rounded-xl p-4">
                 <div className="flex gap-3">
-                  <img src={hotel.image} alt={hotel.name} className="w-24 h-24 object-cover rounded-lg flex-shrink-0" />
+                  <img src={hotel.image} alt={hotel.name} className="w-24 h-24 object-cover rounded-lg" />
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-1">
                       <div>
@@ -373,7 +373,7 @@ export function IslandDetail() {
         )}
       </div>
 
-      <div className="px-6 py-4 bg-white border-t border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-t border-gray-200">
         <Link
           to={`/create-trip?island=${island.id}&name=${encodeURIComponent(island.name)}`}
           className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"

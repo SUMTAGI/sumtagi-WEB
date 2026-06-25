@@ -51,9 +51,9 @@ export function Travel() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header with Background */}
-      <div className="relative px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0 overflow-hidden">
+      <div className="relative px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white overflow-hidden">
         <div
           className="absolute inset-0 opacity-20 bg-cover bg-center"
           style={{
@@ -68,7 +68,7 @@ export function Travel() {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="flex bg-white border-b border-gray-200">
         <button
           onClick={() => setActiveTab("plan")}
           className={`flex-1 py-3 font-medium transition-colors relative ${
@@ -100,7 +100,7 @@ export function Travel() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {isLoading ? (
           <div className="px-6 py-4">
             <ListSkeleton count={3} />
@@ -166,11 +166,11 @@ export function Travel() {
                   to={`/itinerary/${currentTripId}`}
                   className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4"
                 >
-                  <Info className="w-5 h-5 text-amber-600 flex-shrink-0" strokeWidth={2} />
+                  <Info className="w-5 h-5 text-amber-600" strokeWidth={2} />
                   <p className="flex-1 text-sm text-amber-800">
                     일정이 아직 미확정이에요. 열어서 확정하면 홈에도 표시돼요.
                   </p>
-                  <ChevronRight className="w-4 h-4 text-amber-600 flex-shrink-0" strokeWidth={2} />
+                  <ChevronRight className="w-4 h-4 text-amber-600" strokeWidth={2} />
                 </Link>
               )}
 

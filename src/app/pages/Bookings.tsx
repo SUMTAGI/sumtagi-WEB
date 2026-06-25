@@ -72,15 +72,15 @@ export function Bookings() {
   const cancelledCount = bookings.filter(b => b.status === "cancelled").length;
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <h1 className="text-xl font-bold mb-1">예약 관리</h1>
         <p className="text-sm text-blue-100">모든 예약 내역을 확인하세요</p>
       </div>
 
       {/* Stats */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200">
         <div className="grid grid-cols-3 gap-3">
           <StatCardMobile
             icon={<CheckCircle className="w-5 h-5" strokeWidth={2} />}
@@ -104,7 +104,7 @@ export function Bookings() {
       </div>
 
       {/* Filter */}
-      <div className="bg-white px-6 py-3 border-b border-gray-200 flex-shrink-0">
+      <div className="bg-white px-6 py-3 border-b border-gray-200">
         <div className="mb-2">
           <div className="text-xs font-semibold text-gray-500 mb-2">예약 상태</div>
           <div className="flex gap-2">
@@ -148,9 +148,9 @@ export function Bookings() {
       </div>
 
       {/* Bookings List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {filteredBookings.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center px-6 py-12">
+          <div className="items-center justify-center px-6 py-12">
             <Ship className="w-16 h-16 text-gray-300 mb-4" strokeWidth={2} />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">예약 내역이 없어요</h3>
             <p className="text-sm text-gray-600 text-center mb-6">
@@ -231,7 +231,7 @@ function FilterButtonMobile({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-lg font-medium transition-all flex-shrink-0 ${
+      className={`px-4 py-2 rounded-lg font-medium transition-all ${
         active
           ? "bg-blue-600 text-white"
           : "bg-gray-100 text-gray-700 active:scale-95"
@@ -297,7 +297,7 @@ function BookingCardMobile({
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="p-4">
         <div className="flex items-start gap-3 mb-3">
-          <div className={`w-10 h-10 rounded-full ${getTypeColor()} flex items-center justify-center flex-shrink-0`}>
+          <div className={`w-10 h-10 rounded-full ${getTypeColor()} flex items-center justify-center`}>
             {getIcon()}
           </div>
           <div className="flex-1 min-w-0">

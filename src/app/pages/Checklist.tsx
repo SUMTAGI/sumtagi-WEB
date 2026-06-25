@@ -53,9 +53,9 @@ export function Checklist() {
   const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
           className="active:scale-95 transition-transform"
@@ -77,7 +77,7 @@ export function Checklist() {
       </div>
 
       {/* Progress */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100 flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-sm font-medium text-gray-700">준비 진행률</span>
           <span className="text-sm font-bold text-blue-600">{Math.round(progress)}%</span>
@@ -91,7 +91,7 @@ export function Checklist() {
       </div>
 
       {/* Add New Item */}
-      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
         <div className="flex gap-2">
           <select
             value={selectedCategory}
@@ -122,7 +122,7 @@ export function Checklist() {
       </div>
 
       {/* Checklist Items */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="px-6 py-4">
         {categories.map((category) => {
           const categoryItems = items.filter(item => item.category === category);
           if (categoryItems.length === 0) return null;
@@ -143,7 +143,7 @@ export function Checklist() {
                   >
                     <button
                       onClick={() => toggleItem(item)}
-                      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all active-press ${
+                      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all active-press ${
                         item.is_checked
                           ? "bg-blue-600 border-blue-600"
                           : "border-gray-300 bg-white"

@@ -223,9 +223,9 @@ export function Schedule() {
   const currentTransport = LOCAL_TRANSPORT.find(t => t.island === selectedIsland);
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
@@ -238,7 +238,7 @@ export function Schedule() {
       </div>
 
       {/* Tabs */}
-      <div className="px-6 py-3 bg-white border-b border-gray-200 flex gap-2 flex-shrink-0">
+      <div className="px-6 py-3 bg-white border-b border-gray-200 flex gap-2">
         <button
           onClick={() => setActiveTab("ferry")}
           className={`flex-1 py-2 rounded-lg font-medium transition-all ${
@@ -262,7 +262,7 @@ export function Schedule() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         {activeTab === "ferry" ? (
           <>
             {/* Route Filter */}
@@ -295,7 +295,7 @@ export function Schedule() {
             {/* Notice */}
             <div className="px-6 py-4 bg-yellow-50 border-t border-yellow-100">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
+                <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" strokeWidth={2} />
                 <div className="text-sm text-yellow-800">
                   <div className="font-semibold mb-1">운항 안내</div>
                   <ul className="space-y-1">
@@ -449,7 +449,7 @@ function FerryCard({ schedule, onSetAlarm }: { schedule: FerrySchedule; onSetAla
           <div className="text-xs text-gray-600 mt-1">{schedule.departure}</div>
         </div>
 
-        <div className="flex-shrink-0 px-3 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-600">
+        <div className="px-3 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-600">
           {schedule.duration}
         </div>
 

@@ -19,9 +19,9 @@ export function Favorites() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button
           onClick={() => navigate("/my")}
           className="active:scale-95 transition-transform"
@@ -32,7 +32,7 @@ export function Favorites() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="px-6 py-6">
         {favorites.length === 0 ? (
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
@@ -46,7 +46,7 @@ export function Favorites() {
           <div className="space-y-3">
             {favorites.map((fav) => (
               <div key={fav.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex">
-                <div className="w-28 h-28 flex-shrink-0">
+                <div className="w-28 h-28">
                   <img src={fav.islands?.image ?? ''} alt={fav.islands?.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 p-4 flex flex-col">

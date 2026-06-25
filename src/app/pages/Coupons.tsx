@@ -165,9 +165,9 @@ export function Coupons() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-3 text-blue-100 active:scale-95 transition-transform"
@@ -180,7 +180,7 @@ export function Coupons() {
       </div>
 
       {/* Tabs */}
-      <div className="px-6 py-3 bg-white border-b border-gray-200 flex gap-2 flex-shrink-0">
+      <div className="px-6 py-3 bg-white border-b border-gray-200 flex gap-2">
         <button
           onClick={() => setActiveTab("available")}
           className={`flex-1 py-2 rounded-lg font-medium transition-all ${
@@ -204,7 +204,7 @@ export function Coupons() {
       </div>
 
       {/* Category Filter */}
-      <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {(["all", "숙박", "맛집", "체험", "교통"] as const).map(cat => (
             <button
@@ -223,7 +223,7 @@ export function Coupons() {
       </div>
 
       {/* Coupons List */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="px-6 py-4">
         {filteredCoupons.length === 0 ? (
           <div className="text-center py-12">
             <Gift className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
@@ -278,7 +278,7 @@ function CouponCard({
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-start gap-3">
-            <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getCategoryColor(coupon.category)} flex items-center justify-center text-white flex-shrink-0`}>
+            <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getCategoryColor(coupon.category)} flex items-center justify-center text-white`}>
               {getCategoryIcon(coupon.category)}
             </div>
             <div>
@@ -287,7 +287,7 @@ function CouponCard({
               <div className="text-sm text-gray-600">{coupon.description}</div>
             </div>
           </div>
-          <div className="text-right flex-shrink-0">
+          <div className="text-right">
             <div className="text-2xl font-bold text-blue-600">{coupon.discount}</div>
             <div className="text-xs text-gray-500">할인</div>
           </div>

@@ -89,9 +89,9 @@ export function Support() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <button
           onClick={() => {
             if (showContactForm) {
@@ -112,7 +112,7 @@ export function Support() {
       {!showContactForm ? (
         <>
           {/* Contact Options */}
-          <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <div className="px-6 py-4 border-b border-gray-200">
             <div className="grid grid-cols-3 gap-3">
               <ContactOption
                 icon={<Phone className="w-5 h-5" strokeWidth={2} />}
@@ -141,7 +141,7 @@ export function Support() {
           </div>
 
           {/* FAQ Section */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="">
             {/* Category Filter */}
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <div className="flex gap-2 overflow-x-auto pb-2">
@@ -187,7 +187,7 @@ export function Support() {
         </>
       ) : (
         /* Contact Form */
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="px-6 py-4">
           <h3 className="text-lg font-bold text-gray-900 mb-4">1:1 문의하기</h3>
           <div className="space-y-4">
             {/* Category */}
@@ -296,9 +296,9 @@ function FAQItem({
           <p className="font-medium text-gray-900">{faq.question}</p>
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" strokeWidth={2} />
+          <ChevronUp className="w-5 h-5 text-gray-400" strokeWidth={2} />
         ) : (
-          <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" strokeWidth={2} />
+          <ChevronDown className="w-5 h-5 text-gray-400" strokeWidth={2} />
         )}
       </button>
       {isExpanded && (

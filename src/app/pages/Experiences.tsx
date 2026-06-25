@@ -128,9 +128,9 @@ export function Experiences() {
   const categories: ("all" | Experience["category"])[] = ["all", "낚시", "갯벌체험", "카약", "스노클링", "자전거", "트레킹"];
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
           className="active:scale-95 transition-transform"
@@ -144,7 +144,7 @@ export function Experiences() {
       </div>
 
       {/* Filters */}
-      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0 space-y-3">
+      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 space-y-3">
         {/* Island Filter */}
         <div>
           <p className="text-xs font-medium text-gray-500 mb-2">섬</p>
@@ -187,7 +187,7 @@ export function Experiences() {
       </div>
 
       {/* Experiences List */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="px-6 py-4">
         <div className="space-y-4">
           {filteredExperiences.map((exp) => (
             <Link
@@ -199,12 +199,12 @@ export function Experiences() {
                 <img
                   src={exp.image}
                   alt={exp.name}
-                  className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+                  className="w-24 h-24 object-cover rounded-lg"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-1">
                     <h3 className="font-semibold text-gray-900 truncate">{exp.name}</h3>
-                    <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                    <div className="flex items-center gap-1 ml-2">
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" strokeWidth={2} />
                       <span className="text-sm font-semibold text-gray-700">{exp.rating}</span>
                     </div>
@@ -315,9 +315,9 @@ export function ExperienceDetail() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header Image */}
-      <div className="relative h-64 flex-shrink-0">
+      <div className="relative h-64">
         <img
           src={experience.image}
           alt={experience.name}
@@ -353,7 +353,7 @@ export function ExperienceDetail() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+      <div className="px-6 py-6 space-y-6">
         {/* Description */}
         <div>
           <h3 className="font-semibold text-gray-900 mb-2">체험 소개</h3>
@@ -397,7 +397,7 @@ export function ExperienceDetail() {
           <div className="space-y-3">
             {experience.schedule.map((step, index) => (
               <div key={index} className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm flex items-center justify-center">
                   {index + 1}
                 </div>
                 <div className="flex-1 pt-0.5">
@@ -465,7 +465,7 @@ export function ExperienceDetail() {
       </div>
 
       {/* Bottom CTA */}
-      <div className="px-6 py-4 bg-white border-t border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-t border-gray-200">
         <button
           onClick={handleBook}
           className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold active:scale-95 transition-transform"

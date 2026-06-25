@@ -105,9 +105,9 @@ navigate("/login");
   ];
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 border-b border-gray-200">
         <button
           onClick={() => {
             if (step === 0) {
@@ -129,7 +129,7 @@ navigate("/login");
       </div>
 
       {/* Logo */}
-      <div className="px-6 py-6 text-center flex-shrink-0">
+      <div className="px-6 py-6 text-center">
         <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3">
           <Ship className="w-8 h-8 text-white" strokeWidth={2} />
         </div>
@@ -145,7 +145,7 @@ navigate("/login");
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-6 overflow-y-auto">
+      <div className="px-6">
         {/* Step 0: Method Selection */}
         {step === 0 && (
           <div className="space-y-3 pb-6">

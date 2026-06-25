@@ -77,7 +77,7 @@ export function Home() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white">
+    <div className="bg-white">
       {/* Hero Section with Background */}
       <section className="relative bg-gradient-to-br from-blue-500 to-blue-600 text-white px-6 py-8 overflow-hidden">
         <div
@@ -304,7 +304,7 @@ function ReviewCardMobile({ id, author, location, rating, preview, image, likes 
   likes: number;
 }) {
   return (
-    <div className="flex-shrink-0 w-64 snap-start">
+    <div className="w-64 snap-start">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="relative h-32">
           <img

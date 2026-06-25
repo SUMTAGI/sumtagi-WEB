@@ -77,9 +77,9 @@ export function Budget() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="bg-white">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
           className="active:scale-95 transition-transform"
@@ -93,7 +93,7 @@ export function Budget() {
       </div>
 
       {/* Budget Summary */}
-      <div className="px-6 py-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white flex-shrink-0">
+      <div className="px-6 py-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
         <div className="mb-4">
           <div className="text-sm text-blue-100 mb-1">총 예산</div>
           <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export function Budget() {
 
       {/* Category Breakdown */}
       {Object.keys(categoryExpenses).length > 0 && (
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900 mb-3">카테고리별 지출</h3>
           <div className="grid grid-cols-2 gap-3">
             {(Object.entries(categoryExpenses) as [Expense["category"], number][]).map(([category, amount]) => (
@@ -166,7 +166,7 @@ export function Budget() {
       )}
 
       {/* Expense List */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900">지출 내역</h3>
           <button
