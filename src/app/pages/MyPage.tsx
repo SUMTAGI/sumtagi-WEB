@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { useState, useEffect } from "react";
-import { User, Mail, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, Shield, CreditCard, MapPin, Heart, Gift, Users, Book, Ticket, AlertCircle, Clock } from "lucide-react";
+import { User, Mail, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, Shield, CreditCard, Heart, Users, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
 import { supabase } from "../lib/supabase";
@@ -114,29 +114,9 @@ export function MyPage() {
               onClick={() => handleMenuClick("/group-trip")}
             />
             <MenuItem
-              icon={<Book className="w-5 h-5" strokeWidth={2} />}
-              label="여행 다이어리"
-              onClick={() => handleMenuClick("/diary")}
-            />
-            <MenuItem
-              icon={<Ticket className="w-5 h-5" strokeWidth={2} />}
-              label="패키지 상품"
-              onClick={() => handleMenuClick("/packages")}
-            />
-            <MenuItem
               icon={<CreditCard className="w-5 h-5" strokeWidth={2} />}
               label="경비 관리"
               onClick={() => handleMenuClick("/budget")}
-            />
-            <MenuItem
-              icon={<Gift className="w-5 h-5" strokeWidth={2} />}
-              label="쿠폰함"
-              onClick={() => handleMenuClick("/coupons")}
-            />
-            <MenuItem
-              icon={<MapPin className="w-5 h-5" strokeWidth={2} />}
-              label="방문한 섬"
-              onClick={() => handleMenuClick("/visited-islands")}
             />
             <MenuItem
               icon={<Heart className="w-5 h-5" strokeWidth={2} />}
