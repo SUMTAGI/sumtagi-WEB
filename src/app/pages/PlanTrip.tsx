@@ -10,6 +10,7 @@ export function PlanTrip() {
 
   useEffect(() => { fetchIslandData(); }, []);
   const [formData, setFormData] = useState({
+    departurePort: "인천항",
     startDate: "",
     endDate: "",
     travelers: 2,
@@ -108,7 +109,7 @@ export function PlanTrip() {
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() => setFormData({ ...formData, travelers: Math.max(1, formData.travelers - 1) })}
-                className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-xl font-bold active:scale-95 transition-transform" strokeWidth={2}
+                className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-xl font-bold active:scale-95 transition-transform"
               >
                 -
               </button>
@@ -121,7 +122,7 @@ export function PlanTrip() {
               </div>
               <button
                 onClick={() => setFormData({ ...formData, travelers: formData.travelers + 1 })}
-                className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold active:scale-95 transition-transform" strokeWidth={2}
+                className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold active:scale-95 transition-transform"
               >
                 +
               </button>

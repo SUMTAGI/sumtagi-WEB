@@ -46,7 +46,11 @@ export const communityService = {
   },
 
   updateLikes: async (postId: string, count: number) => {
-    await supabase.from('community_posts').update({ likes_count: count }).eq('id', postId)
+    const { error } = await supabase
+      .from('community_posts')
+      .update({ likes_count: count })
+      .eq('id', postId)
+    if (error) throw error
   },
 
   getComments: async (postId: string) => {
@@ -63,17 +67,19 @@ export const communityService = {
 
   createComment: async (postId: string, content: string) => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('community_comments').insert({
+    if (!user) throw new Error('로그인이 필요합니다')
+    const { error: insertError } = await supabase.from('community_comments').insert({
       post_id: postId,
       user_id: user.id,
       author_name: await getAuthorName(),
       content,
     })
+    if (insertError) throw insertError
     const { data: post } = await supabase
       .from('community_posts').select('comments_count').eq('id', postId).single()
-    await supabase.from('community_posts')
+    const { error: updateError } = await supabase.from('community_posts')
       .update({ comments_count: ((post?.comments_count as number) ?? 0) + 1 })
       .eq('id', postId)
+    if (updateError) throw updateError
   },
 }

@@ -3,28 +3,31 @@ import { useNavigate, Link } from "react-router";
 import { ChevronLeft, Heart, Share2, MapPin, Send, MessageCircle, Trash2, PenSquare, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { communityService } from "../../lib/communityService";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../lib/useAuth";
 
 const ISLANDS = ['강화도', '영흥도', '자월도', '덕적도', '백령도', '대청도', '연평도'];
 
 export function Community() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed");
   const [posts, setPosts] = useState<any[]>([]);
   const [qna, setQna] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [islandFilter, setIslandFilter] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, any[]>>({});
   const [commentTexts, setCommentTexts] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setCurrentUserId(user?.id ?? null);
-    });
-  }, []);
+  const currentUserId = user?.id ?? null;
+
+  const requireLogin = () => {
+    if (user) return true;
+    toast.info("로그인이 필요한 기능이에요");
+    navigate("/login", { state: { from: "/community" } });
+    return false;
+  };
 
   const load = async () => {
     setIsLoading(true);
@@ -43,14 +46,29 @@ export function Community() {
   useEffect(() => { load(); }, [islandFilter]);
 
   const toggleLike = async (post: any) => {
+    if (!requireLogin()) return;
     const id = post.id as string;
     const liked = likedIds.has(id);
+    const previous = post.likes_count ?? 0;
     const next = liked ? (post.likes_count ?? 0) - 1 : (post.likes_count ?? 0) + 1;
     setLikedIds(prev => { const s = new Set(prev); liked ? s.delete(id) : s.add(id); return s; });
     const updater = (arr: any[]) => arr.map(p => p.id === id ? { ...p, likes_count: next } : p);
     setPosts(updater);
     setQna(updater);
-    await communityService.updateLikes(id, next);
+    try {
+      await communityService.updateLikes(id, next);
+    } catch {
+      setLikedIds(prev => {
+        const restored = new Set(prev);
+        liked ? restored.add(id) : restored.delete(id);
+        return restored;
+      });
+      const rollback = (arr: any[]) =>
+        arr.map(p => p.id === id ? { ...p, likes_count: previous } : p);
+      setPosts(rollback);
+      setQna(rollback);
+      toast.error("좋아요를 반영하지 못했어요");
+    }
   };
 
   const handleDeletePost = async (postId: string) => {
@@ -74,16 +92,30 @@ export function Community() {
   };
 
   const handleAddComment = async (postId: string) => {
+    if (!requireLogin()) return;
     const text = (commentTexts[postId] ?? '').trim();
     if (!text) return;
-    setCommentTexts(prev => ({ ...prev, [postId]: '' }));
-    await communityService.createComment(postId, text);
-    const data = await communityService.getComments(postId);
-    setComments(prev => ({ ...prev, [postId]: data }));
-    const updater = (arr: any[]) =>
-      arr.map(p => p.id === postId ? { ...p, comments_count: (p.comments_count ?? 0) + 1 } : p);
-    setPosts(updater);
-    setQna(updater);
+    try {
+      await communityService.createComment(postId, text);
+      setCommentTexts(prev => ({ ...prev, [postId]: '' }));
+      const data = await communityService.getComments(postId);
+      setComments(prev => ({ ...prev, [postId]: data }));
+      const updater = (arr: any[]) =>
+        arr.map(p => p.id === postId ? { ...p, comments_count: (p.comments_count ?? 0) + 1 } : p);
+      setPosts(updater);
+      setQna(updater);
+    } catch {
+      toast.error("댓글을 등록하지 못했어요");
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("링크가 복사됐어요");
+    } catch {
+      toast.error("링크를 복사하지 못했어요");
+    }
   };
 
   const timeAgo = (iso: string) => {
@@ -183,7 +215,8 @@ export function Community() {
               </span>
             </button>
             <button
-              onClick={() => toast.success('링크가 복사됐어요')}
+              onClick={handleShare}
+              aria-label="게시글 링크 복사"
               className="ml-auto text-gray-400 active:scale-95"
             >
               <Share2 className="w-4 h-4" strokeWidth={2} />

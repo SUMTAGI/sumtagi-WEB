@@ -1,11 +1,14 @@
 import { supabase } from "../lib/supabase";
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useLocation, useNavigate, Link } from "react-router";
 import { Ship, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnPath =
+    (location.state as { from?: string } | null)?.from ?? "/";
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -34,7 +37,7 @@ export function Login() {
     localStorage.setItem("isLoggedIn", "true");
 
     toast.success("로그인 성공!");
-    navigate("/");
+    navigate(returnPath, { replace: true });
   };
 
   const handleKakaoLogin = async () => {

@@ -465,9 +465,11 @@ export function Home() {
 
 
       {/* ══════════════════════════════════════════════════════════════
-          모바일 레이아웃 (lg 미만) — 기존 코드 완전 보존
+          모바일 레이아웃 (lg 미만) — 로그인 상태별 화면 분리
           ══════════════════════════════════════════════════════════════ */}
       <div className="lg:hidden">
+        {user ? (
+          <>
         <section className="relative bg-gradient-to-br from-blue-500 to-blue-600 text-white px-6 py-8 overflow-hidden">
           <div
             className="absolute inset-0 opacity-30 bg-cover bg-center"
@@ -623,8 +625,108 @@ export function Home() {
             </div>
           </div>
         )}
+          </>
+        ) : (
+          <MobileLanding />
+        )}
       </div>
       {/* ── 모바일 레이아웃 끝 ──────────────────────────────────────────── */}
+    </div>
+  );
+}
+
+function MobileLanding() {
+  return (
+    <div className="bg-white min-h-full">
+      <section className="relative min-h-[520px] flex items-end overflow-hidden px-6 pb-12 pt-16">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1700621497504-d241a3803bbd?auto=format&fit=crop&w=1080&q=80')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/35 to-black/75" />
+        <div className="relative z-10 text-white">
+          <p className="text-xs font-semibold tracking-[0.18em] text-white/70 mb-3">
+            서해 인천 섬 여행 플랫폼
+          </p>
+          <h1 className="text-4xl font-bold leading-tight tracking-tight mb-4">
+            인천의 섬으로
+            <br />
+            떠나는 여행
+          </h1>
+          <p className="text-sm text-white/80 leading-relaxed mb-7">
+            배편 조회부터 AI 일정까지,
+            <br />
+            섬 여행 준비를 한곳에서 시작하세요.
+          </p>
+          <div className="flex gap-3">
+            <Link
+              to="/islands"
+              className="flex-1 bg-white text-gray-900 text-center py-3.5 rounded-xl font-bold"
+            >
+              섬 둘러보기
+            </Link>
+            <Link
+              to="/login"
+              className="flex-1 bg-blue-600 text-white text-center py-3.5 rounded-xl font-bold border border-blue-500"
+            >
+              로그인
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 py-7">
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { to: "/schedule", Icon: Ship, label: "배편 조회" },
+            { to: "/islands", Icon: MapPin, label: "섬 탐색" },
+            { to: "/community", Icon: Users, label: "여행 후기" },
+          ].map(({ to, Icon, label }) => (
+            <Link
+              key={to}
+              to={to}
+              className="flex flex-col items-center gap-2 rounded-2xl bg-blue-50 px-2 py-4 text-blue-700"
+            >
+              <Icon className="w-5 h-5" strokeWidth={2} />
+              <span className="text-xs font-semibold">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-6 pb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-900">인기 섬</h2>
+          <Link to="/islands" className="text-sm font-medium text-blue-600">
+            전체보기
+          </Link>
+        </div>
+        <div className="space-y-3">
+          {POPULAR_ISLANDS.slice(0, 3).map((island) => (
+            <Link
+              key={island.id}
+              to={island.to}
+              className="flex overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+            >
+              <img
+                src={island.image}
+                alt={island.name}
+                className="w-28 h-24 object-cover shrink-0"
+              />
+              <div className="min-w-0 flex-1 px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold text-gray-900">{island.name}</h3>
+                  <span className="text-xs font-semibold text-gray-700">
+                    ★ {island.rating}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1 truncate">{island.subtitle}</p>
+                <p className="text-xs text-blue-600 mt-2">{island.travelTime}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -644,6 +746,8 @@ interface DashboardProps {
 function DesktopDashboard({
   displayName, weather, ferryStatus, confirmedItinerary, confirmedTripId, getDDay, getDDayMessage,
 }: DashboardProps) {
+  const [savedIslands, setSavedIslands] = useState<Set<string>>(new Set());
+
   const normalCount = ferryStatus.filter((s) => s.status === "정상").length;
   const ferryText =
     ferryStatus.length === 0          ? "로딩 중..." :
@@ -652,141 +756,197 @@ function DesktopDashboard({
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
-
   const dday = confirmedItinerary ? getDDay(confirmedItinerary.startDate) : null;
 
+  const toggleSave = (id: string) =>
+    setSavedIslands((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-[#f5f6f8] min-h-screen">
 
       {/* ── Welcome Banner ────────────────────────────────────────────── */}
-      <section className="relative h-[160px] flex items-center overflow-hidden">
+      <section className="relative overflow-hidden">
+        {/* 배경 그라디언트 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1a56e8] via-blue-600 to-blue-500" />
+        {/* 섬 이미지 은은하게 */}
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-[0.08]"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1700621497504-d241a3803bbd?auto=format&fit=crop&w=1920&q=80')" }}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80')",
+            opacity: 0.11,
+          }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-500" />
-        <div className="relative z-10 max-w-[1280px] mx-auto w-full px-8 flex items-center justify-between">
+        {/* 장식 원형 */}
+        <div className="absolute -top-10 -right-10 w-52 h-52 bg-white/[0.05] rounded-full" />
+        <div className="absolute top-6 right-40 w-28 h-28 bg-white/[0.05] rounded-full" />
+        {/* 하단 물결 */}
+        <svg className="absolute bottom-0 left-0 right-0 w-full" viewBox="0 0 1440 40" fill="none" preserveAspectRatio="none">
+          <path d="M0,20 C360,40 720,0 1080,20 C1260,32 1380,8 1440,20 L1440,40 L0,40 Z" fill="#f5f6f8" fillOpacity="1" />
+        </svg>
+
+        <div className="relative z-10 max-w-[1280px] mx-auto px-8 pt-9 pb-14 flex items-center justify-between">
+          {/* 좌: 인사말 */}
           <div>
-            <p className="text-blue-200 text-sm font-medium mb-1">{dateStr}</p>
-            <h1 className="text-[32px] font-bold text-white tracking-tight mb-1">
+            <p className="text-blue-200 text-sm font-medium mb-1.5">{dateStr}</p>
+            <h1 className="text-[30px] font-bold text-white tracking-tight leading-tight mb-2">
               안녕하세요, {displayName}님
             </h1>
             <p className="text-blue-200 text-sm">오늘도 좋은 섬 여행 되세요 🏝️</p>
           </div>
+
+          {/* 우: 날씨 브리핑 글라스 카드 */}
           {weather && (
-            <div className="text-right">
-              <p className="text-blue-100 text-sm mb-1">인천 앞바다</p>
-              <p className="text-2xl font-semibold text-white">{weather.current.temp}°C</p>
-              <p className="text-blue-200 text-sm">{weather.current.condition} · 파고 {weather.current.waveHeight}m</p>
+            <div className="bg-white/[0.12] backdrop-blur-sm border border-white/[0.22] rounded-2xl px-6 py-4 min-w-[220px]">
+              <p className="text-blue-200 text-xs font-medium mb-2.5 flex items-center gap-1.5">
+                <Cloud className="w-3.5 h-3.5" strokeWidth={2} />
+                인천 앞바다 현재 날씨
+              </p>
+              <div className="flex items-end gap-2 mb-2.5">
+                <span className="text-[36px] font-bold text-white leading-none">{weather.current.temp}°</span>
+                <span className="text-blue-100 text-sm font-medium mb-1">{weather.current.condition}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-blue-200 pt-2.5 border-t border-white/[0.18]">
+                <span>파고 {weather.current.waveHeight}m</span>
+                <span className="text-white/20">·</span>
+                <span>바람 {weather.current.windSpeed}m/s</span>
+              </div>
             </div>
           )}
         </div>
       </section>
 
-      {/* ── Status Cards ──────────────────────────────────────────────── */}
-      <div className="max-w-[1280px] mx-auto px-8 pt-6 pb-0">
-        <div className="grid grid-cols-4 gap-4">
-          {/* 실시간 운항 */}
+      {/* ── Main Content ──────────────────────────────────────────────── */}
+      <div className="max-w-[1280px] mx-auto px-8">
+
+        {/* Status Cards — 배너에서 이어지도록 -mt-10 */}
+        <div className="grid grid-cols-4 gap-4 -mt-10 mb-6 relative z-10">
+
+          {/* 운항 현황 */}
           <Link to="/schedule"
-            className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 group"
+            className="bg-white rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.09)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.13)] transition-all duration-200 hover:-translate-y-0.5 group border border-gray-100/60"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+              <div className="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center">
                 <Ship className="w-5 h-5 text-blue-600" strokeWidth={2} />
               </div>
               <div className="flex items-center gap-1.5">
-                <div className={`w-2 h-2 rounded-full ${
+                <div className={`w-1.5 h-1.5 rounded-full ${
                   ferryStatus.length === 0 ? "bg-gray-300" :
                   normalCount === ferryStatus.length ? "bg-green-500 animate-pulse" : "bg-orange-400"
                 }`} />
-                <span className="text-[11px] text-gray-400">실시간</span>
+                <span className="text-[11px] text-gray-400 font-medium">실시간</span>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mb-1">운항 현황</p>
-            <p className="text-base font-semibold text-gray-900">{ferryText}</p>
+            <p className="text-[11px] text-gray-400 font-semibold mb-1.5 uppercase tracking-wide">운항 현황</p>
+            <p className="text-[19px] font-bold text-gray-900 leading-tight">{ferryText}</p>
+            <p className="text-xs text-gray-400 mt-2">오늘 전체 노선 기준</p>
           </Link>
 
           {/* 날씨 */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <div className="mb-4">
-              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.09)] border border-gray-100/60">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-11 h-11 bg-orange-50 rounded-xl flex items-center justify-center">
                 <Cloud className="w-5 h-5 text-orange-500" strokeWidth={2} />
               </div>
             </div>
-            <p className="text-xs text-gray-400 mb-1">인천 앞바다 날씨</p>
-            <p className="text-base font-semibold text-gray-900">
-              {weather ? `${weather.current.condition} ${weather.current.temp}°C` : "로딩 중..."}
+            <p className="text-[11px] text-gray-400 font-semibold mb-1.5 uppercase tracking-wide">인천 앞바다</p>
+            <p className="text-[19px] font-bold text-gray-900 leading-tight">
+              {weather ? `${weather.current.temp}°C` : "—"}
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              {weather ? `${weather.current.condition} · 파고 ${weather.current.waveHeight}m` : "날씨 정보 로딩 중"}
             </p>
           </div>
 
           {/* 다음 여행 */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.09)] border border-gray-100/60">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+              <div className="w-11 h-11 bg-purple-50 rounded-xl flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-purple-600" strokeWidth={2} />
               </div>
               {dday !== null && dday >= 0 && (
-                <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">
+                <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-full">
                   {dday === 0 ? "D-Day" : `D-${dday}`}
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-400 mb-1">다음 여행</p>
-            <p className="text-base font-semibold text-gray-900">
-              {confirmedItinerary ? confirmedItinerary.islands?.join(", ") || "일정 확인" : "계획 없음"}
+            <p className="text-[11px] text-gray-400 font-semibold mb-1.5 uppercase tracking-wide">다음 여행</p>
+            <p className="text-[19px] font-bold text-gray-900 leading-tight">
+              {confirmedItinerary ? (confirmedItinerary.islands?.join(", ") || "일정 확인") : "계획 없음"}
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              {confirmedItinerary ? confirmedItinerary.startDate : "AI 플래너로 시작해보세요"}
             </p>
           </div>
 
           {/* 배편 검색 CTA */}
           <Link to="/schedule"
-            className="bg-blue-600 rounded-2xl p-5 shadow-sm hover:bg-blue-700 transition-colors group"
+            className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 shadow-[0_4px_24px_rgba(37,99,235,0.32)] hover:shadow-[0_8px_32px_rgba(37,99,235,0.44)] transition-all duration-200 hover:-translate-y-0.5 group"
           >
-            <div className="mb-4">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
                 <Search className="w-5 h-5 text-white" strokeWidth={2} />
               </div>
             </div>
-            <p className="text-xs text-blue-200 mb-1">지금 바로</p>
-            <p className="text-base font-semibold text-white flex items-center gap-1">
-              배편 검색하기
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
+            <p className="text-[11px] text-blue-200 font-semibold mb-1.5 uppercase tracking-wide">지금 바로</p>
+            <p className="text-[19px] font-bold text-white leading-tight">배편 검색</p>
+            <p className="text-xs text-blue-200 mt-2 flex items-center gap-1">
+              빠르게 조회하기
+              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
             </p>
           </Link>
         </div>
-      </div>
 
-      {/* ── 메인 2단: 여행 일정 + 인기 섬 ──────────────────────────── */}
-      <div className="max-w-[1280px] mx-auto px-8 py-6">
-        <div className="grid grid-cols-[5fr_7fr] gap-6 items-start">
+        {/* ── 빠른 서비스 ───────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl px-5 pt-5 pb-4 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60 mb-6">
+          <h2 className="text-[15px] font-bold text-gray-900 mb-4">빠른 서비스</h2>
+          <div className="grid grid-cols-6 gap-1">
+            {QUICK_SERVICES.map(({ label, Icon, to, iconColor, bg }) => (
+              <Link key={label} to={to}
+                className="flex flex-col items-center gap-2.5 py-3 rounded-2xl hover:bg-gray-50 transition-colors group"
+              >
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: bg }}>
+                  <Icon className="w-[22px] h-[22px]" style={{ color: iconColor }} strokeWidth={2} />
+                </div>
+                <span className="text-[12px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors text-center leading-tight">{label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
 
-          {/* 좌: 다음 여행 일정 */}
+        {/* ── 2단: 여행 일정 + 인기 섬 (Airbnb 스타일) ────────────── */}
+        <div className="grid grid-cols-[5fr_7fr] gap-5 mb-6">
+
+          {/* 좌: 내 여행 일정 */}
           <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">내 여행 일정</h2>
+            <h2 className="text-[15px] font-bold text-gray-900 mb-3">내 여행 일정</h2>
             {confirmedItinerary ? (
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+              <div className="bg-white rounded-2xl p-6 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
-                    <span className="text-sm font-medium text-gray-500">다음 일정</span>
+                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">확정 일정</span>
                   </div>
                   {dday !== null && dday >= 0 && (
-                    <span className="text-sm font-bold text-white bg-blue-600 px-3 py-1 rounded-full">
+                    <span className="text-xs font-bold text-white bg-blue-600 px-3 py-1 rounded-full">
                       {dday === 0 ? "D-Day" : `D-${dday}`}
                     </span>
                   )}
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-1">{confirmedItinerary.title}</h3>
                 <p className="text-sm text-gray-500 mb-1">{confirmedItinerary.startDate}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <div className="flex items-center gap-2 text-sm text-gray-500 pb-3 mb-3 border-b border-gray-100">
                   <Ship className="w-3.5 h-3.5 text-gray-400 shrink-0" strokeWidth={2} />
                   <span>{confirmedItinerary.departurePort || "인천항"}</span>
                   <span className="text-gray-300">→</span>
                   <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" strokeWidth={2} />
                   <span>{confirmedItinerary.islands?.join(", ")}</span>
                 </div>
-                <p className="text-sm text-blue-600 font-medium mb-4 pb-4 border-b border-gray-100">
-                  {getDDayMessage(dday ?? 0)}
-                </p>
+                <p className="text-sm font-medium text-blue-600 mb-4">{getDDayMessage(dday ?? 0)}</p>
                 <div className="space-y-2.5 mb-5">
                   {confirmedItinerary.days[0]?.activities?.slice(0, 3).map((activity: any, idx: number) => (
                     <div key={idx} className="flex items-start gap-3 text-sm">
@@ -798,12 +958,11 @@ function DesktopDashboard({
                 <Link to={`/itinerary/${confirmedTripId}`}
                   className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                 >
-                  전체 일정 보기
-                  <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                  전체 일정 보기 <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
                 </Link>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-8 border border-dashed border-gray-200 flex flex-col items-center text-center">
+              <div className="bg-white rounded-2xl p-8 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border-2 border-dashed border-gray-200 flex flex-col items-center text-center min-h-[280px] justify-center">
                 <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-4">
                   <Sparkles className="w-7 h-7 text-purple-500" strokeWidth={1.75} />
                 </div>
@@ -820,101 +979,91 @@ function DesktopDashboard({
             )}
           </div>
 
-          {/* 우: 인기 섬 추천 */}
+          {/* 우: 인기 섬 추천 — Airbnb 스타일 3열 이미지 카드 */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">인기 섬 추천</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[15px] font-bold text-gray-900">인기 섬 추천</h2>
               <Link to="/islands"
                 className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
               >
                 전체 보기 <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
               </Link>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-3 gap-4">
               {POPULAR_ISLANDS.slice(0, 3).map((island) => (
-                <Link key={island.id} to={island.to}
-                  className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex group"
-                >
-                  <div className="w-28 h-[88px] shrink-0 overflow-hidden">
-                    <img src={island.image} alt={island.name}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                  </div>
-                  <div className="flex flex-col justify-center px-5 py-3 flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <h3 className="text-base font-semibold text-gray-900">{island.name}</h3>
-                      <div className="flex items-center gap-1 shrink-0">
+                <div key={island.id} className="group relative">
+                  {/* 찜 버튼 */}
+                  <button
+                    onClick={() => toggleSave(island.id)}
+                    className="absolute top-2.5 right-2.5 z-10 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-all"
+                  >
+                    <Heart
+                      className={`w-4 h-4 transition-colors ${savedIslands.has(island.id) ? "fill-red-500 text-red-500" : "text-gray-600"}`}
+                      strokeWidth={2}
+                    />
+                  </button>
+                  <Link to={island.to} className="block">
+                    {/* 이미지 */}
+                    <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-3 relative bg-gray-100">
+                      <img src={island.image} alt={island.name}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    {/* 텍스트 */}
+                    <div className="flex items-start justify-between mb-0.5">
+                      <h3 className="text-[15px] font-semibold text-gray-900">{island.name}</h3>
+                      <div className="flex items-center gap-0.5 shrink-0 ml-1">
                         <Star className="w-3.5 h-3.5 fill-gray-900 text-gray-900" strokeWidth={0} />
-                        <span className="text-sm font-medium text-gray-900">{island.rating}</span>
+                        <span className="text-sm font-semibold text-gray-900">{island.rating}</span>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500 mb-2">{island.route} · {island.travelTime}</p>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {island.tags.map((tag) => (
-                        <span key={tag} className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{tag}</span>
-                      ))}
+                    <p className="text-xs text-gray-500 mb-2">{island.route}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-1 flex-wrap">
+                        {island.tags.slice(0, 2).map((tag) => (
+                          <span key={tag} className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{tag}</span>
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-400 shrink-0 ml-1">{island.travelTime}</span>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               ))}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── 하단 2단: AI 추천 + 빠른 서비스 ────────────────────────── */}
-      <div className="max-w-[1280px] mx-auto px-8 pb-12">
-        <div className="grid grid-cols-[5fr_7fr] gap-6 items-start">
-
-          {/* 좌: AI 이번 주 추천 */}
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">AI 이번 주 추천</h2>
-            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-              <div className="relative h-44 overflow-hidden">
-                <img src={AI_RECOMMENDATION.image} alt={AI_RECOMMENDATION.island}
-                  className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
-                <div className="absolute bottom-4 left-4">
-                  <span className="text-[11px] font-bold text-white bg-purple-600 px-2 py-0.5 rounded-full">AI 추천</span>
-                  <h3 className="text-xl font-bold text-white mt-1.5">{AI_RECOMMENDATION.island}</h3>
-                </div>
-              </div>
-              <div className="p-5">
-                <p className="text-sm text-gray-600 leading-relaxed mb-3">
-                  {weather
-                    ? `현재 파고 ${weather.current.waveHeight}m, ${weather.current.condition} — ${AI_RECOMMENDATION.reason}`
-                    : AI_RECOMMENDATION.reason}
-                </p>
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {AI_RECOMMENDATION.tags.map((tag) => (
-                    <span key={tag} className="text-xs text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full font-medium">{tag}</span>
-                  ))}
-                </div>
-                <Link to={AI_RECOMMENDATION.to}
-                  className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  섬 정보 보기 <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
-                </Link>
-              </div>
+        {/* ── AI 이번 주 추천 — 가로형 카드 ───────────────────────── */}
+        <div className="mb-10">
+          <h2 className="text-[15px] font-bold text-gray-900 mb-3">AI 이번 주 추천</h2>
+          <div className="bg-white rounded-2xl overflow-hidden shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60 flex">
+            <div className="relative w-56 shrink-0 overflow-hidden">
+              <img src={AI_RECOMMENDATION.image} alt={AI_RECOMMENDATION.island}
+                className="w-full h-full object-cover" />
             </div>
-          </div>
-
-          {/* 우: 빠른 서비스 */}
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">빠른 서비스</h2>
-            <div className="grid grid-cols-3 gap-3">
-              {QUICK_SERVICES.map(({ label, Icon, to, iconColor, bg }) => (
-                <Link key={label} to={to}
-                  className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col items-center gap-3 text-center group"
-                >
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: bg }}>
-                    <Icon className="w-6 h-6" style={{ color: iconColor }} strokeWidth={2} />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">{label}</span>
-                </Link>
-              ))}
+            <div className="flex-1 p-6 flex flex-col justify-center">
+              <span className="text-[11px] font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full inline-block mb-3 self-start uppercase tracking-wide">AI 추천</span>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{AI_RECOMMENDATION.island}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed mb-3">
+                {weather
+                  ? `현재 파고 ${weather.current.waveHeight}m, ${weather.current.condition} — ${AI_RECOMMENDATION.reason}`
+                  : AI_RECOMMENDATION.reason}
+              </p>
+              <div className="flex items-center gap-2 mb-4">
+                {AI_RECOMMENDATION.tags.map((tag) => (
+                  <span key={tag} className="text-xs font-medium text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">{tag}</span>
+                ))}
+              </div>
+              <Link to={AI_RECOMMENDATION.to}
+                className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 self-start transition-colors"
+              >
+                섬 정보 보기 <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+              </Link>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

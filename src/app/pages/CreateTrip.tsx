@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { ChevronLeft, CheckCircle } from "lucide-react";
-import { generateItinerary, fetchIslandData } from "../utils/itineraryGenerator";
+import { ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
+import { fetchIslandData } from "../utils/itineraryGenerator";
+import { generateItinerary } from "../../lib/api/aiItinerary";
 import { toast } from "sonner";
 import { Confetti } from "../components/Confetti";
 import { tripService } from "../../lib/tripService";
@@ -38,6 +39,7 @@ export function CreateTrip() {
   const [shakeStart, setShakeStart] = useState(false);
   const [shakeEnd, setShakeEnd] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [preSelectedIsland, setPreSelectedIsland] = useState<string | null>(null);
 
   useEffect(() => {
@@ -93,22 +95,49 @@ export function CreateTrip() {
   };
 
   const handleSubmit = async () => {
-    const dataWithPort = { ...formData, departurePort: computedPort };
-    const itinerary = generateItinerary(dataWithPort);
-    const title = `${formData.islands.join(", ")} 여행`;
+    if (isGenerating) return;
+    setIsGenerating(true);
+
     try {
-      const trip = await tripService.createTrip(title, formData.startDate, formData.endDate, formData.islands, itinerary);
+      const itinerary = await generateItinerary(
+        {
+          departurePort: computedPort,
+          islands:       formData.islands,
+          startDate:     formData.startDate,
+          endDate:       formData.endDate,
+          travelers:     formData.travelers,
+          travelStyle:   formData.travelType,
+          budget:        formData.budget,
+          provider:      "gemini",
+        },
+        () => {
+          toast.warning("AI 일정 생성에 실패했어요. 기본 일정으로 대체합니다.");
+        }
+      );
+
+      const title = `${formData.islands.join(", ")} 여행`;
+      const trip = await tripService.createTrip(
+        title,
+        formData.startDate,
+        formData.endDate,
+        formData.islands,
+        itinerary
+      );
+
       if (!trip) {
         toast.error("일정 저장에 실패했어요. 로그인 상태를 확인해주세요.");
         return;
       }
+
       localStorage.setItem(`plan_${trip.id}`, JSON.stringify(itinerary));
-      toast.success("일정이 생성됐어요!");
+      toast.success(itinerary.generatedBy === "llm" ? "AI 일정이 생성됐어요! 🎉" : "일정이 생성됐어요!");
       setShowConfetti(true);
       setTimeout(() => { navigate(`/itinerary/${trip.id}`); }, 2000);
     } catch (e) {
       toast.error("일정 저장 중 오류가 발생했어요. 다시 시도해주세요.");
       console.error("createTrip error:", e);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -319,9 +348,17 @@ export function CreateTrip() {
       {formData.travelType && (
         <button
           onClick={handleSubmit}
-          className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold active:scale-95 transition-transform mt-6"
+          disabled={isGenerating}
+          className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold transition-all mt-6 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
         >
-          일정 생성하기
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2} />
+              AI가 일정을 만들고 있어요...
+            </>
+          ) : (
+            "AI 일정 생성하기 ✨"
+          )}
         </button>
       )}
     </div>

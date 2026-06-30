@@ -189,6 +189,18 @@ export function Itinerary() {
               {isEditMode ? "저장" : "편집"}
             </button>
           </div>
+          {/* 개발 검증용 배지 — 배포 시 제거 가능 */}
+          {(itinerary as any).generatedBy === "llm" && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-100 bg-purple-600/70 px-2.5 py-0.5 rounded-full mb-2 self-start">
+              ✨ AI 생성 일정
+            </span>
+          )}
+          {(itinerary as any).generatedBy === "fallback" && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-100 bg-gray-600/70 px-2.5 py-0.5 rounded-full mb-2 self-start">
+              ⚡ 기본 일정으로 대체됨
+            </span>
+          )}
+
           <div className="flex flex-wrap gap-3 text-sm text-blue-100">
             <div className="flex items-center gap-1">
               <Ship className="w-4 h-4" strokeWidth={2} />

@@ -10,7 +10,7 @@ interface Notification {
   title: string;
   message: string;
   time: string;
-  isRead: boolean;
+  is_read: boolean;
   severity: "info" | "warning" | "critical";
   relatedBooking?: {
     id: string;
@@ -80,7 +80,7 @@ export function Notifications() {
           <div className="text-center py-12 px-6">
             <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              알림이 없해요
+              알림이 없어요
             </h3>
             <p className="text-sm text-gray-600">
               새로운 알림이 오면 여기에 표시돼요
