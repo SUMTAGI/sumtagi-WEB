@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
-import { ChevronLeft, Heart, Share2, MapPin, Send, MessageCircle, Trash2 } from "lucide-react";
+import { ChevronLeft, Heart, Share2, MapPin, Send, MessageCircle, Trash2, PenSquare, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { communityService } from "../../lib/communityService";
 import { supabase } from "../../lib/supabase";
@@ -97,7 +97,7 @@ export function Community() {
 
   const currentPosts = activeTab === 'feed' ? posts : qna;
 
-  const renderPost = (post: any) => {
+  const renderPost = (post: any, compact = false) => {
     const id = post.id as string;
     const isLiked = likedIds.has(id);
     const isExpanded = expandedPostId === id;
@@ -106,11 +106,11 @@ export function Community() {
     const isMyPost = currentUserId && post.user_id === currentUserId;
 
     return (
-      <div key={id} className="bg-white border-b border-gray-100">
+      <div key={id} className={`bg-white ${compact ? "rounded-xl border border-gray-100" : "border-b border-gray-100"}`}>
         <div className="p-4">
           {/* Author row */}
           <div className="flex items-start gap-3 mb-3">
-            <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
+            <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
               <span className="text-blue-600 text-sm font-bold">
                 {(post.author_name as string)?.[0] ?? '?'}
               </span>
@@ -243,88 +243,231 @@ export function Community() {
   };
 
   return (
-    <div className="bg-gray-50">
-      {/* Header */}
-      <div className="px-4 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="active:scale-95 transition-transform">
-          <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900">리뷰 & Q&A</h1>
-          <p className="text-xs text-gray-500">섬 여행 리뷰와 질문을 공유하세요</p>
+    <div className="bg-gray-50 min-h-screen">
+
+      {/* ================================================================
+          데스크탑 레이아웃 (lg 이상)
+          ================================================================ */}
+      <div className="hidden lg:block">
+        <div className="max-w-[1280px] mx-auto px-8 py-10">
+
+          {/* 페이지 헤더 */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">커뮤니티</h1>
+              <p className="text-gray-500">섬 여행 리뷰와 질문을 공유하세요</p>
+            </div>
+            <Link
+              to={`/community/write?type=${activeTab}`}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors"
+            >
+              <PenSquare className="w-4 h-4" strokeWidth={2} />
+              글쓰기
+            </Link>
+          </div>
+
+          <div className="flex gap-6 items-start">
+
+            {/* ── 왼쪽: 필터 사이드바 ───────────────────────────────── */}
+            <div className="w-[220px] shrink-0 space-y-4">
+
+              {/* 탭 */}
+              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                {[
+                  { key: "feed", label: "여행 리뷰", desc: "섬 방문 후기" },
+                  { key: "qna",  label: "Q&A",       desc: "질문과 답변"  },
+                ].map(({ key, label, desc }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key as "feed" | "qna")}
+                    className={`w-full text-left px-5 py-4 border-b border-gray-50 last:border-0 transition-colors ${
+                      activeTab === key ? "bg-blue-50" : "hover:bg-gray-50"
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${activeTab === key ? "text-blue-700" : "text-gray-800"}`}>{label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              {/* 섬 필터 */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-4">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">섬 필터</h3>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => setIslandFilter(null)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      !islandFilter ? "bg-blue-600 text-white font-medium" : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    전체 보기
+                  </button>
+                  {ISLANDS.map(island => (
+                    <button
+                      key={island}
+                      onClick={() => setIslandFilter(islandFilter === island ? null : island)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+                        islandFilter === island ? "bg-blue-600 text-white font-medium" : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                      {island}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 가운데: 피드 ─────────────────────────────────────── */}
+            <div className="flex-1 min-w-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-40">
+                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : currentPosts.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 text-center py-20">
+                  <MessageCircle className="w-14 h-14 text-gray-200 mx-auto mb-3" strokeWidth={2} />
+                  <p className="font-semibold text-gray-500">
+                    {activeTab === 'feed' ? '아직 리뷰가 없어요' : '아직 질문이 없어요'}
+                  </p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {activeTab === 'feed' ? '첫 번째 리뷰를 남겨보세요!' : '궁금한 점을 물어보세요!'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {currentPosts.map(post => renderPost(post, true))}
+                </div>
+              )}
+            </div>
+
+            {/* ── 오른쪽: 사이드 위젯 ──────────────────────────────── */}
+            <div className="w-[220px] shrink-0 space-y-4">
+
+              {/* 글쓰기 CTA */}
+              <div className="bg-blue-600 rounded-2xl p-5 text-white">
+                <h3 className="font-bold mb-1">나도 공유하기</h3>
+                <p className="text-blue-200 text-xs mb-4">섬 여행 리뷰를 남기거나 궁금한 점을 물어보세요</p>
+                <Link
+                  to={`/community/write?type=${activeTab}`}
+                  className="block w-full bg-white text-blue-600 text-center font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-50 transition-colors"
+                >
+                  {activeTab === 'feed' ? '리뷰 작성' : '질문하기'}
+                </Link>
+              </div>
+
+              {/* 인기 섬 */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-4">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-blue-500" strokeWidth={2} />
+                  인기 섬
+                </h3>
+                <div className="space-y-2">
+                  {['덕적도', '백령도', '자월도', '강화도', '영흥도'].map((island, i) => (
+                    <button
+                      key={island}
+                      onClick={() => setIslandFilter(island)}
+                      className="w-full flex items-center gap-2 text-sm py-1 text-left hover:text-blue-600 transition-colors"
+                    >
+                      <span className={`w-5 text-center font-bold text-xs ${i < 3 ? "text-blue-600" : "text-gray-400"}`}>
+                        {i + 1}
+                      </span>
+                      <span className="text-gray-700">{island}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <Link
-          to={`/community/write?type=${activeTab}`}
-          className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold active:scale-95 transition-transform"
-        >
-          글쓰기
-        </Link>
       </div>
 
-      {/* Tabs */}
-      <div className="px-4 pt-3 pb-2 bg-white flex gap-2">
-        <button
-          onClick={() => setActiveTab("feed")}
-          className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
-            activeTab === "feed" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          리뷰
-        </button>
-        <button
-          onClick={() => setActiveTab("qna")}
-          className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
-            activeTab === "qna" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          질문 & 답변
-        </button>
-      </div>
+      {/* ================================================================
+          모바일 레이아웃 (lg 미만) — 기존 코드 완전 보존
+          ================================================================ */}
+      <div className="lg:hidden">
+        {/* Header */}
+        <div className="px-4 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="active:scale-95 transition-transform">
+            <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold text-gray-900">리뷰 & Q&A</h1>
+            <p className="text-xs text-gray-500">섬 여행 리뷰와 질문을 공유하세요</p>
+          </div>
+          <Link
+            to={`/community/write?type=${activeTab}`}
+            className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold active:scale-95 transition-transform"
+          >
+            글쓰기
+          </Link>
+        </div>
 
-      {/* Island filter chips */}
-      <div className="px-4 pb-3 bg-white border-b border-gray-200">
-        <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+        {/* Tabs */}
+        <div className="px-4 pt-3 pb-2 bg-white flex gap-2">
           <button
-            onClick={() => setIslandFilter(null)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-              !islandFilter ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+            onClick={() => setActiveTab("feed")}
+            className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
+              activeTab === "feed" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
             }`}
           >
-            전체
+            리뷰
           </button>
-          {ISLANDS.map(island => (
+          <button
+            onClick={() => setActiveTab("qna")}
+            className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
+              activeTab === "qna" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            질문 & 답변
+          </button>
+        </div>
+
+        {/* Island filter chips */}
+        <div className="px-4 pb-3 bg-white border-b border-gray-200">
+          <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
             <button
-              key={island}
-              onClick={() => setIslandFilter(islandFilter === island ? null : island)}
+              onClick={() => setIslandFilter(null)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                islandFilter === island ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+                !islandFilter ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
               }`}
             >
-              {island}
+              전체
             </button>
-          ))}
+            {ISLANDS.map(island => (
+              <button
+                key={island}
+                onClick={() => setIslandFilter(islandFilter === island ? null : island)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                  islandFilter === island ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {island}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : currentPosts.length === 0 ? (
-          <div className="text-center py-16">
-            <MessageCircle className="w-14 h-14 text-gray-200 mx-auto mb-3" strokeWidth={2} />
-            <p className="font-medium text-gray-500">
-              {activeTab === 'feed' ? '아직 리뷰가 없어요' : '아직 질문이 없어요'}
-            </p>
-            <p className="text-sm text-gray-400 mt-1">
-              {activeTab === 'feed' ? '첫 번째 리뷰를 남겨보세요!' : '궁금한 점을 물어보세요!'}
-            </p>
-          </div>
-        ) : (
-          <div>{currentPosts.map(post => renderPost(post))}</div>
-        )}
+        {/* Content */}
+        <div>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-40">
+              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : currentPosts.length === 0 ? (
+            <div className="text-center py-16">
+              <MessageCircle className="w-14 h-14 text-gray-200 mx-auto mb-3" strokeWidth={2} />
+              <p className="font-medium text-gray-500">
+                {activeTab === 'feed' ? '아직 리뷰가 없어요' : '아직 질문이 없어요'}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {activeTab === 'feed' ? '첫 번째 리뷰를 남겨보세요!' : '궁금한 점을 물어보세요!'}
+              </p>
+            </div>
+          ) : (
+            <div>{currentPosts.map(post => renderPost(post))}</div>
+          )}
+        </div>
       </div>
     </div>
   );
