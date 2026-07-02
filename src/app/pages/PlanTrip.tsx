@@ -134,22 +134,30 @@ export function PlanTrip() {
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-gray-900">여행 스타일을 선택해주세요</h2>
             <div className="grid grid-cols-2 gap-3">
-              {["관광", "휴양", "체험", "사진"].map((type) => (
+              {[
+                { type: "관광",     emoji: "🏖️" },
+                { type: "휴양",     emoji: "😌" },
+                { type: "체험",     emoji: "🎣" },
+                { type: "사진",     emoji: "📸" },
+                { type: "생태",     emoji: "🌿", badge: true },
+                { type: "무장애",   emoji: "♿", badge: true },
+                { type: "반려동물", emoji: "🐾", badge: true },
+              ].map(({ type, emoji, badge }) => (
                 <button
                   key={type}
                   onClick={() => setFormData({ ...formData, travelType: type })}
-                  className={`p-6 rounded-xl border-2 transition-all ${
+                  className={`p-5 rounded-xl border-2 transition-all relative ${
                     formData.travelType === type
                       ? "border-blue-600 bg-blue-50"
                       : "border-gray-200 bg-white active:scale-95"
                   }`}
                 >
-                  <div className="text-3xl mb-2">
-                    {type === "관광" && "🏖️"}
-                    {type === "휴양" && "😌"}
-                    {type === "체험" && "🎣"}
-                    {type === "사진" && "📸"}
-                  </div>
+                  {badge && (
+                    <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                      관광공사
+                    </span>
+                  )}
+                  <div className="text-3xl mb-2">{emoji}</div>
                   <div className={`font-semibold ${
                     formData.travelType === type ? "text-blue-600" : "text-gray-900"
                   }`}>

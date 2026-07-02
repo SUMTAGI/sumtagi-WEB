@@ -309,18 +309,28 @@ export function CreateTrip() {
         <h3 className="text-sm font-medium text-gray-700 mb-3">여행 스타일</h3>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { id: "관광", emoji: "🏖️" }, { id: "휴양", emoji: "😌" },
-            { id: "체험", emoji: "🎣" }, { id: "사진", emoji: "📸" },
-          ].map(({ id, emoji }) => (
+            { id: "관광",     emoji: "🏖️" },
+            { id: "휴양",     emoji: "😌" },
+            { id: "체험",     emoji: "🎣" },
+            { id: "사진",     emoji: "📸" },
+            { id: "생태",     emoji: "🌿", badge: "생태관광" },
+            { id: "무장애",   emoji: "♿", badge: "무장애여행" },
+            { id: "반려동물", emoji: "🐾", badge: "반려동물동반" },
+          ].map(({ id, emoji, badge }) => (
             <button
               key={id}
               onClick={() => setFormData({ ...formData, travelType: id })}
-              className={`p-4 rounded-xl border-2 transition-all ${
+              className={`p-4 rounded-xl border-2 transition-all relative ${
                 formData.travelType === id ? "border-blue-600 bg-blue-50" : "border-gray-200 active:scale-95"
               }`}
             >
+              {badge && (
+                <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                  관광공사
+                </span>
+              )}
               <div className="text-2xl mb-1">{emoji}</div>
-              <div className={`font-semibold ${formData.travelType === id ? "text-blue-600" : "text-gray-900"}`}>{id}</div>
+              <div className={`font-semibold text-sm ${formData.travelType === id ? "text-blue-600" : "text-gray-900"}`}>{id}</div>
             </button>
           ))}
         </div>
