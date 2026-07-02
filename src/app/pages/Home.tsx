@@ -11,6 +11,7 @@ import { tripService } from "../../lib/tripService";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/useAuth";
 import { getHomeFerryStatus, type FerryRouteStatus } from "../../lib/api/ferry";
+import { getAllIslandsDemand } from "../../lib/api/demandIntensity";
 
 // ─── Landing 전용 정적 데이터 ──────────────────────────────────────────────────
 
@@ -134,6 +135,7 @@ export function Home() {
   const [ferryStatus,        setFerryStatus]        = useState<FerryRouteStatus[]>([]);
   const [showFerryModal,     setShowFerryModal]     = useState(false);
   const [unreadNotifications] = useState(0);
+  const [demandLevels,       setDemandLevels]       = useState<Record<string, 'low' | 'medium' | 'high'>>({});
 
   // Landing 전용 상태
   const [searchForm,   setSearchForm]   = useState({ departurePort: "", destination: "", date: "" });
@@ -165,6 +167,7 @@ export function Home() {
 
     fetchIncheonWeather().then(setWeather);
     getHomeFerryStatus().then(setFerryStatus).catch(() => {});
+    getAllIslandsDemand().then(setDemandLevels).catch(() => {});
 
     supabase
       .from("reviews")
@@ -235,6 +238,7 @@ export function Home() {
             confirmedTripId={confirmedTripId}
             getDDay={getDDay}
             getDDayMessage={getDDayMessage}
+            demandLevels={demandLevels}
           />
         ) : (
           /* ── 로그인 전: Landing (기존 코드 완전 유지) ─────────────── */
@@ -430,6 +434,16 @@ export function Home() {
                           strokeWidth={2}
                         />
                       </button>
+                      {demandLevels[island.id] === 'high' && (
+                        <span className="absolute top-3 left-3 z-10 text-[10px] font-bold bg-red-500 text-white px-2 py-0.5 rounded-full">
+                          🔥 인기
+                        </span>
+                      )}
+                      {demandLevels[island.id] === 'low' && (
+                        <span className="absolute top-3 left-3 z-10 text-[10px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full">
+                          💤 한산
+                        </span>
+                      )}
                       <Link to={island.to} className="block">
                         <div className="aspect-[3/2] rounded-xl overflow-hidden mb-3 relative">
                           <img src={island.image} alt={island.name}
@@ -741,10 +755,11 @@ interface DashboardProps {
   confirmedTripId: string | null;
   getDDay: (startDate: string) => number;
   getDDayMessage: (dday: number) => string;
+  demandLevels?: Record<string, 'low' | 'medium' | 'high'>;
 }
 
 function DesktopDashboard({
-  displayName, weather, ferryStatus, confirmedItinerary, confirmedTripId, getDDay, getDDayMessage,
+  displayName, weather, ferryStatus, confirmedItinerary, confirmedTripId, getDDay, getDDayMessage, demandLevels = {},
 }: DashboardProps) {
   const [savedIslands, setSavedIslands] = useState<Set<string>>(new Set());
 
@@ -1002,6 +1017,17 @@ function DesktopDashboard({
                       strokeWidth={2}
                     />
                   </button>
+                  {/* 수요강도 배지 */}
+                  {demandLevels[island.id] === 'high' && (
+                    <span className="absolute top-2.5 left-2.5 z-10 text-[9px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">
+                      🔥 인기
+                    </span>
+                  )}
+                  {demandLevels[island.id] === 'low' && (
+                    <span className="absolute top-2.5 left-2.5 z-10 text-[9px] font-bold bg-sky-500 text-white px-1.5 py-0.5 rounded-full">
+                      💤 한산
+                    </span>
+                  )}
                   <Link to={island.to} className="block">
                     {/* 이미지 */}
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-3 relative bg-gray-100">
