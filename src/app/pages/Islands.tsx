@@ -356,7 +356,7 @@ function IslandCardDesktop({
             {island.name}
           </h3>
           <span className="text-sm font-semibold text-gray-900 shrink-0 ml-2">
-            {island.ferry_price.toLocaleString()}원~
+            {island.ferry_price > 0 ? `${island.ferry_price.toLocaleString()}원~` : "육로 연결"}
           </span>
         </div>
 
@@ -458,7 +458,9 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
         <div className="mt-3 pt-3 border-t border-gray-200">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">여객선 요금</span>
-            <span className="font-bold text-blue-500">{island.ferry_price.toLocaleString()}원</span>
+            <span className="font-bold text-blue-500">
+              {island.ferry_price > 0 ? `${island.ferry_price.toLocaleString()}원` : "육로 연결"}
+            </span>
           </div>
           <div className="flex gap-1">
             {island.ports.map((port) => (

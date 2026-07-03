@@ -173,7 +173,9 @@ export function IslandDetail() {
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-600">편도 요금</div>
-            <div className="text-lg font-bold text-blue-600">{island.ferry_price.toLocaleString()}원</div>
+            <div className="text-lg font-bold text-blue-600">
+              {island.ferry_price > 0 ? `${island.ferry_price.toLocaleString()}원` : "육로 연결"}
+            </div>
           </div>
         </div>
       </div>
