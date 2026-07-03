@@ -28,19 +28,13 @@ const Checklist = lazy(() => import("./pages/Checklist").then(m => ({ default: m
 const Budget = lazy(() => import("./pages/Budget").then(m => ({ default: m.Budget })));
 const Community = lazy(() => import("./pages/Community").then(m => ({ default: m.Community })));
 const CommunityWrite = lazy(() => import("./pages/CommunityWrite").then(m => ({ default: m.CommunityWrite })));
-const Packages = lazy(() => import("./pages/Packages").then(m => ({ default: m.Packages })));
-const Events = lazy(() => import("./pages/Events").then(m => ({ default: m.Events })));
 const Emergency = lazy(() => import("./pages/Emergency").then(m => ({ default: m.Emergency })));
 const Schedule = lazy(() => import("./pages/Schedule").then(m => ({ default: m.Schedule })));
-const Coupons = lazy(() => import("./pages/Coupons").then(m => ({ default: m.Coupons })));
-const Diary = lazy(() => import("./pages/Diary").then(m => ({ default: m.Diary })));
 const GroupTrip = lazy(() => import("./pages/GroupTrip").then(m => ({ default: m.GroupTrip })));
 const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m.GroupJoin })));
 const AppSettings = lazy(() => import("./pages/AppSettings").then(m => ({ default: m.AppSettings })));
 const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
 const Bookings = lazy(() => import("./pages/Bookings").then(m => ({ default: m.Bookings })));
-const ReviewDetail = lazy(() => import("./pages/ReviewDetail").then(m => ({ default: m.ReviewDetail })));
-const Reviews = lazy(() => import("./pages/Reviews").then(m => ({ default: m.Reviews })));
 const PlanTrip = lazy(() => import("./pages/PlanTrip").then(m => ({ default: m.PlanTrip })));
 
 const Fallback = () => null;
@@ -78,12 +72,9 @@ export const router = createBrowserRouter([
       { path: "experiences", element: <Suspense fallback={<Fallback />}><Experiences /></Suspense> },
       { path: "experience/:id", element: <Suspense fallback={<Fallback />}><ExperienceDetail /></Suspense> },
       { path: "community", element: <Suspense fallback={<Fallback />}><Community /></Suspense> },
-      { path: "packages", element: <Suspense fallback={<Fallback />}><Packages /></Suspense> },
-      { path: "events", element: <Suspense fallback={<Fallback />}><Events /></Suspense> },
       { path: "emergency", element: <Suspense fallback={<Fallback />}><Emergency /></Suspense> },
       { path: "schedule", element: <Suspense fallback={<Fallback />}><Schedule /></Suspense> },
       { path: "support", element: <Suspense fallback={<Fallback />}><Support /></Suspense> },
-      { path: "review/:id", element: <Suspense fallback={<Fallback />}><ReviewDetail /></Suspense> },
       {
         element: <ProtectedRoute />,
         children: [
@@ -100,13 +91,10 @@ export const router = createBrowserRouter([
           { path: "checklist", element: <Suspense fallback={<Fallback />}><Checklist /></Suspense> },
           { path: "budget", element: <Suspense fallback={<Fallback />}><Budget /></Suspense> },
           { path: "community/write", element: <Suspense fallback={<Fallback />}><CommunityWrite /></Suspense> },
-          { path: "coupons", element: <Suspense fallback={<Fallback />}><Coupons /></Suspense> },
-          { path: "diary", element: <Suspense fallback={<Fallback />}><Diary /></Suspense> },
           { path: "group-trip", element: <Suspense fallback={<Fallback />}><GroupTrip /></Suspense> },
           { path: "group-join/:code", element: <Suspense fallback={<Fallback />}><GroupJoin /></Suspense> },
           { path: "app-settings", element: <Suspense fallback={<Fallback />}><AppSettings /></Suspense> },
           { path: "bookings", element: <Suspense fallback={<Fallback />}><Bookings /></Suspense> },
-          { path: "reviews", element: <Suspense fallback={<Fallback />}><Reviews /></Suspense> },
           { path: "plan-trip", element: <Suspense fallback={<Fallback />}><PlanTrip /></Suspense> },
         ],
       },

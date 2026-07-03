@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import {
-  Ship, MapPin, Calendar, Sparkles, Shield, ChevronRight, Star, Heart,
+  Ship, MapPin, Calendar, Sparkles, Shield, Star, Heart,
   Bell, Camera, Users, DollarSign, Search, Cloud, Waves, ArrowRight,
   ChevronDown,
 } from "lucide-react";
@@ -8,7 +8,6 @@ import { useState, useEffect, useRef } from "react";
 import { WeatherWidget, WeeklyForecast } from "../components/WeatherWidget";
 import { fetchIncheonWeather, type WeatherResult } from "../../lib/weatherService";
 import { tripService } from "../../lib/tripService";
-import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/useAuth";
 import { getHomeFerryStatus, type FerryRouteStatus } from "../../lib/api/ferry";
 import { getAllIslandsDemand } from "../../lib/api/demandIntensity";
@@ -115,13 +114,6 @@ const QUICK_SERVICES = [
   { label: "여행 계획", Icon: Calendar, to: "/travel",      iconColor: "#DB2777", bg: "#FCE7F3" },
 ] as const;
 
-// ─── 타입 ─────────────────────────────────────────────────────────────────────
-
-interface ReviewData {
-  id: string; author: string; location: string;
-  rating: number; preview: string; image: string; likes: number;
-}
-
 // ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
 
 export function Home() {
@@ -131,7 +123,6 @@ export function Home() {
   const [confirmedItinerary, setConfirmedItinerary] = useState<any>(null);
   const [confirmedTripId,    setConfirmedTripId]    = useState<string | null>(null);
   const [weather,            setWeather]            = useState<WeatherResult | null>(null);
-  const [popularReviews,     setPopularReviews]     = useState<ReviewData[]>([]);
   const [ferryStatus,        setFerryStatus]        = useState<FerryRouteStatus[]>([]);
   const [showFerryModal,     setShowFerryModal]     = useState(false);
   const [unreadNotifications] = useState(0);
@@ -168,27 +159,6 @@ export function Home() {
     fetchIncheonWeather().then(setWeather);
     getHomeFerryStatus().then(setFerryStatus).catch(() => {});
     getAllIslandsDemand().then(setDemandLevels).catch(() => {});
-
-    supabase
-      .from("reviews")
-      .select("id, rating, content, images, likes_count, profiles(nickname), islands(name, image)")
-      .order("likes_count", { ascending: false })
-      .limit(3)
-      .then(({ data }) => {
-        if (data) {
-          setPopularReviews(
-            data.map((r: any) => ({
-              id:       r.id,
-              author:   r.profiles?.nickname ?? "여행자",
-              location: r.islands?.name      ?? "",
-              rating:   r.rating,
-              preview:  r.content            ?? "",
-              image:    r.images?.[0] ?? r.islands?.image ?? "",
-              likes:    r.likes_count,
-            }))
-          );
-        }
-      });
   }, []);
 
   const getDDay = (startDate: string) => {
@@ -560,8 +530,7 @@ export function Home() {
         </section>
 
         <section className="px-6 py-4 bg-white">
-          <div className="grid grid-cols-5 gap-2">
-            <Link to="/packages"><FeatureCardMobile icon={<Sparkles className="w-5 h-5 text-blue-600" strokeWidth={2} />} title="패키지" /></Link>
+          <div className="grid grid-cols-4 gap-2">
             <Link to="/experiences"><FeatureCardMobile icon={<Camera className="w-5 h-5 text-blue-600" strokeWidth={2} />} title="체험" /></Link>
             <Link to="/community"><FeatureCardMobile icon={<Users className="w-5 h-5 text-blue-600" strokeWidth={2} />} title="리뷰" /></Link>
             <Link to="/checklist"><FeatureCardMobile icon={<Shield className="w-5 h-5 text-blue-600" strokeWidth={2} />} title="체크리스트" /></Link>
@@ -599,20 +568,6 @@ export function Home() {
             }}
           />
           <WeeklyForecast forecast={weather?.forecast ?? []} />
-        </section>
-
-        <section className="px-6 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">인기 리뷰</h2>
-            <Link to="/community" className="flex items-center gap-1 text-sm text-blue-600 font-medium">
-              전체보기 <ChevronRight className="w-4 h-4" strokeWidth={2} />
-            </Link>
-          </div>
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory">
-            {popularReviews.length > 0
-              ? popularReviews.map((review) => <MobileReviewCard key={review.id} {...review} />)
-              : <p className="text-sm text-gray-400 py-4">아직 리뷰가 없어요.</p>}
-          </div>
         </section>
 
         {showFerryModal && (
@@ -1128,38 +1083,6 @@ function MobileStatusItem({ island, status }: { island: string; status: string }
     <div className="flex items-center justify-between text-sm">
       <span className="text-gray-700">{island}</span>
       <span className={`font-medium ${color}`}>{label}</span>
-    </div>
-  );
-}
-
-function MobileReviewCard({ id, author, location, rating, preview, image, likes }: ReviewData) {
-  return (
-    <div className="w-64 snap-start">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="relative h-32">
-          <img src={image} alt={location} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          <div className="absolute bottom-3 left-3 right-3">
-            <div className="flex items-center gap-1 mb-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className={`w-3 h-3 ${i < rating ? "fill-yellow-400 text-yellow-400" : "text-white/40"}`} strokeWidth={2} />
-              ))}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-white/90">
-              <MapPin className="w-3 h-3" strokeWidth={2} /><span>{location}</span>
-            </div>
-          </div>
-        </div>
-        <div className="p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-900">{author}</span>
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <Heart className="w-3 h-3" strokeWidth={2} /><span>{likes}</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 line-clamp-2">{preview}</p>
-        </div>
-      </div>
     </div>
   );
 }
