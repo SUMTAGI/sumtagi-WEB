@@ -6,7 +6,7 @@ export interface Island {
   description: string
   features: string[]
   ferry_time: string
-  ferry_price: number
+  ferry_price: number | null
   popularity_trend: 'up' | 'down' | 'stable'
   congestion: 'low' | 'medium' | 'high'
   best_season: string
@@ -14,6 +14,13 @@ export interface Island {
   ports: string[]
   lat?: number
   lng?: number
+}
+
+// ferry_price: 0 = 다리로 연결돼 배가 필요 없음, null = 배는 있지만 정확한 요금 미확인
+export function formatFerryPrice(price: number | null): string {
+  if (price === null) return '요금 확인 필요'
+  if (price > 0) return `${price.toLocaleString()}원`
+  return '육로 연결'
 }
 
 export interface Attraction {

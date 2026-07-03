@@ -30,6 +30,11 @@ const ISLAND_CONTENT_IDS: Record<string, string> = {
   yeonghung:   '126550', // 영흥도
   pungdo:      '128899', // 풍도
   guleop:      '126546', // 굴업도
+  seonjae:     '127851', // 선재도(선재도 어촌체험마을)
+  jangbongdo:  '128005', // 장봉도
+  soya:        '2782222', // 소야도
+  uldo:        '128004', // 울도
+  // yukdo, sindo, sido, modo, mungap, baegado: 관광공사 API에 섬 단위 contentId가 없어(관광지 자체가 없거나 동명이인 지역과 혼동) 미등록
 }
 
 const cache: Record<string, RelatedAttraction[]> = {}

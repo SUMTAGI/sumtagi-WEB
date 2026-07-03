@@ -9,6 +9,9 @@ export interface FerrySchedule {
 }
 
 // 섬 ID → 항로명에 포함된 키워드
+// 신도/장봉도는 "장봉-삼목" 한 면허항로로 묶여 있어 같은 키워드 사용(신도는 그 항로의 중간 기항지).
+// 문갑도/백아도는 별도 면허항로가 확인되지 않아 완행선이 겹치는 "인천-덕적"(덕적 키워드) 재사용.
+// 시도/모도/소야도는 다리로 연결돼 있어 별도 항로가 없음(ROUTE_KEYWORDS 미등록 → 상시 '운항없음').
 const ROUTE_KEYWORDS: Record<string, string> = {
   baengnyeong: '백령',
   daecheong: '대청',
@@ -24,6 +27,11 @@ const ROUTE_KEYWORDS: Record<string, string> = {
   yeonghung: '영흥',
   seonjae: '선재',
   guleop: '굴업',
+  sindo: '장봉',
+  jangbongdo: '장봉',
+  mungap: '덕적',
+  baegado: '덕적',
+  uldo: '울도',
 };
 
 function todayKst(): string {
@@ -59,6 +67,14 @@ const ALL_ISLANDS = [
   { id: 'yeonghung',   name: '영흥도' },
   { id: 'seonjae',     name: '선재도' },
   { id: 'guleop',      name: '굴업도' },
+  { id: 'sindo',       name: '신도' },
+  { id: 'sido',        name: '시도' },
+  { id: 'modo',        name: '모도' },
+  { id: 'jangbongdo',  name: '장봉도' },
+  { id: 'soya',        name: '소야도' },
+  { id: 'mungap',      name: '문갑도' },
+  { id: 'baegado',     name: '백아도' },
+  { id: 'uldo',        name: '울도' },
 ];
 
 async function fetchAllToday(): Promise<any[]> {

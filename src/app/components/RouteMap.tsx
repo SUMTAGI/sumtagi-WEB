@@ -10,6 +10,9 @@ interface RouteMapProps {
 const islandCoords: Record<string, { lat: number; lng: number }> = {
   "인천항":   { lat: 37.4744, lng: 126.6169 },
   "대부도":   { lat: 37.2173, lng: 126.5589 },
+  "삼목항":   { lat: 37.4986, lng: 126.4532 },
+  "신도":     { lat: 37.5279, lng: 126.4572 },
+  "장봉도":   { lat: 37.5310, lng: 126.3679 },
   "백령도":   { lat: 37.9685, lng: 124.6902 },
   "대청도":   { lat: 37.8371, lng: 124.7182 },
   "소청도":   { lat: 37.7625, lng: 124.7431 },

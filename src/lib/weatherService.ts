@@ -1,6 +1,5 @@
 const INCHEON_LAT = 37.4563;
 const INCHEON_LON = 126.7052;
-const CACHE_KEY = 'incheon_weather_v1';
 const CACHE_DURATION_MS = 30 * 60 * 1000;
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -50,9 +49,31 @@ function waveToFerryStatus(wave: number): FerryStatus {
 }
 
 export async function fetchIncheonWeather(): Promise<WeatherResult | null> {
+  return fetchWeatherForLocation(INCHEON_LAT, INCHEON_LON, 'incheon_weather_v1');
+}
+
+/** 섬 좌표 기준 날씨 조회. 좌표 없는 섬은 인천 대표 좌표로 대체 */
+export async function fetchWeatherForIsland(
+  islandId: string,
+  lat?: number | null,
+  lng?: number | null,
+): Promise<WeatherResult | null> {
+  const hasCoords = typeof lat === 'number' && typeof lng === 'number';
+  return fetchWeatherForLocation(
+    hasCoords ? lat : INCHEON_LAT,
+    hasCoords ? lng : INCHEON_LON,
+    `island_weather_v1_${islandId}`,
+  );
+}
+
+async function fetchWeatherForLocation(
+  lat: number,
+  lon: number,
+  cacheKey: string,
+): Promise<WeatherResult | null> {
   // 캐시 확인
   try {
-    const cached = sessionStorage.getItem(CACHE_KEY);
+    const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
       const data: WeatherResult = JSON.parse(cached);
       if (Date.now() - data.fetchedAt < CACHE_DURATION_MS) return data;
@@ -62,13 +83,13 @@ export async function fetchIncheonWeather(): Promise<WeatherResult | null> {
   try {
     const [forecastRes, marineRes] = await Promise.all([
       fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${INCHEON_LAT}&longitude=${INCHEON_LON}` +
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
         `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m` +
         `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
         `&timezone=Asia%2FSeoul&forecast_days=6`
       ),
       fetch(
-        `https://marine-api.open-meteo.com/v1/marine?latitude=${INCHEON_LAT}&longitude=${INCHEON_LON}` +
+        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}` +
         `&hourly=wave_height&timezone=Asia%2FSeoul&forecast_days=1`
       ),
     ]);
@@ -112,7 +133,7 @@ export async function fetchIncheonWeather(): Promise<WeatherResult | null> {
       fetchedAt: Date.now(),
     };
 
-    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(result)); } catch {}
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(result)); } catch {}
     return result;
   } catch {
     return null;

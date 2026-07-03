@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { Ship, Clock, Search, X, ChevronDown, TrendingUp } from "lucide-react";
 import { CardGridSkeleton } from "../components/SkeletonLoader";
-import { getIslands, type Island } from "../../lib/api/islands";
+import { getIslands, formatFerryPrice, type Island } from "../../lib/api/islands";
 import { getAllIslandsCongestion, type IslandCongestionData } from "../../lib/api/congestion";
 
 type SortOrder = "default" | "price_asc" | "price_desc";
@@ -10,7 +10,7 @@ type SortOrder = "default" | "price_asc" | "price_desc";
 export function Islands() {
   const [islands, setIslands] = useState<Island[]>([]);
   const [congestionMap, setCongestionMap] = useState<Record<string, IslandCongestionData>>({});
-  const [portFilter, setPortFilter] = useState<"all" | "인천항" | "대부도">("all");
+  const [portFilter, setPortFilter] = useState<"all" | "인천항" | "대부도" | "삼목선착장">("all");
   const [congestionFilter, setCongestionFilter] = useState<"all" | "low" | "medium" | "high">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
@@ -40,8 +40,9 @@ export function Islands() {
 
   const sortedIslands = useMemo(() => {
     const arr = [...filteredIslands];
-    if (sortOrder === "price_asc") return arr.sort((a, b) => a.ferry_price - b.ferry_price);
-    if (sortOrder === "price_desc") return arr.sort((a, b) => b.ferry_price - a.ferry_price);
+    // 요금 미확인(null) 섬은 정렬 방향과 무관하게 항상 맨 뒤로
+    if (sortOrder === "price_asc") return arr.sort((a, b) => (a.ferry_price ?? Infinity) - (b.ferry_price ?? Infinity));
+    if (sortOrder === "price_desc") return arr.sort((a, b) => (b.ferry_price ?? -Infinity) - (a.ferry_price ?? -Infinity));
     return arr;
   }, [filteredIslands, sortOrder]);
 
@@ -92,6 +93,7 @@ export function Islands() {
                     { value: "all",  label: "전체",  count: islands.length },
                     { value: "인천항", label: "인천항", count: portCount("인천항") },
                     { value: "대부도", label: "대부도", count: portCount("대부도") },
+                    { value: "삼목선착장", label: "삼목선착장", count: portCount("삼목선착장") },
                   ] as const
                 ).map(({ value, label, count }) => (
                   <button
@@ -260,10 +262,11 @@ export function Islands() {
         <div className="bg-white px-6 py-4 border-b border-gray-200 space-y-3">
           <div>
             <p className="text-xs font-medium text-gray-500 mb-2">출발 항구</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <FilterButton active={portFilter === "all"}    onClick={() => setPortFilter("all")}    label="전체"  count={islands.length} />
               <FilterButton active={portFilter === "인천항"} onClick={() => setPortFilter("인천항")} label="인천항" color="red"    count={portCount("인천항")} />
               <FilterButton active={portFilter === "대부도"} onClick={() => setPortFilter("대부도")} label="대부도" color="orange" count={portCount("대부도")} />
+              <FilterButton active={portFilter === "삼목선착장"} onClick={() => setPortFilter("삼목선착장")} label="삼목항" color="blue" count={portCount("삼목선착장")} />
             </div>
           </div>
           <div>
@@ -356,7 +359,7 @@ function IslandCardDesktop({
             {island.name}
           </h3>
           <span className="text-sm font-semibold text-gray-900 shrink-0 ml-2">
-            {island.ferry_price > 0 ? `${island.ferry_price.toLocaleString()}원~` : "육로 연결"}
+            {island.ferry_price === null ? "요금 확인 필요" : island.ferry_price > 0 ? `${island.ferry_price.toLocaleString()}원~` : "육로 연결"}
           </span>
         </div>
 
@@ -459,7 +462,7 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">여객선 요금</span>
             <span className="font-bold text-blue-500">
-              {island.ferry_price > 0 ? `${island.ferry_price.toLocaleString()}원` : "육로 연결"}
+              {formatFerryPrice(island.ferry_price)}
             </span>
           </div>
           <div className="flex gap-1">

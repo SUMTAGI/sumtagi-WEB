@@ -31,10 +31,26 @@ const ONGJIN_GUNGU = '옹진군'
 const ISLAND_GUNGU_KEYWORDS: Record<string, string> = {
   baengnyeong: '백령',
   daecheong:   '대청',
+  socheong:    '소청',
+  yeonpyeong:  '연평',
   deokjeok:    '덕적',
   jawol:       '자월',
-  yeonghung:   '영흥',
+  seungbong:   '승봉',
+  daeijak:     '대이작',
+  soijak:      '소이작',
   pungdo:      '풍도',
+  yukdo:       '육도',
+  yeonghung:   '영흥',
+  seonjae:     '선재',
+  guleop:      '굴업',
+  sindo:       '신도',
+  sido:        '시도',
+  modo:        '모도',
+  jangbongdo:  '장봉',
+  soya:        '소야',
+  mungap:      '문갑',
+  baegado:     '백아',
+  uldo:        '울도',
 }
 
 const courseCache: Record<string, DurunubiCourse[]> = {}

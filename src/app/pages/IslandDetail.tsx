@@ -4,9 +4,9 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { toast } from "sonner";
 
 const CongestionChart = lazy(() => import("../components/CongestionChart").then(m => ({ default: m.CongestionChart })));
-import { getWeatherForIsland } from "../utils/weatherData";
+import { fetchWeatherForIsland, type WeatherResult } from "../../lib/weatherService";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
-import { getIslandById, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
+import { getIslandById, formatFerryPrice, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
 import { favoritesService } from "../../lib/favoritesService";
 import { getFerryScheduleForIsland, type FerrySchedule } from "../../lib/api/ferry";
 import { getIslandCongestion, type IslandCongestionData } from "../../lib/api/congestion";
@@ -22,6 +22,8 @@ export function IslandDetail() {
   const [ferryLoading, setFerryLoading] = useState(true);
   const [congestion, setCongestion] = useState<IslandCongestionData | null>(null);
   const [congestionLoading, setCongestionLoading] = useState(true);
+  const [weather, setWeather] = useState<WeatherResult["current"] | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
@@ -41,9 +43,14 @@ export function IslandDetail() {
           .then(setCongestion)
           .catch(() => {})
           .finally(() => setCongestionLoading(false));
+        fetchWeatherForIsland(id!, islandData.lat, islandData.lng)
+          .then((result) => setWeather(result?.current ?? null))
+          .catch(() => {})
+          .finally(() => setWeatherLoading(false));
       } else {
         setFerryLoading(false);
         setCongestionLoading(false);
+        setWeatherLoading(false);
       }
     }).finally(() => setIsLoading(false));
   }, [id]);
@@ -66,8 +73,6 @@ export function IslandDetail() {
       </div>
     );
   }
-
-  const weather = getWeatherForIsland(island.name);
 
   const handleFavorite = async () => {
     if (!id) return;
@@ -125,31 +130,35 @@ export function IslandDetail() {
               <Sun className="w-5 h-5 text-orange-500" strokeWidth={2} />
               <div>
                 <div className="text-xs text-gray-600">날씨</div>
-                <div className="font-semibold text-gray-900">{weather.temp}°C {weather.condition}</div>
+                <div className="font-semibold text-gray-900">
+                  {weatherLoading ? "-" : weather ? `${weather.temp}°C ${weather.condition}` : "정보 없음"}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Waves className="w-5 h-5 text-blue-600" strokeWidth={2} />
               <div>
                 <div className="text-xs text-gray-600">파고</div>
-                <div className="font-semibold text-gray-900">{weather.waveHeight}m</div>
+                <div className="font-semibold text-gray-900">{weatherLoading ? "-" : weather ? `${weather.waveHeight}m` : "정보 없음"}</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Wind className="w-5 h-5 text-gray-500" strokeWidth={2} />
               <div>
                 <div className="text-xs text-gray-600">풍속</div>
-                <div className="font-semibold text-gray-900">{weather.windSpeed}m/s</div>
+                <div className="font-semibold text-gray-900">{weatherLoading ? "-" : weather ? `${weather.windSpeed}m/s` : "정보 없음"}</div>
               </div>
             </div>
           </div>
-          <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${
-            weather.ferryStatus === "정상" ? "bg-green-100 text-green-700" :
-            weather.ferryStatus === "지연" ? "bg-orange-100 text-orange-700" :
-            "bg-red-100 text-red-700"
-          }`}>
-            {weather.ferryStatus}
-          </div>
+          {!weatherLoading && weather && (
+            <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${
+              weather.ferryStatus === "정상" ? "bg-green-100 text-green-700" :
+              weather.ferryStatus === "지연" ? "bg-orange-100 text-orange-700" :
+              "bg-red-100 text-red-700"
+            }`}>
+              {weather.ferryStatus}
+            </div>
+          )}
         </div>
       </div>
 
@@ -174,7 +183,7 @@ export function IslandDetail() {
           <div className="text-right">
             <div className="text-xs text-gray-600">편도 요금</div>
             <div className="text-lg font-bold text-blue-600">
-              {island.ferry_price > 0 ? `${island.ferry_price.toLocaleString()}원` : "육로 연결"}
+              {formatFerryPrice(island.ferry_price)}
             </div>
           </div>
         </div>

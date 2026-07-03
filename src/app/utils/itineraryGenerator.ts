@@ -105,6 +105,12 @@ const FERRY_SCHEDULES: FerrySchedule[] = [
   { id: "s2", from: "자월도", to: "대이작도", departureTime: "14:00", arrivalTime: "14:30", price: 8000, available: true },
   { id: "s3", from: "덕적도", to: "굴업도", departureTime: "11:20", arrivalTime: "12:00", price: 7500, available: true },
   { id: "s4", from: "굴업도", to: "덕적도", departureTime: "14:00", arrivalTime: "14:40", price: 7500, available: true },
+
+  // 삼목항 출발 (세종해운, 신도·장봉도는 같은 항로 "장봉-삼목"의 기항지라 요금 동일)
+  { id: "p1", from: "삼목항", to: "신도",   departureTime: "09:00", arrivalTime: "09:10", price: 3400, available: true },
+  { id: "p2", from: "신도",   to: "삼목항", departureTime: "15:30", arrivalTime: "15:40", price: 3400, available: true },
+  { id: "p3", from: "삼목항", to: "장봉도", departureTime: "09:00", arrivalTime: "09:40", price: 3400, available: true },
+  { id: "p4", from: "장봉도", to: "삼목항", departureTime: "15:00", arrivalTime: "15:40", price: 3400, available: true },
 ];
 
 const ATTRACTIONS: Attraction[] = [
@@ -187,6 +193,16 @@ const ATTRACTIONS: Attraction[] = [
   { id: "l1",  name: "작은해변",     island: "육도", category: "해변",       duration: 60,  congestionLevel: "low",    description: "외딴 섬의 조용하고 깨끗한 모래사장" },
   { id: "l2",  name: "어촌마을",     island: "육도", category: "문화",       duration: 45,  congestionLevel: "low",    description: "시간이 멈춘 듯한 전통 어촌 마을" },
   { id: "l3",  name: "육도 트레킹",  island: "육도", category: "등산",       duration: 90,  congestionLevel: "low",    description: "소박한 섬 전체를 걷는 자연 탐방로" },
+
+  // 선재도
+  { id: "m1",  name: "목섬",         island: "선재도", category: "자연경관", duration: 60,  congestionLevel: "medium", description: "썰물 때만 걸어 들어갈 수 있는 신비로운 모세의 기적 섬" },
+  { id: "m2",  name: "해안산책로",   island: "선재도", category: "자연경관", duration: 60,  congestionLevel: "low",    description: "영흥대교·선재대교 조망이 좋은 해안 산책길" },
+  { id: "m3",  name: "갯벌 체험",    island: "선재도", category: "체험",     duration: 90,  congestionLevel: "low",    description: "굴·바지락이 풍부한 갯벌 채취 체험" },
+
+  // 굴업도
+  { id: "n1",  name: "개머리언덕",   island: "굴업도", category: "자연경관", duration: 90,  congestionLevel: "low",    description: "서해를 조망하는 초원 언덕, 굴업도 대표 트레킹 코스" },
+  { id: "n2",  name: "해안트레킹",   island: "굴업도", category: "체험",     duration: 120, congestionLevel: "low",    description: "무인도 같은 순수한 해안선을 따라 걷는 트레킹" },
+  { id: "n3",  name: "야생화",       island: "굴업도", category: "자연경관", duration: 45,  congestionLevel: "low",    description: "사람 손이 닿지 않은 야생화 군락" },
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -233,6 +249,10 @@ function selectIslands(formData: TripFormData, numDays: number, _ferries?: Ferry
     if (numDays === 2) return ["대이작도"];
     if (numDays >= 3) return ["풍도", "소이작도"];
     return ["자월도"];
+  } else if (formData.departurePort === "삼목항") {
+    if (numDays === 1) return ["신도"];
+    if (numDays >= 2) return ["신도", "장봉도"];
+    return ["신도"];
   } else {
     // 인천항
     if (numDays === 1) return ["덕적도"];

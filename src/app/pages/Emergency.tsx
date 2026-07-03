@@ -44,7 +44,104 @@ const EMERGENCY_CONTACTS: EmergencyContact[] = [
     police: { name: "영흥파출소", phone: "032-886-3112", address: "영흥면 내리 423" },
     coastGuard: { name: "영흥파출소", phone: "032-886-0857" },
   },
+  {
+    island: "소청도",
+    hospital: { name: "대청보건지소(대청면 관할)", phone: "032-899-3120", address: "대청면 대청리" },
+    police: { name: "대청파출소", phone: "032-836-3114", address: "대청면 대청리 189" },
+    coastGuard: { name: "대청해경", phone: "032-836-5119" },
+  },
+  {
+    island: "연평도",
+    hospital: { name: "연평보건지소", phone: "032-899-3120", address: "연평면 연평리" },
+    police: { name: "연평파출소", phone: "112", address: "연평면 연평로 152" },
+    coastGuard: { name: "인천해양경찰서 연평파출소", phone: "032-650-2125" },
+  },
+  {
+    island: "승봉도",
+    hospital: { name: "승봉보건진료소", phone: "032-899-3120", address: "자월면 승봉리" },
+    police: { name: "자월파출소(자월면 관할)", phone: "032-832-3112", address: "자월면 자월리 195" },
+    coastGuard: { name: "자월파출소", phone: "032-832-2857" },
+  },
+  {
+    island: "대이작도",
+    hospital: { name: "대이작보건진료소", phone: "032-899-3120", address: "자월면 대이작리" },
+    police: { name: "자월파출소(자월면 관할)", phone: "032-832-3112", address: "자월면 자월리 195" },
+    coastGuard: { name: "자월파출소", phone: "032-832-2857" },
+  },
+  {
+    island: "소이작도",
+    hospital: { name: "소이작보건진료소", phone: "032-899-3120", address: "자월면 소이작리" },
+    police: { name: "자월파출소(자월면 관할)", phone: "032-832-3112", address: "자월면 자월리 195" },
+    coastGuard: { name: "자월파출소", phone: "032-832-2857" },
+  },
+  {
+    island: "굴업도",
+    hospital: { name: "굴업보건진료소", phone: "032-899-3120", address: "덕적면 굴업리" },
+    police: { name: "덕적파출소(덕적면 관할)", phone: "032-831-3112", address: "덕적면 진리 453" },
+    coastGuard: { name: "덕적파출소", phone: "032-832-0857" },
+  },
+  {
+    island: "풍도",
+    hospital: { name: "풍도보건진료소", phone: "031-481-3000", address: "경기도 안산시 단원구 풍도동" },
+    police: { name: "안산단원경찰서 대부파출소 풍도분소", phone: "112", address: "경기도 안산시 단원구 풍도동" },
+    coastGuard: { name: "해양경찰(공통)", phone: "122" },
+  },
+  {
+    island: "육도",
+    police: { name: "안산단원경찰서 대부파출소", phone: "112", address: "경기도 안산시 단원구 대부동" },
+    coastGuard: { name: "해양경찰(공통)", phone: "122" },
+  },
+  {
+    island: "신도",
+    hospital: { name: "북도보건지소(북도면 관할)", phone: "032-899-3120", address: "북도면 시도리" },
+    police: { name: "북도파출소", phone: "112", address: "북도면 시도리" },
+    coastGuard: { name: "해양경찰(공통)", phone: "122" },
+  },
+  {
+    island: "시도",
+    hospital: { name: "북도보건지소", phone: "032-899-3120", address: "북도면 시도리" },
+    police: { name: "북도파출소", phone: "112", address: "북도면 시도리" },
+    coastGuard: { name: "해양경찰(공통)", phone: "122" },
+  },
+  {
+    island: "모도",
+    hospital: { name: "북도보건지소(북도면 관할)", phone: "032-899-3120", address: "북도면 시도리" },
+    police: { name: "북도파출소", phone: "112", address: "북도면 시도리" },
+    coastGuard: { name: "해양경찰(공통)", phone: "122" },
+  },
+  {
+    island: "장봉도",
+    hospital: { name: "북도보건지소(북도면 관할)", phone: "032-899-3120", address: "북도면 시도리" },
+    police: { name: "북도파출소", phone: "112", address: "북도면 시도리" },
+    coastGuard: { name: "해양경찰(공통)", phone: "122" },
+  },
+  {
+    island: "소야도",
+    hospital: { name: "소야보건진료소", phone: "032-899-3120", address: "덕적면 소야리" },
+    police: { name: "덕적파출소(덕적면 관할)", phone: "032-831-3112", address: "덕적면 진리 453" },
+    coastGuard: { name: "덕적파출소", phone: "032-832-0857" },
+  },
+  {
+    island: "문갑도",
+    hospital: { name: "문갑보건진료소", phone: "032-899-3120", address: "덕적면 문갑리" },
+    police: { name: "덕적파출소(덕적면 관할)", phone: "032-831-3112", address: "덕적면 진리 453" },
+    coastGuard: { name: "덕적파출소", phone: "032-832-0857" },
+  },
+  {
+    island: "백아도",
+    hospital: { name: "백아보건진료소", phone: "032-899-3120", address: "덕적면 백아리" },
+    police: { name: "덕적파출소(덕적면 관할)", phone: "032-831-3112", address: "덕적면 진리 453" },
+    coastGuard: { name: "덕적파출소", phone: "032-832-0857" },
+  },
+  {
+    island: "울도",
+    hospital: { name: "울도보건진료소", phone: "032-899-3120", address: "덕적면 울도리" },
+    police: { name: "덕적파출소(덕적면 관할)", phone: "032-831-3112", address: "덕적면 진리 453" },
+    coastGuard: { name: "덕적파출소", phone: "032-832-0857" },
+  },
 ];
+// 개별 직통번호가 검색으로 확인되지 않은 곳은 옹진군보건소 대표번호(032-899-3120)·112·122(전국 공통, 실제 연결됨)로 대체.
+// 정확한 직통번호가 필요하면 옹진군청(032-899-3120) 또는 인천중부경찰서 민원실(032-760-8324)에 문의 권장.
 
 const FIRST_AID = [
   {
