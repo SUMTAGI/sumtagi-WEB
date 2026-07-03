@@ -10,12 +10,10 @@ export function MyPage() {
   const navigate = useNavigate();
   const { user, displayName } = useAuth();
   const [tripCount, setTripCount] = useState(0);
-  const [reviewCount, setReviewCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([tripService.getTripCount(), tripService.getMyReviewCount()])
-      .then(([t, r]) => { setTripCount(t); setReviewCount(r); });
+    tripService.getTripCount().then(setTripCount);
   }, [user]);
 
   const handleLogout = async () => {
@@ -68,11 +66,10 @@ export function MyPage() {
                     <h2 className="text-xl font-bold mb-1">{displayName}</h2>
                     <p className="text-blue-200 text-sm truncate">{user.email}</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="grid grid-cols-2 gap-2 text-center">
                     {[
                       { label: "가입", value: `${daysSinceJoin}일` },
                       { label: "여행", value: `${tripCount}건` },
-                      { label: "리뷰", value: `${reviewCount}개` },
                     ].map(({ label, value }) => (
                       <div key={label} className="bg-white/10 rounded-xl py-3">
                         <p className="text-[10px] text-blue-200 mb-0.5 uppercase tracking-wide">{label}</p>
@@ -162,7 +159,6 @@ export function MyPage() {
                   </div>
                   {[
                     { icon: Clock,       label: "교통 시간표",    path: "/schedule"  },
-                    { icon: Calendar,    label: "이벤트 & 축제",  path: "/events"    },
                     { icon: AlertCircle, label: "긴급 연락처",    path: "/emergency" },
                   ].map(({ icon: Icon, label, path }) => (
                     <button
@@ -232,10 +228,9 @@ export function MyPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <StatCard label="가입일" value={`${daysSinceJoin}일전`} />
               <StatCard label="예약" value={`${tripCount}건`} />
-              <StatCard label="리뷰" value={`${reviewCount}개`} />
             </div>
           </div>
         </div>
@@ -268,7 +263,6 @@ export function MyPage() {
             <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">편의 기능</h3>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <MenuItem icon={<Clock className="w-5 h-5" strokeWidth={2} />} label="교통 시간표" onClick={() => go("/schedule")} />
-              <MenuItem icon={<Calendar className="w-5 h-5" strokeWidth={2} />} label="이벤트 & 축제" onClick={() => go("/events")} />
               <MenuItem icon={<AlertCircle className="w-5 h-5" strokeWidth={2} />} label="긴급 연락처" onClick={() => go("/emergency")} showDivider={false} />
             </div>
           </div>

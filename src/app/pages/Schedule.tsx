@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { ChevronLeft, Ship, Clock, MapPin, Bell, Bus, Car, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { getFerryScheduleForIsland, type FerrySchedule as LiveFerrySchedule } from "../../lib/api/ferry";
+import { getIslands, type Island } from "../../lib/api/islands";
 
 interface FerrySchedule {
   id: string;
@@ -9,111 +11,26 @@ interface FerrySchedule {
   departure: string;
   arrival: string;
   departureTime: string;
-  arrivalTime: string;
   duration: string;
   price: number;
   vessel: string;
-  status: "정상" | "지연" | "결항";
+  status: string;
 }
 
-const FERRY_SCHEDULES: FerrySchedule[] = [
-  {
-    id: "f1",
-    route: "인천항 → 백령도",
-    departure: "인천항",
-    arrival: "백령도",
-    departureTime: "08:00",
-    arrivalTime: "12:00",
-    duration: "4시간",
-    price: 45000,
-    vessel: "하모니플라워호",
-    status: "정상"
-  },
-  {
-    id: "f2",
-    route: "백령도 → 인천항",
-    departure: "백령도",
-    arrival: "인천항",
-    departureTime: "14:00",
-    arrivalTime: "18:00",
-    duration: "4시간",
-    price: 45000,
-    vessel: "하모니플라워호",
-    status: "정상"
-  },
-  {
-    id: "f3",
-    route: "인천항 → 덕적도",
-    departure: "인천항",
-    arrival: "덕적도",
-    departureTime: "09:00",
-    arrivalTime: "11:30",
-    duration: "2.5시간",
-    price: 28000,
-    vessel: "섬사랑2호",
-    status: "정상"
-  },
-  {
-    id: "f4",
-    route: "덕적도 → 인천항",
-    departure: "덕적도",
-    arrival: "인천항",
-    departureTime: "15:00",
-    arrivalTime: "17:30",
-    duration: "2.5시간",
-    price: 28000,
-    vessel: "섬사랑2호",
-    status: "정상"
-  },
-  {
-    id: "f5",
-    route: "인천항 → 영흥도",
-    departure: "인천항",
-    arrival: "영흥도",
-    departureTime: "10:00",
-    arrivalTime: "11:00",
-    duration: "1시간",
-    price: 15000,
-    vessel: "영흥페리호",
-    status: "정상"
-  },
-  {
-    id: "f6",
-    route: "영흥도 → 인천항",
-    departure: "영흥도",
-    arrival: "인천항",
-    departureTime: "16:00",
-    arrivalTime: "17:00",
-    duration: "1시간",
-    price: 15000,
-    vessel: "영흥페리호",
-    status: "정상"
-  },
-  {
-    id: "f7",
-    route: "대부도 → 자월도",
-    departure: "대부도",
-    arrival: "자월도",
-    departureTime: "09:30",
-    arrivalTime: "11:30",
-    duration: "2시간",
-    price: 25000,
-    vessel: "코리아킹호",
-    status: "정상"
-  },
-  {
-    id: "f8",
-    route: "자월도 → 대부도",
-    departure: "자월도",
-    arrival: "대부도",
-    departureTime: "14:30",
-    arrivalTime: "16:30",
-    duration: "2시간",
-    price: 25000,
-    vessel: "코리아킹호",
-    status: "정상"
-  },
-];
+function toFerrySchedule(live: LiveFerrySchedule, island: Island | undefined, idx: number): FerrySchedule {
+  const port = island?.ports?.[0] ?? "인천항";
+  return {
+    id: `${live.ferryName}_${live.departureTime}_${idx}`,
+    route: live.routeName || `${port} ↔ ${island?.name ?? ""}`,
+    departure: port,
+    arrival: island?.name ?? "",
+    departureTime: live.departureTime,
+    duration: island?.ferry_time ?? "",
+    price: island?.ferry_price ?? 0,
+    vessel: live.ferryName,
+    status: live.status,
+  };
+}
 
 interface LocalTransport {
   island: string;
@@ -206,15 +123,27 @@ const LOCAL_TRANSPORT: LocalTransport[] = [
 export function Schedule() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"ferry" | "local">("ferry");
-  const [selectedRoute, setSelectedRoute] = useState<string>("all");
+  const [islands, setIslands] = useState<Island[]>([]);
+  const [selectedFerryIsland, setSelectedFerryIsland] = useState<string>("baengnyeong");
+  const [ferrySchedules, setFerrySchedules] = useState<FerrySchedule[]>([]);
+  const [isFerryLoading, setIsFerryLoading] = useState(true);
   const [selectedIsland, setSelectedIsland] = useState<string>("백령도");
 
-  const routes = ["all", ...Array.from(new Set(FERRY_SCHEDULES.map(s => s.departure)))];
+  useEffect(() => {
+    getIslands().then(setIslands).catch(() => toast.error("섬 정보를 불러오지 못했어요"));
+  }, []);
 
-  const filteredSchedules = FERRY_SCHEDULES.filter(schedule => {
-    if (selectedRoute === "all") return true;
-    return schedule.departure === selectedRoute;
-  });
+  useEffect(() => {
+    if (islands.length === 0) return;
+    setIsFerryLoading(true);
+    getFerryScheduleForIsland(selectedFerryIsland)
+      .then(live => {
+        const island = islands.find(i => i.id === selectedFerryIsland);
+        setFerrySchedules(live.map((l, idx) => toFerrySchedule(l, island, idx)));
+      })
+      .catch(() => toast.error("여객선 시간표를 불러오지 못했어요"))
+      .finally(() => setIsFerryLoading(false));
+  }, [selectedFerryIsland, islands]);
 
   const setAlarm = (schedule: FerrySchedule) => {
     toast.success(`${schedule.departureTime} 출항 1시간 전에 알림을 드릴게요`);
@@ -234,7 +163,7 @@ export function Schedule() {
           <span className="text-sm">뒤로</span>
         </button>
         <h1 className="text-xl font-bold mb-1">교통 시간표</h1>
-        <p className="text-sm text-blue-100">여객선 및 섬 내부 교통 정보</p>
+        <p className="text-sm text-blue-100">오늘의 실시간 여객선 운항 정보 및 섬 내부 교통 안내</p>
       </div>
 
       {/* Tabs */}
@@ -265,21 +194,21 @@ export function Schedule() {
       <div className="">
         {activeTab === "ferry" ? (
           <>
-            {/* Route Filter */}
+            {/* Island Filter */}
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-2">출발지</p>
+              <p className="text-sm font-medium text-gray-700 mb-2">섬 선택</p>
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {routes.map(route => (
+                {islands.map(island => (
                   <button
-                    key={route}
-                    onClick={() => setSelectedRoute(route)}
+                    key={island.id}
+                    onClick={() => setSelectedFerryIsland(island.id)}
                     className={`px-3 py-1.5 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
-                      selectedRoute === route
+                      selectedFerryIsland === island.id
                         ? "bg-blue-600 text-white"
                         : "bg-white text-gray-700 border border-gray-200"
                     }`}
                   >
-                    {route === "all" ? "전체" : route}
+                    {island.name}
                   </button>
                 ))}
               </div>
@@ -287,9 +216,19 @@ export function Schedule() {
 
             {/* Ferry Schedules */}
             <div className="px-6 py-4 space-y-3">
-              {filteredSchedules.map(schedule => (
-                <FerryCard key={schedule.id} schedule={schedule} onSetAlarm={setAlarm} />
-              ))}
+              {isFerryLoading ? (
+                <div className="text-center py-12 text-gray-400 text-sm">오늘 운항 정보를 불러오는 중...</div>
+              ) : ferrySchedules.length === 0 ? (
+                <div className="text-center py-12">
+                  <Ship className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
+                  <p className="text-gray-500 mb-2">오늘 예정된 운항이 없어요</p>
+                  <p className="text-sm text-gray-400">다른 섬을 선택해보세요</p>
+                </div>
+              ) : (
+                ferrySchedules.map(schedule => (
+                  <FerryCard key={schedule.id} schedule={schedule} onSetAlarm={setAlarm} />
+                ))
+              )}
             </div>
 
             {/* Notice */}
@@ -420,6 +359,12 @@ export function Schedule() {
   );
 }
 
+function statusColor(status: string): string {
+  if (status.includes("결항")) return "bg-red-100 text-red-700";
+  if (status.includes("지연")) return "bg-orange-100 text-orange-700";
+  return "bg-blue-100 text-blue-700";
+}
+
 function FerryCard({ schedule, onSetAlarm }: { schedule: FerrySchedule; onSetAlarm: (schedule: FerrySchedule) => void }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -429,11 +374,7 @@ function FerryCard({ schedule, onSetAlarm }: { schedule: FerrySchedule; onSetAla
           <div className="font-bold text-gray-900 mb-1">{schedule.route}</div>
           <div className="text-xs text-gray-500">{schedule.vessel}</div>
         </div>
-        <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-          schedule.status === "정상" ? "bg-blue-100 text-blue-700" :
-          schedule.status === "지연" ? "bg-orange-100 text-orange-700" :
-          "bg-red-100 text-red-700"
-        }`}>
+        <div className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColor(schedule.status)}`}>
           {schedule.status}
         </div>
       </div>
@@ -449,17 +390,18 @@ function FerryCard({ schedule, onSetAlarm }: { schedule: FerrySchedule; onSetAla
           <div className="text-xs text-gray-600 mt-1">{schedule.departure}</div>
         </div>
 
-        <div className="px-3 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-600">
-          {schedule.duration}
-        </div>
-
-        <div className="flex-1">
-          <div className="text-xs text-gray-500 mb-1">도착</div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-gray-400" strokeWidth={2} />
-            <span className="text-lg font-bold text-gray-900">{schedule.arrivalTime}</span>
+        {schedule.duration && (
+          <div className="px-3 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-600">
+            소요 {schedule.duration}
           </div>
-          <div className="text-xs text-gray-600 mt-1">{schedule.arrival}</div>
+        )}
+
+        <div className="flex-1 text-right">
+          <div className="text-xs text-gray-500 mb-1">도착지</div>
+          <div className="flex items-center justify-end gap-2">
+            <MapPin className="w-4 h-4 text-gray-400" strokeWidth={2} />
+            <span className="text-lg font-bold text-gray-900">{schedule.arrival}</span>
+          </div>
         </div>
       </div>
 
@@ -467,7 +409,9 @@ function FerryCard({ schedule, onSetAlarm }: { schedule: FerrySchedule; onSetAla
       <div className="flex items-center justify-between pt-3 border-t border-gray-200">
         <div>
           <div className="text-xs text-gray-500">편도 요금</div>
-          <div className="text-lg font-bold text-blue-600">{schedule.price.toLocaleString()}원</div>
+          <div className="text-lg font-bold text-blue-600">
+            {schedule.price > 0 ? `${schedule.price.toLocaleString()}원` : "정보 없음"}
+          </div>
         </div>
         <button
           onClick={() => onSetAlarm(schedule)}
