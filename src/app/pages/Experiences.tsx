@@ -275,22 +275,6 @@ export function ExperienceDetail() {
       return;
     }
 
-    const booking = {
-      id: `booking-${Date.now()}`,
-      experienceId: experience.id,
-      experience: experience.name,
-      island: experience.island,
-      date: selectedDate,
-      people: selectedPeople,
-      price: experience.price * selectedPeople,
-      status: "confirmed",
-      bookedAt: new Date().toISOString(),
-    };
-
-    const bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
-    bookings.push(booking);
-    localStorage.setItem("bookings", JSON.stringify(bookings));
-
     // 경비에도 자동으로 추가 (실제 가계부 데이터에 반영되도록 Supabase에 저장)
     await budgetService.addExpense(
       "체험",

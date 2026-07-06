@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import {
-  Ship, MapPin, Calendar, Sparkles, Shield, Star, Heart,
+  Ship, MapPin, Calendar, Sparkles, Shield, Heart,
   Bell, Camera, Users, DollarSign, Search, Cloud, Waves, ArrowRight,
   ChevronDown,
 } from "lucide-react";
@@ -11,6 +11,8 @@ import { tripService } from "../../lib/tripService";
 import { useAuth } from "../../lib/useAuth";
 import { getHomeFerryStatus, type FerryRouteStatus } from "../../lib/api/ferry";
 import { getAllIslandsDemand } from "../../lib/api/demandIntensity";
+import { getPopularIslands, type Island } from "../../lib/api/islands";
+import { IslandImage } from "../components/IslandImage";
 
 // ─── Landing 전용 정적 데이터 ──────────────────────────────────────────────────
 
@@ -64,36 +66,6 @@ const FEATURE_ITEMS = [
 
 // ─── 공유 데이터 ───────────────────────────────────────────────────────────────
 
-const POPULAR_ISLANDS = [
-  {
-    id: "deokjeok", name: "덕적도", subtitle: "서해 최고의 비경",
-    route: "인천 연안부두 출발", travelTime: "약 2시간 20분",
-    rating: 4.8, reviews: 234, tags: ["해수욕", "낚시", "캠핑"],
-    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-    to: "/island/deokjeok",
-  },
-  {
-    id: "jawol", name: "자월도", subtitle: "달빛처럼 고요한 섬",
-    route: "인천 연안부두 출발", travelTime: "약 1시간 50분",
-    rating: 4.6, reviews: 128, tags: ["캠핑", "일몰", "산책"],
-    image: "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=800&q=80",
-    to: "/island/jawol",
-  },
-  {
-    id: "muui", name: "무의도", subtitle: "수도권 가장 가까운 해수욕장",
-    route: "잠진도 선착장 출발", travelTime: "약 5분",
-    rating: 4.9, reviews: 412, tags: ["해수욕", "갯벌", "등산"],
-    image: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=800&q=80",
-    to: "/island/muui",
-  },
-  {
-    id: "yeonghung", name: "영흥도", subtitle: "드라이브와 해산물의 섬",
-    route: "대부도 방아머리 출발", travelTime: "약 15분",
-    rating: 4.7, reviews: 318, tags: ["드라이브", "해산물", "펜션"],
-    image: "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?auto=format&fit=crop&w=800&q=80",
-    to: "/island/yeonghung",
-  },
-];
 
 // ─── Dashboard Mock 데이터 (TODO: API/Supabase 데이터로 교체) ─────────────────
 
@@ -108,7 +80,7 @@ const AI_RECOMMENDATION = {
 const QUICK_SERVICES = [
   { label: "배편 조회", Icon: Ship,     to: "/schedule",    iconColor: "#1664F5", bg: "#EEF4FF" },
   { label: "AI 플래너", Icon: Sparkles, to: "/create-trip", iconColor: "#7C3AED", bg: "#F5F3FF" },
-  { label: "지도",      Icon: MapPin,   to: "/map",         iconColor: "#0B9488", bg: "#CCFBF1" },
+  { label: "지도",      Icon: MapPin,   to: "/islands",     iconColor: "#0B9488", bg: "#CCFBF1" },
   { label: "커뮤니티",  Icon: Users,    to: "/community",   iconColor: "#F97316", bg: "#FFF1E6" },
   { label: "날씨·물때", Icon: Cloud,    to: "/",            iconColor: "#0284C7", bg: "#E0F2FE" },
   { label: "여행 계획", Icon: Calendar, to: "/travel",      iconColor: "#DB2777", bg: "#FCE7F3" },
@@ -127,6 +99,7 @@ export function Home() {
   const [showFerryModal,     setShowFerryModal]     = useState(false);
   const [unreadNotifications] = useState(0);
   const [demandLevels,       setDemandLevels]       = useState<Record<string, 'low' | 'medium' | 'high'>>({});
+  const [popularIslands,     setPopularIslands]     = useState<Island[]>([]);
 
   // Landing 전용 상태
   const [searchForm,   setSearchForm]   = useState({ departurePort: "", destination: "", date: "" });
@@ -159,6 +132,7 @@ export function Home() {
     fetchIncheonWeather().then(setWeather);
     getHomeFerryStatus().then(setFerryStatus).catch(() => {});
     getAllIslandsDemand().then(setDemandLevels).catch(() => {});
+    getPopularIslands(4).then(setPopularIslands).catch(() => {});
   }, []);
 
   const getDDay = (startDate: string) => {
@@ -209,6 +183,7 @@ export function Home() {
             getDDay={getDDay}
             getDDayMessage={getDDayMessage}
             demandLevels={demandLevels}
+            popularIslands={popularIslands}
           />
         ) : (
           /* ── 로그인 전: Landing (기존 코드 완전 유지) ─────────────── */
@@ -393,7 +368,7 @@ export function Home() {
                   </Link>
                 </div>
                 <div className="grid grid-cols-4 gap-6">
-                  {POPULAR_ISLANDS.map((island) => (
+                  {popularIslands.map((island) => (
                     <div key={island.id} className="group relative">
                       <button
                         onClick={() => toggleSave(island.id)}
@@ -414,24 +389,18 @@ export function Home() {
                           💤 한산
                         </span>
                       )}
-                      <Link to={island.to} className="block">
+                      <Link to={`/island/${island.id}`} className="block">
                         <div className="aspect-[3/2] rounded-xl overflow-hidden mb-3 relative">
-                          <img src={island.image} alt={island.name}
+                          <IslandImage src={island.image} alt={island.name}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         </div>
                         <div>
-                          <div className="flex items-start justify-between mb-0.5">
-                            <h3 className="text-base font-semibold text-gray-900">{island.name}</h3>
-                            <div className="flex items-center gap-1 shrink-0 ml-2">
-                              <Star className="w-3.5 h-3.5 fill-gray-900 text-gray-900" strokeWidth={0} />
-                              <span className="text-sm font-medium text-gray-900">{island.rating}</span>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-500 mb-1">{island.route}</p>
-                          <p className="text-sm text-gray-400 mb-2">{island.travelTime}</p>
+                          <h3 className="text-base font-semibold text-gray-900 mb-0.5">{island.name}</h3>
+                          <p className="text-sm text-gray-500 mb-1">{island.ports.join(", ")} 출발</p>
+                          <p className="text-sm text-gray-400 mb-2">{island.ferry_time}</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {island.tags.map((tag) => (
+                            {island.features.slice(0, 3).map((tag) => (
                               <span key={tag} className="text-xs text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-full">{tag}</span>
                             ))}
                           </div>
@@ -596,7 +565,7 @@ export function Home() {
         )}
           </>
         ) : (
-          <MobileLanding />
+          <MobileLanding popularIslands={popularIslands} />
         )}
       </div>
       {/* ── 모바일 레이아웃 끝 ──────────────────────────────────────────── */}
@@ -604,7 +573,7 @@ export function Home() {
   );
 }
 
-function MobileLanding() {
+function MobileLanding({ popularIslands }: { popularIslands: Island[] }) {
   return (
     <div className="bg-white min-h-full">
       <section className="relative min-h-[520px] flex items-end overflow-hidden px-6 pb-12 pt-16">
@@ -671,26 +640,21 @@ function MobileLanding() {
           </Link>
         </div>
         <div className="space-y-3">
-          {POPULAR_ISLANDS.slice(0, 3).map((island) => (
+          {popularIslands.slice(0, 3).map((island) => (
             <Link
               key={island.id}
-              to={island.to}
+              to={`/island/${island.id}`}
               className="flex overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
             >
-              <img
+              <IslandImage
                 src={island.image}
                 alt={island.name}
                 className="w-28 h-24 object-cover shrink-0"
               />
               <div className="min-w-0 flex-1 px-4 py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold text-gray-900">{island.name}</h3>
-                  <span className="text-xs font-semibold text-gray-700">
-                    ★ {island.rating}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1 truncate">{island.subtitle}</p>
-                <p className="text-xs text-blue-600 mt-2">{island.travelTime}</p>
+                <h3 className="font-semibold text-gray-900">{island.name}</h3>
+                <p className="text-xs text-gray-500 mt-1 truncate">{island.description}</p>
+                <p className="text-xs text-blue-600 mt-2">{island.ferry_time}</p>
               </div>
             </Link>
           ))}
@@ -711,10 +675,11 @@ interface DashboardProps {
   getDDay: (startDate: string) => number;
   getDDayMessage: (dday: number) => string;
   demandLevels?: Record<string, 'low' | 'medium' | 'high'>;
+  popularIslands: Island[];
 }
 
 function DesktopDashboard({
-  displayName, weather, ferryStatus, confirmedItinerary, confirmedTripId, getDDay, getDDayMessage, demandLevels = {},
+  displayName, weather, ferryStatus, confirmedItinerary, confirmedTripId, getDDay, getDDayMessage, demandLevels = {}, popularIslands,
 }: DashboardProps) {
   const [savedIslands, setSavedIslands] = useState<Set<string>>(new Set());
 
@@ -960,7 +925,7 @@ function DesktopDashboard({
               </Link>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              {POPULAR_ISLANDS.slice(0, 3).map((island) => (
+              {popularIslands.slice(0, 3).map((island) => (
                 <div key={island.id} className="group relative">
                   {/* 찜 버튼 */}
                   <button
@@ -983,30 +948,24 @@ function DesktopDashboard({
                       💤 한산
                     </span>
                   )}
-                  <Link to={island.to} className="block">
+                  <Link to={`/island/${island.id}`} className="block">
                     {/* 이미지 */}
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-3 relative bg-gray-100">
-                      <img src={island.image} alt={island.name}
+                      <IslandImage src={island.image} alt={island.name}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     {/* 텍스트 */}
-                    <div className="flex items-start justify-between mb-0.5">
-                      <h3 className="text-[15px] font-semibold text-gray-900">{island.name}</h3>
-                      <div className="flex items-center gap-0.5 shrink-0 ml-1">
-                        <Star className="w-3.5 h-3.5 fill-gray-900 text-gray-900" strokeWidth={0} />
-                        <span className="text-sm font-semibold text-gray-900">{island.rating}</span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-2">{island.route}</p>
+                    <h3 className="text-[15px] font-semibold text-gray-900 mb-0.5">{island.name}</h3>
+                    <p className="text-xs text-gray-500 mb-2">{island.ports.join(", ")} 출발</p>
                     <div className="flex items-center justify-between">
                       <div className="flex gap-1 flex-wrap">
-                        {island.tags.slice(0, 2).map((tag) => (
+                        {island.features.slice(0, 2).map((tag) => (
                           <span key={tag} className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{tag}</span>
                         ))}
                       </div>
-                      <span className="text-xs text-gray-400 shrink-0 ml-1">{island.travelTime}</span>
+                      <span className="text-xs text-gray-400 shrink-0 ml-1">{island.ferry_time}</span>
                     </div>
                   </Link>
                 </div>

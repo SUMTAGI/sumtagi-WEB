@@ -34,7 +34,8 @@ export function Itinerary() {
           setItinerary(plan);
           setIsConfirmed(plan.confirmed || data.confirmed || false);
         } else {
-          setItinerary({ ...data, startDate: data.start_date, islands: data.islands ?? [], days: [], totalCost: 0 });
+          // plan(JSON) 없이 앱(Flutter)에서 만든 여행은 days/total_cost 컬럼에 직접 저장되므로 그걸 사용
+          setItinerary({ ...data, startDate: data.start_date, islands: data.islands ?? [], days: data.days ?? [], totalCost: data.total_cost ?? 0 });
           setIsConfirmed(data.confirmed || false);
         }
       } else {
@@ -159,6 +160,22 @@ export function Itinerary() {
   }
 
   const currentDay = itinerary.days[selectedDay];
+
+  if (!currentDay) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gray-50">
+        <div className="text-center px-6">
+          <p className="text-gray-600 mb-4">아직 생성된 일정이 없어요</p>
+          <button
+            onClick={() => navigate("/travel")}
+            className="text-blue-600 font-semibold"
+          >
+            여행 목록으로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50">

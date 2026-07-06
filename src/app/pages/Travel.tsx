@@ -16,15 +16,15 @@ export function Travel() {
 
   useEffect(() => {
     const load = async () => {
-      const [trip, progress, trips] = await Promise.all([
+      const [trip, trips] = await Promise.all([
         tripService.getUpcomingTrip(),
-        tripService.getChecklistProgress(),
         tripService.getVisitedTrips(),
       ]);
       if (trip) {
         setCurrentItinerary({ ...trip, startDate: trip.start_date, islands: trip.islands ?? [] });
         setCurrentTripId(trip.id);
       }
+      const progress = await tripService.getChecklistProgress(trip?.id ?? null);
       setChecklistProgress(progress);
       setConfirmedTrips(trips);
       setIsLoading(false);
@@ -203,23 +203,25 @@ export function Travel() {
               {/* ── 오른쪽: 사이드 패널 (1/3) ──────────────────────── */}
               <div className="space-y-5">
 
-                {/* 새 여행 만들기 */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Plus className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
-                    새 여행 계획
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4 leading-relaxed">
-                    AI가 여행 스타일을 분석해 최적의 섬 일정을 추천해드려요.
-                  </p>
-                  <button
-                    onClick={() => navigate("/create-trip")}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
-                  >
-                    <Sparkles className="w-4 h-4" strokeWidth={2} />
-                    AI 일정 생성
-                  </button>
-                </div>
+                {/* 새 여행 만들기 — 이미 진행 중인 여행이 있을 때만 노출(없을 때는 왼쪽 빈 상태 CTA와 중복) */}
+                {currentItinerary && (
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
+                      새 여행 계획
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+                      AI가 여행 스타일을 분석해 최적의 섬 일정을 추천해드려요.
+                    </p>
+                    <button
+                      onClick={() => navigate("/create-trip")}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" strokeWidth={2} />
+                      AI 일정 생성
+                    </button>
+                  </div>
+                )}
 
                 {/* 지난 여행 */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">

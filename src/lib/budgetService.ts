@@ -3,18 +3,20 @@ import { supabase } from './supabase'
 const uid = async () => (await supabase.auth.getUser()).data.user?.id
 
 export const budgetService = {
-  getExpenses: async () => {
+  getExpenses: async (tripId?: string | null) => {
     const id = await uid()
     if (!id) return []
-    const { data, error } = await supabase.from('budget_items').select().eq('user_id', id).order('created_at', { ascending: false })
+    let query = supabase.from('budget_items').select().eq('user_id', id)
+    query = tripId ? query.eq('trip_id', tripId) : query.is('trip_id', null)
+    const { data, error } = await query.order('created_at', { ascending: false })
     if (error) console.error('getExpenses error:', error)
     return data ?? []
   },
 
-  addExpense: async (category: string, amount: number, description: string) => {
+  addExpense: async (category: string, amount: number, title: string, tripId?: string | null) => {
     const id = await uid()
     if (!id) return
-    const { error } = await supabase.from('budget_items').insert({ user_id: id, category, amount, description })
+    const { error } = await supabase.from('budget_items').insert({ user_id: id, category, amount, title, trip_id: tripId ?? null })
     if (error) console.error('addExpense error:', error)
   },
 

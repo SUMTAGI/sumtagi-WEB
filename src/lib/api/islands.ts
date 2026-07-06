@@ -10,7 +10,7 @@ export interface Island {
   popularity_trend: 'up' | 'down' | 'stable'
   congestion: 'low' | 'medium' | 'high'
   best_season: string
-  image: string
+  image: string | null
   ports: string[]
   lat?: number
   lng?: number
@@ -83,6 +83,29 @@ export async function getIslands(): Promise<Island[]> {
 
   if (error) throw error
   return data ?? []
+}
+
+// 즐겨찾기 데이터가 거의 없는 초기 서비스 특성상, "인기 섬"은 관광지 정보(맛집·포토스팟)가
+// 가장 풍부하게 등록된 섬을 우선순위로 삼는다 (콘텐츠가 많을수록 실제로 둘러볼 게 많은 섬).
+export async function getPopularIslands(limit = 4): Promise<Island[]> {
+  const [islands, restaurants, photoSpots] = await Promise.all([
+    getIslands(),
+    supabase.from('restaurants').select('island_id'),
+    supabase.from('photo_spots').select('island_id'),
+  ])
+
+  const richness: Record<string, number> = {}
+  const tally = (rows: { island_id: string }[] | null) => {
+    for (const row of rows ?? []) {
+      richness[row.island_id] = (richness[row.island_id] ?? 0) + 1
+    }
+  }
+  tally(restaurants.data)
+  tally(photoSpots.data)
+
+  return [...islands]
+    .sort((a, b) => (richness[b.id] ?? 0) - (richness[a.id] ?? 0))
+    .slice(0, limit)
 }
 
 export async function getIslandById(id: string): Promise<IslandDetail | null> {

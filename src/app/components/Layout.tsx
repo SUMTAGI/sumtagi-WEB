@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router";
-import { MapPin, Compass, Home as HomeIcon, Calendar, User, Bell, Ship } from "lucide-react";
+import { MapPin, Home as HomeIcon, Calendar, User, Bell, Ship } from "lucide-react";
 import { Toaster } from "sonner";
 import { useAuth } from "../../lib/useAuth";
 
@@ -9,14 +9,12 @@ const DESKTOP_NAV = [
   { to: "/islands",  label: "섬 탐색"              },
   { to: "/travel",   label: "여행 계획"             },
   { to: "/community",label: "커뮤니티"              },
-  { to: "/map",      label: "지도"                  },
 ];
 
 const MOBILE_NAV = [
   { to: "/",       label: "홈",  Icon: HomeIcon, exact: true },
   { to: "/travel", label: "여행", Icon: Calendar               },
   { to: "/islands",label: "섬",  Icon: MapPin                  },
-  { to: "/map",    label: "지도", Icon: Compass                 },
   { to: "/my",     label: "마이", Icon: User                    },
 ];
 

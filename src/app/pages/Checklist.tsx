@@ -3,10 +3,11 @@ import { useNavigate } from "react-router";
 import { ChevronLeft, Plus, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { checklistService } from "../../lib/checklistService";
+import { tripService } from "../../lib/tripService";
 
 interface ChecklistItem {
   id: string;
-  text: string;
+  title: string;
   is_checked: boolean;
   category: string;
 }
@@ -16,9 +17,15 @@ export function Checklist() {
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("필수품");
+  const [tripId, setTripId] = useState<string | null>(null);
+  const [tripTitle, setTripTitle] = useState<string | null>(null);
 
   useEffect(() => {
-    checklistService.getItems().then(data => setItems(data as ChecklistItem[]));
+    tripService.getUpcomingTrip().then(trip => {
+      setTripId(trip?.id ?? null);
+      setTripTitle(trip?.title ?? null);
+      checklistService.getItems(trip?.id ?? null).then(data => setItems(data as ChecklistItem[]));
+    });
   }, []);
 
   const toggleItem = async (item: ChecklistItem) => {
@@ -34,16 +41,16 @@ export function Checklist() {
 
   const addItem = async () => {
     if (!newItemText.trim()) { toast.error("항목을 입력해주세요"); return; }
-    await checklistService.addItem(newItemText, selectedCategory);
-    const data = await checklistService.getItems();
+    await checklistService.addItem(newItemText, selectedCategory, tripId);
+    const data = await checklistService.getItems(tripId);
     setItems(data as ChecklistItem[]);
     setNewItemText("");
     toast.success("항목이 추가됐어요");
   };
 
   const resetChecklist = async () => {
-    await checklistService.reset();
-    const data = await checklistService.getItems();
+    await checklistService.reset(tripId);
+    const data = await checklistService.getItems(tripId);
     setItems(data as ChecklistItem[]);
     toast.success("체크리스트가 초기화됐어요");
   };
@@ -63,7 +70,7 @@ export function Checklist() {
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900">여행 체크리스트</h1>
+          <h1 className="text-lg font-bold text-gray-900">{tripTitle ? `${tripTitle} 체크리스트` : "여행 체크리스트"}</h1>
           <p className="text-xs text-gray-500">
             {completedCount}/{items.length} 완료
           </p>
@@ -158,7 +165,7 @@ export function Checklist() {
                           : "text-gray-900"
                       }`}
                     >
-                      {item.text}
+                      {item.title}
                     </span>
                     <button
                       onClick={() => deleteItem(item.id)}

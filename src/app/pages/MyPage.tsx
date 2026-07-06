@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { useState, useEffect } from "react";
-import { User, Mail, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, Shield, CreditCard, Heart, Users, AlertCircle, Clock } from "lucide-react";
+import { User, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, CreditCard, Heart, Users, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
 import { supabase } from "../lib/supabase";
@@ -86,9 +86,7 @@ export function MyPage() {
                   <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">계정 정보</h3>
                 </div>
                 {[
-                  { icon: User,   label: "프로필 수정",   path: "/profile-edit" },
-                  { icon: Mail,   label: "이메일",         path: "/profile-edit", sub: user.email },
-                  { icon: Shield, label: "비밀번호 변경",  path: "/profile-edit" },
+                  { icon: User, label: "프로필 수정", path: "/profile-edit", sub: user.email },
                 ].map(({ icon: Icon, label, path, sub }) => (
                   <button
                     key={label}
@@ -241,9 +239,7 @@ export function MyPage() {
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">계정 정보</h3>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <MenuItem icon={<User className="w-5 h-5" strokeWidth={2} />} label="프로필 수정" onClick={() => go("/profile-edit")} />
-              <MenuItem icon={<Mail className="w-5 h-5" strokeWidth={2} />} label="이메일" value={user.email ?? ''} onClick={() => go("/profile-edit")} />
-              <MenuItem icon={<Shield className="w-5 h-5" strokeWidth={2} />} label="비밀번호 변경" onClick={() => go("/profile-edit")} showDivider={false} />
+              <MenuItem icon={<User className="w-5 h-5" strokeWidth={2} />} label="프로필 수정" value={user.email ?? ''} onClick={() => go("/profile-edit")} showDivider={false} />
             </div>
           </div>
 
