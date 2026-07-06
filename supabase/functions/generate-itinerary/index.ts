@@ -109,7 +109,7 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.7,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192,
       },
     }),
   });
