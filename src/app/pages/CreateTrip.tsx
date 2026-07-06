@@ -36,6 +36,7 @@ export function CreateTrip() {
     travelType: "",
     islands: [] as string[],
     budget: "보통",
+    specialRequests: "",
   });
   const [shakeStart, setShakeStart] = useState(false);
   const [shakeEnd, setShakeEnd] = useState(false);
@@ -109,6 +110,7 @@ export function CreateTrip() {
           travelers:     formData.travelers,
           travelStyle:   formData.travelType,
           budget:        formData.budget,
+          specialRequests: formData.specialRequests.trim() || undefined,
           provider:      "gemini",
         },
         () => {
@@ -354,6 +356,17 @@ export function CreateTrip() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-gray-700 mb-3">AI에게 하고 싶은 말이 있나요? <span className="text-gray-400 font-normal">(선택)</span></h3>
+        <textarea
+          value={formData.specialRequests}
+          onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
+          placeholder="예: 아이랑 같이 가요, 낚시하고 싶어요, 걷는 건 최소화해주세요"
+          rows={3}
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none"
+        />
       </div>
 
       {formData.travelType && (
