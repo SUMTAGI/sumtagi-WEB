@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router";
+import { Outlet, Link, useLocation } from "react-router";
 import { MapPin, Compass, Home as HomeIcon, Calendar, User, Bell, Ship } from "lucide-react";
 import { Toaster } from "sonner";
 import { useAuth } from "../../lib/useAuth";
@@ -30,16 +30,8 @@ const TOASTER_STYLE = {
 
 export function Layout() {
   const location = useLocation();
-  const navigate  = useNavigate();
   const { user, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    if (loading) return;
-    if (user && !localStorage.getItem("hasSeenOnboarding") && location.pathname === "/") {
-      navigate("/onboarding", { replace: true });
-    }
-  }, [user, loading, navigate, location.pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);

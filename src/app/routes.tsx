@@ -10,7 +10,6 @@ const Itinerary = lazy(() => import("./pages/Itinerary").then(m => ({ default: m
 const Islands = lazy(() => import("./pages/Islands").then(m => ({ default: m.Islands })));
 const MapPage = lazy(() => import("./pages/MapPage").then(m => ({ default: m.MapPage })));
 const MyPage = lazy(() => import("./pages/MyPage").then(m => ({ default: m.MyPage })));
-const Onboarding = lazy(() => import("./pages/Onboarding").then(m => ({ default: m.Onboarding })));
 const Login = lazy(() => import("./pages/Login").then(m => ({ default: m.Login })));
 const Signup = lazy(() => import("./pages/Signup").then(m => ({ default: m.Signup })));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit").then(m => ({ default: m.ProfileEdit })));
@@ -40,13 +39,6 @@ const PlanTrip = lazy(() => import("./pages/PlanTrip").then(m => ({ default: m.P
 const Fallback = () => null;
 
 export const router = createBrowserRouter([
-  {
-    path: "/onboarding",
-    Component: AuthLayout,
-    children: [
-      { index: true, element: <Suspense fallback={<Fallback />}><Onboarding /></Suspense> },
-    ],
-  },
   {
     path: "/login",
     Component: AuthLayout,
