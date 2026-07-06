@@ -40,13 +40,23 @@ export function Bookings() {
   const [filter, setFilter] = useState<"all" | "confirmed" | "cancelled">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "itinerary" | "experience">("all");
 
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem("bookings") || "[]") as Booking[];
+    setBookings(stored);
+  }, []);
+
+  const persist = (next: Booking[]) => {
+    setBookings(next);
+    localStorage.setItem("bookings", JSON.stringify(next));
+  };
+
   const handleCancelBooking = (bookingId: string) => {
-    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: "cancelled" as const } : b));
+    persist(bookings.map(b => b.id === bookingId ? { ...b, status: "cancelled" as const } : b));
     toast.success("예약이 취소됐어요");
   };
 
   const handleDeleteBooking = (bookingId: string) => {
-    setBookings(prev => prev.filter(b => b.id !== bookingId));
+    persist(bookings.filter(b => b.id !== bookingId));
     toast.success("예약 내역이 삭제됐어요");
   };
 
@@ -157,7 +167,7 @@ export function Bookings() {
               여행 일정을 생성하고 원하는 항목을 예약해보세요
             </p>
             <Link
-              to="/plan"
+              to="/plan-trip"
               className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium active:scale-95 transition-transform flex items-center gap-2"
             >
               <Calendar className="w-5 h-5" strokeWidth={2} />
