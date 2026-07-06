@@ -73,7 +73,7 @@ export function Signup() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
   email: formData.email,
   password: formData.password,
   options: {
@@ -90,8 +90,6 @@ if (error) {
   return;
 }
 
-localStorage.setItem("user", JSON.stringify(data.user));
-localStorage.setItem("isLoggedIn", "true");
 toast.success("회원가입이 완료됐어요! 로그인해주세요.");
 navigate("/login");
   };

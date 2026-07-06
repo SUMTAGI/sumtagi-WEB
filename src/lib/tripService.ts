@@ -80,10 +80,12 @@ export const tripService = {
     return count ?? 0
   },
 
-  getChecklistProgress: async () => {
+  getChecklistProgress: async (tripId?: string | null) => {
     const id = await uid()
     if (!id) return 0
-    const { data } = await supabase.from('checklist_items').select('is_checked').eq('user_id', id)
+    let query = supabase.from('checklist_items').select('is_checked').eq('user_id', id)
+    query = tripId ? query.eq('trip_id', tripId) : query.is('trip_id', null)
+    const { data } = await query
     if (!data || data.length === 0) return 0
     const done = data.filter(i => i.is_checked).length
     return Math.round((done / data.length) * 100)

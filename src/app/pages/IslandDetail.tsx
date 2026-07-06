@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 const CongestionChart = lazy(() => import("../components/CongestionChart").then(m => ({ default: m.CongestionChart })));
 import { fetchWeatherForIsland, type WeatherResult } from "../../lib/weatherService";
+import { IslandImage } from "../components/IslandImage";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
 import { getIslandById, formatFerryPrice, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
 import { favoritesService } from "../../lib/favoritesService";
@@ -93,7 +94,7 @@ export function IslandDetail() {
   return (
     <div className="bg-white">
       <div className="relative h-64">
-        <img src={island.image} alt={island.name} className="w-full h-full object-cover" />
+        <IslandImage src={island.image} alt={island.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
         <button

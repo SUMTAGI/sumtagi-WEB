@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { ChevronLeft, Plus, DollarSign, TrendingUp, TrendingDown, Ship, Hotel, UtensilsCrossed, Camera, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { budgetService } from "../../lib/budgetService";
+import { tripService } from "../../lib/tripService";
 
 type Category = "교통" | "숙박" | "식사" | "체험" | "기타";
 
@@ -10,7 +11,7 @@ interface Expense {
   id: string;
   category: Category;
   amount: number;
-  description: string;
+  title: string;
   created_at: string;
 }
 
@@ -19,18 +20,24 @@ export function Budget() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalBudget, setTotalBudget] = useState(500000);
   const [showAddExpense, setShowAddExpense] = useState(false);
-  const [newExpense, setNewExpense] = useState({ category: "식사" as Category, amount: "", description: "" });
+  const [newExpense, setNewExpense] = useState({ category: "식사" as Category, amount: "", title: "" });
+  const [tripId, setTripId] = useState<string | null>(null);
+  const [tripTitle, setTripTitle] = useState<string | null>(null);
 
   useEffect(() => {
-    budgetService.getExpenses().then(data => setExpenses(data as Expense[]));
+    tripService.getUpcomingTrip().then(trip => {
+      setTripId(trip?.id ?? null);
+      setTripTitle(trip?.title ?? null);
+      budgetService.getExpenses(trip?.id ?? null).then(data => setExpenses(data as Expense[]));
+    });
   }, []);
 
   const addExpense = async () => {
-    if (!newExpense.amount || !newExpense.description) { toast.error("모든 항목을 입력해주세요"); return; }
-    await budgetService.addExpense(newExpense.category, parseInt(newExpense.amount), newExpense.description);
-    const data = await budgetService.getExpenses();
+    if (!newExpense.amount || !newExpense.title) { toast.error("모든 항목을 입력해주세요"); return; }
+    await budgetService.addExpense(newExpense.category, parseInt(newExpense.amount), newExpense.title, tripId);
+    const data = await budgetService.getExpenses(tripId);
     setExpenses(data as Expense[]);
-    setNewExpense({ category: "식사", amount: "", description: "" });
+    setNewExpense({ category: "식사", amount: "", title: "" });
     setShowAddExpense(false);
     toast.success("지출이 추가됐어요");
   };
@@ -88,7 +95,9 @@ export function Budget() {
         </button>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-gray-900">여행 경비 관리</h1>
-          <p className="text-xs text-gray-500">지출을 기록하고 예산을 관리하세요</p>
+          <p className="text-xs text-gray-500">
+            {tripTitle ? `${tripTitle} 지출 관리` : "여행 중이 아닐 때의 지출을 기록하세요"}
+          </p>
         </div>
       </div>
 
@@ -211,8 +220,8 @@ export function Budget() {
                 <label className="text-sm font-medium text-gray-700 block mb-1">내용</label>
                 <input
                   type="text"
-                  value={newExpense.description}
-                  onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                  value={newExpense.title}
+                  onChange={(e) => setNewExpense({ ...newExpense, title: e.target.value })}
                   placeholder="점심 식사"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
@@ -258,7 +267,7 @@ export function Budget() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-1">
                       <div>
-                        <div className="font-semibold text-gray-900">{expense.description}</div>
+                        <div className="font-semibold text-gray-900">{expense.title}</div>
                         <div className="text-xs text-gray-500 mt-0.5">
                           {new Date(expense.created_at).toLocaleDateString('ko-KR', {
                             month: 'long',

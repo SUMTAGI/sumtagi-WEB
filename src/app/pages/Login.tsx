@@ -23,7 +23,7 @@ export function Login() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email: formData.email,
       password: formData.password,
     });
@@ -32,9 +32,6 @@ export function Login() {
       toast.error(error.message);
       return;
     }
-
-    localStorage.setItem("user", JSON.stringify(data.user));
-    localStorage.setItem("isLoggedIn", "true");
 
     toast.success("로그인 성공!");
     navigate(returnPath, { replace: true });

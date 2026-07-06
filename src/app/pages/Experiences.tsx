@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, useParams, Link } from "react-router";
 import { ChevronLeft, Users, Clock, MapPin, Star, Calendar, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Confetti } from "../components/Confetti";
+import { budgetService } from "../../lib/budgetService";
 
 interface Experience {
   id: string;
@@ -259,53 +260,27 @@ export function Experiences() {
   );
 }
 
-interface ExperienceDetailProps {
-  experienceId: string;
-}
-
 export function ExperienceDetail() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedPeople, setSelectedPeople] = useState(2);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // Mock data - 실제로는 experienceId로 데이터를 가져와야 함
-  const experience = EXPERIENCES[0];
+  const experience = EXPERIENCES.find((exp) => exp.id === id) ?? EXPERIENCES[0];
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!selectedDate) {
       toast.error("날짜를 선택해주세요");
       return;
     }
 
-    const booking = {
-      id: `booking-${Date.now()}`,
-      experienceId: experience.id,
-      experience: experience.name,
-      island: experience.island,
-      date: selectedDate,
-      people: selectedPeople,
-      price: experience.price * selectedPeople,
-      status: "confirmed",
-      bookedAt: new Date().toISOString(),
-    };
-
-    const bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
-    bookings.push(booking);
-    localStorage.setItem("bookings", JSON.stringify(bookings));
-
-    // 경비에도 자동으로 추가
-    const expenses = JSON.parse(localStorage.getItem("expenses") || "[]");
-    const newExpense = {
-      id: `expense-${Date.now()}`,
-      category: "체험",
-      description: `${experience.name} (${selectedPeople}명)`,
-      amount: experience.price * selectedPeople,
-      date: selectedDate,
-      createdAt: new Date().toISOString(),
-    };
-    expenses.push(newExpense);
-    localStorage.setItem("expenses", JSON.stringify(expenses));
+    // 경비에도 자동으로 추가 (실제 가계부 데이터에 반영되도록 Supabase에 저장)
+    await budgetService.addExpense(
+      "체험",
+      experience.price * selectedPeople,
+      `${experience.name} (${selectedPeople}명)`
+    );
 
     toast.success("체험 예약 및 경비가 추가됐어요!");
     setShowConfetti(true);

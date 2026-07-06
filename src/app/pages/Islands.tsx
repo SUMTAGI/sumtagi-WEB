@@ -1,11 +1,110 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router";
-import { Ship, Clock, Search, X, ChevronDown, TrendingUp } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
+import L from "leaflet";
+import { Ship, Clock, Search, X, ChevronDown, ChevronRight, TrendingUp, LayoutGrid, Map as MapIcon } from "lucide-react";
 import { CardGridSkeleton } from "../components/SkeletonLoader";
+import { IslandImage } from "../components/IslandImage";
+import { Link } from "react-router";
 import { getIslands, formatFerryPrice, type Island } from "../../lib/api/islands";
 import { getAllIslandsCongestion, type IslandCongestionData } from "../../lib/api/congestion";
 
+// ─── 타입 ─────────────────────────────────────────────────────────────────────
+
+type PortFilter = "all" | "인천항" | "대부도" | "삼목선착장";
+type CongestionFilter = "all" | "low" | "medium" | "high";
 type SortOrder = "default" | "price_asc" | "price_desc";
+type ViewMode = "list" | "map";
+
+interface Port {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  color: string;
+  description: string;
+}
+
+interface IslandWithCoords extends Island {
+  lat: number;
+  lng: number;
+}
+
+interface PortMarker extends Port {
+  isPort: true;
+}
+
+interface IslandMarker extends IslandWithCoords {
+  isPort: false;
+  color: string;
+}
+
+type MarkerItem = PortMarker | IslandMarker;
+
+function isIslandMarker(marker: MarkerItem): marker is IslandMarker {
+  return !marker.isPort;
+}
+
+// ─── 정적 데이터 (지도 뷰 전용) ────────────────────────────────────────────────
+
+const PORTS: Port[] = [
+  { id: "incheon", name: "인천항",   lat: 37.4744, lng: 126.6169, color: "#ef4444", description: "인천 연안여객터미널" },
+  { id: "daebu",   name: "대부도항", lat: 37.2173, lng: 126.5589, color: "#f97316", description: "방아머리여객터미널" },
+];
+
+const FERRY_ROUTES: [string, string][] = [
+  ["incheon", "baengnyeong"], ["incheon", "daecheong"],  ["incheon", "socheong"],
+  ["incheon", "yeonpyeong"],  ["incheon", "deokjeok"],   ["incheon", "jawol"],
+  ["incheon", "seungbong"],   ["incheon", "daeijak"],
+  ["daebu",   "jawol"],       ["daebu",   "seungbong"],  ["daebu",   "daeijak"],
+  ["daebu",   "soijak"],      ["daebu",   "deokjeok"],   ["daebu",   "pungdo"],
+  ["daebu",   "yukdo"],
+  ["deokjeok","jawol"],       ["jawol",   "daeijak"],
+  ["incheon", "yeonghung"],   ["incheon", "guleop"],
+  ["yeonghung","seonjae"],
+];
+
+const CONGESTION_CONFIG = {
+  low:    { label: "여유", bg: "bg-green-500",  text: "text-white" },
+  medium: { label: "보통", bg: "bg-yellow-400", text: "text-white" },
+  high:   { label: "혼잡", bg: "bg-red-500",    text: "text-white" },
+} as const;
+
+// ─── 유틸 (지도 뷰 전용) ───────────────────────────────────────────────────────
+
+function makeIcon(color: string, isPort: boolean, isSelected: boolean) {
+  const size   = isPort ? 18 : isSelected ? 22 : 16;
+  const border = isSelected ? 3 : 2;
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      width:${size}px;height:${size}px;
+      background:${color};
+      border:${border}px solid white;
+      border-radius:50%;
+      box-shadow:0 2px 6px rgba(0,0,0,0.35);
+      ${isSelected ? `outline:3px solid ${color}50;outline-offset:1px;` : ""}
+    "></div>`,
+    iconSize:   [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+// 최초 데이터 로드 완료 후 1회만 전체 범위로 fitBounds
+function InitialBounds({ markers }: { markers: MarkerItem[] }) {
+  const map    = useMap();
+  const fitted = useRef(false);
+
+  useEffect(() => {
+    if (fitted.current || markers.length <= PORTS.length) return;
+    fitted.current = true;
+    const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
+    map.fitBounds(bounds, { padding: [48, 48] });
+  }, [markers, map]);
+
+  return null;
+}
+
+// ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
 
 export function Islands() {
   const [islands, setIslands] = useState<Island[]>([]);
@@ -15,6 +114,12 @@ export function Islands() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
   const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+
+  // 지도 뷰 전용 상태
+  const [selected, setSelected] = useState<MarkerItem | null>(null);
+  const [showRoutes, setShowRoutes] = useState(true);
+  const mapRef = useRef<L.Map | null>(null);
 
   useEffect(() => {
     getIslands()
@@ -49,6 +154,41 @@ export function Islands() {
   const portCount = (port: string) => islands.filter(i => i.ports.includes(port)).length;
   const congestionCount = (level: "low" | "medium" | "high") =>
     islands.filter(i => effectiveCongestion(i) === level).length;
+
+  // ── 지도 뷰 파생 데이터 ─────────────────────────────────────────────────────
+  const mapIslands = useMemo(
+    () => sortedIslands.filter((i): i is IslandWithCoords => i.lat != null && i.lng != null),
+    [sortedIslands]
+  );
+  const markers: MarkerItem[] = useMemo(() => [
+    ...PORTS.map(p => ({ ...p, isPort: true as const })),
+    ...mapIslands.map(i => ({ ...i, isPort: false as const, color: "#3b82f6" })),
+  ], [mapIslands]);
+  const getMarkerById = (id: string) => markers.find(m => m.id === id);
+
+  const handleSelect = useCallback((marker: MarkerItem) => {
+    setSelected(marker);
+    if (mapRef.current) {
+      const zoom = marker.isPort ? 10 : 11;
+      mapRef.current.flyTo([marker.lat, marker.lng], zoom, { duration: 0.8 });
+    }
+  }, []);
+
+  const routeLines = FERRY_ROUTES.flatMap(([fromId, toId], idx) => {
+    const from = getMarkerById(fromId);
+    const to   = getMarkerById(toId);
+    if (!from || !to) return [];
+    const isHighlighted = selected?.id === fromId || selected?.id === toId;
+    return [{
+      key: idx, from, to,
+      options: {
+        color:     isHighlighted ? "#2563eb" : "#3b82f6",
+        weight:    isHighlighted ? 2.5 : 1.2,
+        opacity:   isHighlighted ? 1   : 0.35,
+        dashArray: "6, 6",
+      },
+    }];
+  });
 
   return (
     <div className="bg-white">
@@ -171,7 +311,7 @@ export function Islands() {
             </div>
           </aside>
 
-          {/* ── 메인 그리드 ─────────────────────────────────────────────── */}
+          {/* ── 메인 영역 ─────────────────────────────────────────────── */}
           <main className="flex-1 px-8 py-8 min-w-0">
 
             {/* 결과 헤더 */}
@@ -188,41 +328,76 @@ export function Islands() {
                   </button>
                 )}
               </p>
-              <div className="relative">
-                <select
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                  className="appearance-none text-sm text-gray-700 bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
-                >
-                  <option value="default">기본순</option>
-                  <option value="price_asc">요금 낮은순</option>
-                  <option value="price_desc">요금 높은순</option>
-                </select>
-                <ChevronDown
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
-                  strokeWidth={2}
-                />
+              <div className="flex items-center gap-2">
+                {viewMode === "map" && (
+                  <button
+                    onClick={() => setShowRoutes(v => !v)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      showRoutes
+                        ? "bg-blue-50 text-blue-700 border border-blue-200"
+                        : "bg-gray-100 text-gray-600 border border-transparent"
+                    }`}
+                  >
+                    <Ship className="w-3.5 h-3.5" strokeWidth={2} />
+                    항로
+                  </button>
+                )}
+                {viewMode === "list" && (
+                  <div className="relative">
+                    <select
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                      className="appearance-none text-sm text-gray-700 bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+                    >
+                      <option value="default">기본순</option>
+                      <option value="price_asc">요금 낮은순</option>
+                      <option value="price_desc">요금 높은순</option>
+                    </select>
+                    <ChevronDown
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+                      strokeWidth={2}
+                    />
+                  </div>
+                )}
+                <ViewToggle viewMode={viewMode} onChange={setViewMode} />
               </div>
             </div>
 
-            {/* 카드 그리드 */}
-            {isLoading ? (
-              <CardGridSkeleton count={6} />
-            ) : sortedIslands.length === 0 ? (
-              <div className="text-center py-28">
-                <Search className="w-12 h-12 mx-auto mb-4 text-gray-200" strokeWidth={1.5} />
-                <p className="text-lg font-medium text-gray-500 mb-1">검색 결과가 없어요</p>
-                <p className="text-sm text-gray-400">다른 필터나 검색어를 시도해보세요</p>
-              </div>
+            {viewMode === "list" ? (
+              isLoading ? (
+                <CardGridSkeleton count={6} />
+              ) : sortedIslands.length === 0 ? (
+                <div className="text-center py-28">
+                  <Search className="w-12 h-12 mx-auto mb-4 text-gray-200" strokeWidth={1.5} />
+                  <p className="text-lg font-medium text-gray-500 mb-1">검색 결과가 없어요</p>
+                  <p className="text-sm text-gray-400">다른 필터나 검색어를 시도해보세요</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-6">
+                  {sortedIslands.map((island) => (
+                    <IslandCardDesktop
+                      key={island.id}
+                      island={island}
+                      congestionLevel={effectiveCongestion(island)}
+                    />
+                  ))}
+                </div>
+              )
             ) : (
-              <div className="grid grid-cols-3 gap-6">
-                {sortedIslands.map((island) => (
-                  <IslandCardDesktop
-                    key={island.id}
-                    island={island}
-                    congestionLevel={effectiveCongestion(island)}
-                  />
-                ))}
+              <div className="relative rounded-2xl overflow-hidden border border-gray-200" style={{ height: "calc(100vh - 220px)" }}>
+                <IslandMap
+                  markers={markers}
+                  routeLines={routeLines}
+                  showRoutes={showRoutes}
+                  selected={selected}
+                  onSelect={handleSelect}
+                  mapRef={mapRef}
+                />
+                {selected && (
+                  <div className="absolute bottom-4 left-4 z-[1001] w-[320px]">
+                    <MarkerDetailCard marker={selected} onClose={() => setSelected(null)} />
+                  </div>
+                )}
               </div>
             )}
           </main>
@@ -230,11 +405,14 @@ export function Islands() {
       </div>
 
       {/* ================================================================
-          모바일 레이아웃 (lg 미만) — 기존 코드 완전 보존
+          모바일 레이아웃 (lg 미만) — 기존 코드 완전 보존 + 지도 뷰 추가
           ================================================================ */}
       <div className="lg:hidden">
         <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-500 text-white">
-          <h1 className="text-xl font-bold mb-1">섬 둘러보기</h1>
+          <div className="flex items-center justify-between mb-1">
+            <h1 className="text-xl font-bold">섬 둘러보기</h1>
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} compact />
+          </div>
           <p className="text-sm text-blue-100">인천의 아름다운 섬들을 탐색해보세요</p>
         </div>
 
@@ -280,45 +458,241 @@ export function Islands() {
           </div>
         </div>
 
-        <div className="px-6 py-4">
-          {isLoading ? (
-            <CardGridSkeleton count={5} />
-          ) : (
-            <div className="space-y-4">
-              {filteredIslands.map((island, index) => (
-                <div key={island.id} className="animate-stagger-item" style={{ animationDelay: `${index * 0.05}s` }}>
-                  <IslandCardMobile island={island} congestionLevel={effectiveCongestion(island)} />
-                </div>
-              ))}
-              {filteredIslands.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  <p>검색 결과가 없어요</p>
-                </div>
-              )}
-            </div>
-          )}
+        {viewMode === "list" ? (
+          <div className="px-6 py-4">
+            {isLoading ? (
+              <CardGridSkeleton count={5} />
+            ) : (
+              <div className="space-y-4">
+                {filteredIslands.map((island, index) => (
+                  <div key={island.id} className="animate-stagger-item" style={{ animationDelay: `${index * 0.05}s` }}>
+                    <IslandCardMobile island={island} congestionLevel={effectiveCongestion(island)} />
+                  </div>
+                ))}
+                {filteredIslands.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    <p>검색 결과가 없어요</p>
+                  </div>
+                )}
+              </div>
+            )}
 
-          <div className="mt-6 mb-6 bg-blue-100 rounded-xl p-4 border border-blue-200">
-            <h3 className="font-semibold text-blue-900 mb-3">💡 여행 가이드</h3>
-            <ul className="space-y-2 text-sm text-blue-800">
-              <li>• 주말/공휴일은 1주일 전에 미리 예약하세요</li>
-              <li>• 출발 전날 운항 여부를 꼭 확인해주세요</li>
-              <li>• 자외선 차단제, 편한 신발 챙기는 거 잊지 마세요</li>
-            </ul>
+            <div className="mt-6 mb-6 bg-blue-100 rounded-xl p-4 border border-blue-200">
+              <h3 className="font-semibold text-blue-900 mb-3">💡 여행 가이드</h3>
+              <ul className="space-y-2 text-sm text-blue-800">
+                <li>• 주말/공휴일은 1주일 전에 미리 예약하세요</li>
+                <li>• 출발 전날 운항 여부를 꼭 확인해주세요</li>
+                <li>• 자외선 차단제, 편한 신발 챙기는 거 잊지 마세요</li>
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-end mb-3">
+              <button
+                onClick={() => setShowRoutes(v => !v)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  showRoutes
+                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                    : "bg-gray-100 text-gray-600 border border-transparent"
+                }`}
+              >
+                <Ship className="w-3.5 h-3.5" strokeWidth={2} />
+                항로 {showRoutes ? "숨기기" : "보기"}
+              </button>
+            </div>
+            <div className="relative rounded-2xl overflow-hidden border border-gray-200" style={{ height: "min(60vh, 480px)" }}>
+              <IslandMap
+                markers={markers}
+                routeLines={routeLines}
+                showRoutes={showRoutes}
+                selected={selected}
+                onSelect={handleSelect}
+                mapRef={mapRef}
+              />
+            </div>
+            {selected && (
+              <div className="mt-4">
+                <MarkerDetailCard marker={selected} onClose={() => setSelected(null)} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── 리스트/지도 토글 ─────────────────────────────────────────────────────────
+
+function ViewToggle({
+  viewMode, onChange, compact,
+}: {
+  viewMode: ViewMode; onChange: (v: ViewMode) => void; compact?: boolean;
+}) {
+  const base = compact
+    ? "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+    : "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all";
+  return (
+    <div className={`inline-flex ${compact ? "bg-white/15" : "bg-gray-100"} rounded-lg p-0.5`}>
+      <button
+        onClick={() => onChange("list")}
+        className={`${base} ${
+          viewMode === "list"
+            ? (compact ? "bg-white/25 text-white" : "bg-white text-gray-900 shadow-sm")
+            : (compact ? "text-blue-100" : "text-gray-500")
+        }`}
+      >
+        <LayoutGrid className="w-3.5 h-3.5" strokeWidth={2} />
+        리스트
+      </button>
+      <button
+        onClick={() => onChange("map")}
+        className={`${base} ${
+          viewMode === "map"
+            ? (compact ? "bg-white/25 text-white" : "bg-white text-gray-900 shadow-sm")
+            : (compact ? "text-blue-100" : "text-gray-500")
+        }`}
+      >
+        <MapIcon className="w-3.5 h-3.5" strokeWidth={2} />
+        지도
+      </button>
+    </div>
+  );
+}
+
+// ─── 지도 뷰 ──────────────────────────────────────────────────────────────────
+
+function IslandMap({
+  markers, routeLines, showRoutes, selected, onSelect, mapRef,
+}: {
+  markers: MarkerItem[];
+  routeLines: { key: number; from: MarkerItem; to: MarkerItem; options: L.PolylineOptions }[];
+  showRoutes: boolean;
+  selected: MarkerItem | null;
+  onSelect: (marker: MarkerItem) => void;
+  mapRef: React.MutableRefObject<L.Map | null>;
+}) {
+  return (
+    <>
+      <MapContainer
+        center={[37.5, 125.8]}
+        zoom={8}
+        style={{ height: "100%", width: "100%" }}
+        ref={mapRef}
+        zoomControl={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        <InitialBounds markers={markers} />
+
+        {showRoutes && routeLines.map(({ key, from, to, options }) => (
+          <Polyline
+            key={key}
+            positions={[[from.lat, from.lng], [to.lat, to.lng]]}
+            pathOptions={options}
+          />
+        ))}
+
+        {markers.map((marker) => (
+          <Marker
+            key={marker.id}
+            position={[marker.lat, marker.lng]}
+            icon={makeIcon(marker.color, marker.isPort, selected?.id === marker.id)}
+            eventHandlers={{ click: () => onSelect(marker) }}
+          />
+        ))}
+      </MapContainer>
+
+      {/* 범례 */}
+      <div className="absolute top-4 right-4 z-[1001] bg-white/95 backdrop-blur-sm px-4 py-3 rounded-2xl shadow-sm border border-gray-100">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">범례</p>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-xs text-gray-700">
+            <div className="w-3.5 h-3.5 rounded-full bg-red-500 shrink-0 border-2 border-white shadow-sm" />
+            인천항
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-700">
+            <div className="w-3.5 h-3.5 rounded-full bg-orange-500 shrink-0 border-2 border-white shadow-sm" />
+            대부도항
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-700">
+            <div className="w-3.5 h-3.5 rounded-full bg-blue-500 shrink-0 border-2 border-white shadow-sm" />
+            섬
           </div>
         </div>
+      </div>
+    </>
+  );
+}
+
+function MarkerDetailCard({ marker, onClose }: { marker: MarkerItem; onClose: () => void }) {
+  const badge = isIslandMarker(marker) ? CONGESTION_CONFIG[marker.congestion] : null;
+  return (
+    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      {isIslandMarker(marker) && (
+        <div className="relative h-28">
+          <IslandImage src={marker.image} alt={marker.name} className="w-full h-full object-cover" />
+          {badge && (
+            <span className={`absolute top-2.5 left-2.5 text-xs font-semibold px-2 py-0.5 rounded-full ${badge.bg} ${badge.text}`}>
+              {badge.label}
+            </span>
+          )}
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60"
+          >
+            <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+          </button>
+        </div>
+      )}
+      <div className="p-4">
+        <div className="flex items-start justify-between mb-1.5">
+          <p className="text-base font-bold text-gray-900">{marker.name}</p>
+          {marker.isPort && (
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 -m-1">
+              <X className="w-4 h-4" strokeWidth={2} />
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mb-3">{marker.description}</p>
+
+        {isIslandMarker(marker) && (
+          <>
+            <div className="flex items-center gap-3 text-xs text-gray-600 mb-3">
+              <span className="flex items-center gap-1">
+                <Ship className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
+                {marker.ferry_time || "정보 없음"}
+              </span>
+              <span className="font-semibold text-gray-900">{formatFerryPrice(marker.ferry_price)}</span>
+            </div>
+            {marker.features.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {marker.features.slice(0, 4).map(tag => (
+                  <span key={tag} className="text-[11px] text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            <Link
+              to={`/island/${marker.id}`}
+              className="flex items-center justify-between w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              섬 상세 보기
+              <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── 데스크탑 카드 ────────────────────────────────────────────────────────────
-
-const CONGESTION_CONFIG = {
-  low:    { label: "여유", bg: "bg-green-500",  text: "text-white" },
-  medium: { label: "보통", bg: "bg-yellow-400", text: "text-white" },
-  high:   { label: "혼잡", bg: "bg-red-500",    text: "text-white" },
-} as const;
 
 function IslandCardDesktop({
   island,
@@ -333,7 +707,7 @@ function IslandCardDesktop({
     <Link to={`/island/${island.id}`} className="group block">
       {/* 이미지 */}
       <div className="aspect-[4/3] rounded-xl overflow-hidden relative mb-3">
-        <img
+        <IslandImage
           src={island.image}
           alt={island.name}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -430,7 +804,7 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
   return (
     <Link to={`/island/${island.id}`} className="block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden active:scale-98 transition-transform">
       <div className="relative h-40">
-        <img src={island.image} alt={island.name} className="w-full h-full object-cover" />
+        <IslandImage src={island.image} alt={island.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
         <div className="absolute bottom-3 left-3 right-3">
           <h3 className="text-lg font-bold text-white mb-1">{island.name}</h3>

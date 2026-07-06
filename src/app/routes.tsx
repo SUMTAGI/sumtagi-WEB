@@ -8,15 +8,12 @@ const Home = lazy(() => import("./pages/Home").then(m => ({ default: m.Home })))
 const Travel = lazy(() => import("./pages/Travel").then(m => ({ default: m.Travel })));
 const Itinerary = lazy(() => import("./pages/Itinerary").then(m => ({ default: m.Itinerary })));
 const Islands = lazy(() => import("./pages/Islands").then(m => ({ default: m.Islands })));
-const MapPage = lazy(() => import("./pages/MapPage").then(m => ({ default: m.MapPage })));
 const MyPage = lazy(() => import("./pages/MyPage").then(m => ({ default: m.MyPage })));
-const Onboarding = lazy(() => import("./pages/Onboarding").then(m => ({ default: m.Onboarding })));
 const Login = lazy(() => import("./pages/Login").then(m => ({ default: m.Login })));
 const Signup = lazy(() => import("./pages/Signup").then(m => ({ default: m.Signup })));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit").then(m => ({ default: m.ProfileEdit })));
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings").then(m => ({ default: m.NotificationSettings })));
 const PaymentMethods = lazy(() => import("./pages/PaymentMethods").then(m => ({ default: m.PaymentMethods })));
-const VisitedIslands = lazy(() => import("./pages/VisitedIslands").then(m => ({ default: m.VisitedIslands })));
 const Favorites = lazy(() => import("./pages/Favorites").then(m => ({ default: m.Favorites })));
 const Notifications = lazy(() => import("./pages/Notifications").then(m => ({ default: m.Notifications })));
 const CreateTrip = lazy(() => import("./pages/CreateTrip").then(m => ({ default: m.CreateTrip })));
@@ -34,19 +31,10 @@ const GroupTrip = lazy(() => import("./pages/GroupTrip").then(m => ({ default: m
 const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m.GroupJoin })));
 const AppSettings = lazy(() => import("./pages/AppSettings").then(m => ({ default: m.AppSettings })));
 const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
-const Bookings = lazy(() => import("./pages/Bookings").then(m => ({ default: m.Bookings })));
-const PlanTrip = lazy(() => import("./pages/PlanTrip").then(m => ({ default: m.PlanTrip })));
 
 const Fallback = () => null;
 
 export const router = createBrowserRouter([
-  {
-    path: "/onboarding",
-    Component: AuthLayout,
-    children: [
-      { index: true, element: <Suspense fallback={<Fallback />}><Onboarding /></Suspense> },
-    ],
-  },
   {
     path: "/login",
     Component: AuthLayout,
@@ -68,7 +56,6 @@ export const router = createBrowserRouter([
       { index: true, element: <Suspense fallback={<Fallback />}><Home /></Suspense> },
       { path: "islands", element: <Suspense fallback={<Fallback />}><Islands /></Suspense> },
       { path: "island/:id", element: <Suspense fallback={<Fallback />}><IslandDetail /></Suspense> },
-      { path: "map", element: <Suspense fallback={<Fallback />}><MapPage /></Suspense> },
       { path: "experiences", element: <Suspense fallback={<Fallback />}><Experiences /></Suspense> },
       { path: "experience/:id", element: <Suspense fallback={<Fallback />}><ExperienceDetail /></Suspense> },
       { path: "community", element: <Suspense fallback={<Fallback />}><Community /></Suspense> },
@@ -84,7 +71,6 @@ export const router = createBrowserRouter([
           { path: "profile-edit", element: <Suspense fallback={<Fallback />}><ProfileEdit /></Suspense> },
           { path: "notification-settings", element: <Suspense fallback={<Fallback />}><NotificationSettings /></Suspense> },
           { path: "payment-methods", element: <Suspense fallback={<Fallback />}><PaymentMethods /></Suspense> },
-          { path: "visited-islands", element: <Suspense fallback={<Fallback />}><VisitedIslands /></Suspense> },
           { path: "favorites", element: <Suspense fallback={<Fallback />}><Favorites /></Suspense> },
           { path: "notifications", element: <Suspense fallback={<Fallback />}><Notifications /></Suspense> },
           { path: "create-trip", element: <Suspense fallback={<Fallback />}><CreateTrip /></Suspense> },
@@ -94,8 +80,6 @@ export const router = createBrowserRouter([
           { path: "group-trip", element: <Suspense fallback={<Fallback />}><GroupTrip /></Suspense> },
           { path: "group-join/:code", element: <Suspense fallback={<Fallback />}><GroupJoin /></Suspense> },
           { path: "app-settings", element: <Suspense fallback={<Fallback />}><AppSettings /></Suspense> },
-          { path: "bookings", element: <Suspense fallback={<Fallback />}><Bookings /></Suspense> },
-          { path: "plan-trip", element: <Suspense fallback={<Fallback />}><PlanTrip /></Suspense> },
         ],
       },
       { path: "*", element: <Suspense fallback={<Fallback />}><NotFound /></Suspense> },

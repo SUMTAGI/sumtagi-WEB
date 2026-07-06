@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { ChevronLeft, Heart, MapPin, Ship, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { favoritesService } from "../../lib/favoritesService";
+import { IslandImage } from "../components/IslandImage";
 
 export function Favorites() {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ export function Favorites() {
             {favorites.map((fav) => (
               <div key={fav.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex">
                 <div className="w-28 h-28">
-                  <img src={fav.islands?.image ?? ''} alt={fav.islands?.name} className="w-full h-full object-cover" />
+                  <IslandImage src={fav.islands?.image} alt={fav.islands?.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 p-4 flex flex-col">
                   <div className="flex items-start justify-between mb-2">
