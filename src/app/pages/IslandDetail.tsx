@@ -7,7 +7,7 @@ const CongestionChart = lazy(() => import("../components/CongestionChart").then(
 import { fetchWeatherForIsland, type WeatherResult } from "../../lib/weatherService";
 import { IslandImage } from "../components/IslandImage";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
-import { getIslandById, formatFerryPrice, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
+import { getIslandById, formatFerryPrice, formatAccommodationPrice, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
 import { favoritesService } from "../../lib/favoritesService";
 import { getFerryScheduleForIsland, type FerrySchedule } from "../../lib/api/ferry";
 import { getIslandCongestion, type IslandCongestionData } from "../../lib/api/congestion";
@@ -336,17 +336,24 @@ export function IslandDetail() {
             ) : island.restaurants.map((restaurant) => (
               <div key={restaurant.id} className="bg-gray-50 rounded-xl p-4">
                 <div className="flex gap-3">
-                  <img src={restaurant.image} alt={restaurant.name} className="w-24 h-24 object-cover rounded-lg" />
-                  <div className="flex-1">
+                  <IslandImage src={restaurant.image} alt={restaurant.name} className="w-24 h-24 object-cover rounded-lg shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-1">
                       <h4 className="font-semibold text-gray-900">{restaurant.name}</h4>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" strokeWidth={2} />
-                        <span className="text-sm font-semibold text-gray-700">{restaurant.rating}</span>
-                      </div>
+                      {restaurant.rating != null && (
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" strokeWidth={2} />
+                          <span className="text-sm font-semibold text-gray-700">{restaurant.rating}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs text-blue-600 font-medium mb-2">{restaurant.cuisine} · {restaurant.price_level}</div>
-                    <p className="text-sm text-gray-600">{restaurant.specialty}</p>
+                    <div className="text-xs text-blue-600 font-medium mb-2">{[restaurant.cuisine, restaurant.price_level].filter(Boolean).join(" · ")}</div>
+                    {restaurant.specialty && <p className="text-sm text-gray-600">{restaurant.specialty}</p>}
+                    {restaurant.phone && (
+                      <a href={`tel:${restaurant.phone}`} className="inline-block mt-2 text-xs font-medium text-blue-600">
+                        📞 {restaurant.phone}
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -361,21 +368,30 @@ export function IslandDetail() {
             ) : island.accommodations.map((hotel) => (
               <div key={hotel.id} className="bg-gray-50 rounded-xl p-4">
                 <div className="flex gap-3">
-                  <img src={hotel.image} alt={hotel.name} className="w-24 h-24 object-cover rounded-lg" />
-                  <div className="flex-1">
+                  <IslandImage src={hotel.image} alt={hotel.name} className="w-24 h-24 object-cover rounded-lg shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-1">
                       <div>
                         <h4 className="font-semibold text-gray-900">{hotel.name}</h4>
-                        <div className="text-xs text-gray-600 mt-0.5">{hotel.type}</div>
+                        {hotel.type && <div className="text-xs text-gray-600 mt-0.5">{hotel.type}</div>}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" strokeWidth={2} />
-                        <span className="text-sm font-semibold text-gray-700">{hotel.rating}</span>
-                      </div>
+                      {hotel.rating != null && (
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" strokeWidth={2} />
+                          <span className="text-sm font-semibold text-gray-700">{hotel.rating}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="mt-3">
-                      <div className="text-lg font-bold text-blue-600">{hotel.price_per_night.toLocaleString()}원</div>
-                      <div className="text-xs text-gray-500">1박 기준</div>
+                    <div className="mt-3 flex items-end justify-between">
+                      <div>
+                        <div className="text-lg font-bold text-blue-600">{formatAccommodationPrice(hotel.price_per_night)}</div>
+                        <div className="text-xs text-gray-500">1박 기준</div>
+                      </div>
+                      {hotel.phone && (
+                        <a href={`tel:${hotel.phone}`} className="text-xs font-medium text-blue-600">
+                          📞 {hotel.phone}
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
