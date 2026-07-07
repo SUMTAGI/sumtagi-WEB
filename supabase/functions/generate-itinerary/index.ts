@@ -97,7 +97,7 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY 환경변수가 설정되지 않았습니다");
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
 
   console.log("[LLM 호출] Gemini API 요청 시작");
   const res = await fetch(url, {
@@ -109,7 +109,7 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.7,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192,
       },
     }),
   });

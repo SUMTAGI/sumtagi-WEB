@@ -24,6 +24,16 @@ const islandCoords: Record<string, { lat: number; lng: number }> = {
   "소이작도": { lat: 37.1500, lng: 126.2917 },
   "풍도":     { lat: 37.0647, lng: 126.2636 },
   "육도":     { lat: 37.0036, lng: 126.3547 },
+  "영흥도":   { lat: 37.2397, lng: 126.4921 },
+  "선재도":   { lat: 37.2508, lng: 126.4731 },
+  "굴업도":   { lat: 37.1917, lng: 126.2186 },
+  "시도":     { lat: 37.5446026512, lng: 126.431177159 },
+  "소야도":   { lat: 37.2126756954, lng: 126.175942845 },
+  "울도":     { lat: 37.0257233193983, lng: 125.997020937643 },
+  // 모도·문갑도·백아도는 관광공사 API에 데이터가 없어 OSM Nominatim으로 실측 좌표 확보(2026-07-07)
+  "모도":     { lat: 37.5331998, lng: 126.4080697 },
+  "문갑도":   { lat: 37.1769151, lng: 126.0982694 },
+  "백아도":   { lat: 37.0802720, lng: 125.9468352 },
 };
 
 function makeStopIcon(index: number, isPort: boolean) {
@@ -56,22 +66,27 @@ function AutoFit({ positions }: { positions: [number, number][] }) {
 export function RouteMap({ islands, departurePort = "인천항" }: RouteMapProps) {
   if (islands.length === 0) return null;
 
+  // 다리로 연결된 섬("육로 이동")은 고정 출발항이 없어 좌표가 없음 — 섬간 경로만 표시
   const portCoord = islandCoords[departurePort];
   const stops = islands.map(name => islandCoords[name]).filter(Boolean);
 
-  if (!portCoord || stops.length === 0) return null;
+  if (stops.length === 0) return null;
 
-  const routePositions: [number, number][] = [
-    [portCoord.lat, portCoord.lng],
-    ...stops.map(c => [c.lat, c.lng] as [number, number]),
-    [portCoord.lat, portCoord.lng],
-  ];
+  const routePositions: [number, number][] = portCoord
+    ? [
+        [portCoord.lat, portCoord.lng],
+        ...stops.map(c => [c.lat, c.lng] as [number, number]),
+        [portCoord.lat, portCoord.lng],
+      ]
+    : stops.map(c => [c.lat, c.lng] as [number, number]);
+
+  const center = portCoord ?? stops[0];
 
   return (
     <div className="w-full">
     <div className="w-full rounded-lg overflow-hidden border border-blue-200" style={{ height: 240 }}>
       <MapContainer
-        center={[portCoord.lat, portCoord.lng]}
+        center={[center.lat, center.lng]}
         zoom={8}
         style={{ height: "100%", width: "100%" }}
         zoomControl={false}
@@ -88,10 +103,12 @@ export function RouteMap({ islands, departurePort = "인천항" }: RouteMapProps
           pathOptions={{ color: "#3b82f6", weight: 2, dashArray: "6,5", opacity: 0.85 }}
         />
 
-        <Marker
-          position={[portCoord.lat, portCoord.lng]}
-          icon={makeStopIcon(0, true)}
-        />
+        {portCoord && (
+          <Marker
+            position={[portCoord.lat, portCoord.lng]}
+            icon={makeStopIcon(0, true)}
+          />
+        )}
 
         {stops.map((coord, i) => (
           <Marker
