@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import {
-  Ship, MapPin, Hotel, UtensilsCrossed, Users, DollarSign,
+  Ship, Car, MapPin, Hotel, UtensilsCrossed, Users, DollarSign,
   Download, Share2, ChevronLeft, Trash2, Pencil, Check, X, Plus,
 } from "lucide-react";
 import type { GeneratedItinerary, Activity } from "../utils/itineraryGenerator";
@@ -220,7 +220,11 @@ export function Itinerary() {
 
           <div className="flex flex-wrap gap-3 text-sm text-blue-100">
             <div className="flex items-center gap-1">
-              <Ship className="w-4 h-4" strokeWidth={2} />
+              {itinerary.departurePort === "육로 이동" ? (
+                <Car className="w-4 h-4" strokeWidth={2} />
+              ) : (
+                <Ship className="w-4 h-4" strokeWidth={2} />
+              )}
               <span>{itinerary.departurePort || "인천항"}</span>
             </div>
             <div className="flex items-center gap-1">
@@ -322,7 +326,9 @@ export function Itinerary() {
               <h3 className="font-semibold text-gray-900 mb-3">여행 경로</h3>
               <RouteMap islands={itinerary.islands} departurePort={itinerary.departurePort} />
               <p className="text-xs text-gray-600 mt-2 text-center">
-                {[itinerary.departurePort || "인천항", ...itinerary.islands, itinerary.departurePort || "인천항"].join(" → ")}
+                {itinerary.departurePort === "육로 이동"
+                  ? itinerary.islands.join(" → ")
+                  : [itinerary.departurePort || "인천항", ...itinerary.islands, itinerary.departurePort || "인천항"].join(" → ")}
               </p>
             </div>
 

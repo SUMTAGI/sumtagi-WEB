@@ -402,6 +402,9 @@ const ISLAND_ID_TO_KOR: Record<string, string> = {
   yeonpyeong:  '연평도', deokjeok:  '덕적도', jawol:     '자월도',
   seungbong:   '승봉도', daeijak:   '대이작도', soijak:  '소이작도',
   yeonghung:   '영흥도', pungdo:    '풍도',    guleop:   '굴업도',
+  yukdo: '육도', seonjae: '선재도', sindo: '신도', sido: '시도',
+  modo: '모도', jangbongdo: '장봉도', soya: '소야도',
+  mungap: '문갑도', baegado: '백아도', uldo: '울도',
 }
 
 export async function prefetchDurunubiData(islandIds: string[]): Promise<void> {
