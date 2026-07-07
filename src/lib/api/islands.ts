@@ -39,11 +39,12 @@ export interface Restaurant {
   id: string
   island_id: string
   name: string
-  cuisine: string
-  price_level: string
-  specialty: string
-  image: string
-  rating: number
+  cuisine: string | null
+  price_level: string | null
+  specialty: string | null
+  image: string | null
+  phone: string | null
+  rating: number | null
   order_index: number
 }
 
@@ -51,11 +52,18 @@ export interface Accommodation {
   id: string
   island_id: string
   name: string
-  type: string
-  price_per_night: number
-  image: string
-  rating: number
+  type: string | null
+  price_per_night: number | null
+  image: string | null
+  phone: string | null
+  rating: number | null
   order_index: number
+}
+
+// price_per_night: 목록 API/수동조사 단계에서 확인 안 된 곳이 많아 null이 흔함 — 실제로 없는 게 아니라 "확인 필요" 상태
+export function formatAccommodationPrice(price: number | null): string {
+  if (price === null) return '요금 문의'
+  return `${price.toLocaleString()}원`
 }
 
 export interface PhotoSpot {
