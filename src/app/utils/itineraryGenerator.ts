@@ -397,7 +397,7 @@ export async function fetchIslandData() {
 // 두루누비 코스 기반 이동시간 캐시 (섬 → 분)
 const _durunubiTimeCache: Record<string, number> = {}
 
-const ISLAND_ID_TO_KOR: Record<string, string> = {
+export const ISLAND_ID_TO_KOR: Record<string, string> = {
   baengnyeong: '백령도', daecheong: '대청도', socheong: '소청도',
   yeonpyeong:  '연평도', deokjeok:  '덕적도', jawol:     '자월도',
   seungbong:   '승봉도', daeijak:   '대이작도', soijak:  '소이작도',

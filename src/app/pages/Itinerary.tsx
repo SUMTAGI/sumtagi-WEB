@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import {
   Ship, Car, MapPin, Hotel, UtensilsCrossed, Users, DollarSign,
-  Download, Share2, ChevronLeft, Trash2, Pencil, Check, X, Plus,
+  Download, Share2, ChevronLeft, Trash2, Pencil, Check, X, Plus, Phone, ExternalLink, ClipboardList,
 } from "lucide-react";
 import type { GeneratedItinerary, Activity } from "../utils/itineraryGenerator";
 import { toast } from "sonner";
 import { RouteMap } from "../components/RouteMap";
 import { tripService } from "../../lib/tripService";
+import { tripBookingService, type TripBooking } from "../../lib/tripBookingService";
 
 const TYPE_OPTIONS: Activity["type"][] = ["ferry", "attraction", "accommodation", "meal"];
 const TYPE_LABEL: Record<Activity["type"], string> = {
@@ -24,6 +25,7 @@ export function Itinerary() {
   const [isEditMode, setIsEditMode] = useState(searchParams.get("edit") === "true");
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [newAct, setNewAct] = useState<Partial<Activity>>({ type: "attraction", time: "", title: "", location: "", description: "", price: undefined });
+  const [bookings, setBookings] = useState<TripBooking[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -43,6 +45,16 @@ export function Itinerary() {
       }
     });
   }, [id, navigate]);
+
+  useEffect(() => {
+    if (!id || !itinerary) return;
+    tripBookingService.getChecklist(id, itinerary.islands, itinerary.departurePort || "인천항").then(setBookings);
+  }, [id, itinerary?.islands?.join(","), itinerary?.departurePort]);
+
+  const handleToggleBooking = (booking: TripBooking) => {
+    setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, is_done: !b.is_done } : b));
+    tripBookingService.toggle(booking.id, booking.is_done);
+  };
 
   const persistItinerary = (updated: GeneratedItinerary) => {
     const totalCost = updated.days.reduce((sum, day) =>
@@ -351,6 +363,13 @@ export function Itinerary() {
               </div>
             </div>
 
+            {/* Booking Checklist */}
+            {bookings.length > 0 && (
+              <div className="px-6 py-6 bg-gray-50">
+                <BookingChecklistSection bookings={bookings} onToggle={handleToggleBooking} />
+              </div>
+            )}
+
             {!isConfirmed && (
               <div className="px-6 py-6">
                 <button
@@ -619,6 +638,71 @@ function BudgetItemMobile({ label, amount, isTotal = false }: { label: string; a
     <div className={`flex justify-between items-center ${isTotal ? "font-bold text-base" : "text-sm"}`}>
       <span className="text-gray-700">{label}</span>
       <span className={isTotal ? "text-blue-600" : "text-gray-900"}>{amount.toLocaleString()}원</span>
+    </div>
+  );
+}
+
+const BOOKING_CATEGORY_LABEL: Record<TripBooking["category"], string> = {
+  ferry: "여객선", accommodation: "숙박", restaurant: "식당", experience: "체험",
+};
+
+function BookingChecklistSection({ bookings, onToggle }: { bookings: TripBooking[]; onToggle: (booking: TripBooking) => void }) {
+  const doneCount = bookings.filter(b => b.is_done).length;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="w-4 h-4 text-gray-700" strokeWidth={2} />
+          <h3 className="font-semibold text-gray-900">예약 준비 체크리스트</h3>
+        </div>
+        <span className="text-xs text-gray-500">{doneCount}/{bookings.length}</span>
+      </div>
+      <p className="text-xs text-gray-500 mb-3">
+        여객선·숙박·식당 예약은 sumtagi가 대신 해주지 않아요. 연락처로 직접 예약한 뒤 완료로 체크하세요.
+      </p>
+      <div className="bg-white rounded-xl divide-y divide-gray-100">
+        {bookings.map(booking => (
+          <div key={booking.id} className="flex items-center gap-3 p-3">
+            <button
+              onClick={() => onToggle(booking)}
+              className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${
+                booking.is_done ? "bg-blue-600 border-blue-600" : "border-gray-300"
+              }`}
+            >
+              {booking.is_done && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+            </button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">
+                  {BOOKING_CATEGORY_LABEL[booking.category]}
+                </span>
+                <span className={`text-sm font-medium truncate ${booking.is_done ? "text-gray-400 line-through" : "text-gray-900"}`}>
+                  {booking.name}
+                </span>
+              </div>
+            </div>
+            {booking.phone && (
+              <a
+                href={`tel:${booking.phone}`}
+                className="shrink-0 w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <Phone className="w-3.5 h-3.5" strokeWidth={2} />
+              </a>
+            )}
+            {booking.external_url && (
+              <a
+                href={booking.external_url}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <ExternalLink className="w-3.5 h-3.5" strokeWidth={2} />
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
