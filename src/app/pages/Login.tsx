@@ -90,7 +90,7 @@ export function Login() {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Ship className="w-[18px] h-[18px] text-white" strokeWidth={2.5} />
               </div>
-              <span className="text-sm font-bold text-gray-900 tracking-tight">섬여행</span>
+              <span className="text-sm font-bold text-gray-900 tracking-tight">섬타기</span>
             </Link>
           </div>
 
