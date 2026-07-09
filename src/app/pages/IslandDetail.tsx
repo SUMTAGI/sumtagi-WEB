@@ -21,6 +21,7 @@ export function IslandDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [ferrySchedule, setFerrySchedule] = useState<FerrySchedule[]>([]);
   const [ferryLoading, setFerryLoading] = useState(true);
+  const [ferryError, setFerryError] = useState(false);
   const [congestion, setCongestion] = useState<IslandCongestionData | null>(null);
   const [congestionLoading, setCongestionLoading] = useState(true);
   const [weather, setWeather] = useState<WeatherResult["current"] | null>(null);
@@ -38,7 +39,7 @@ export function IslandDetail() {
       if (islandData) {
         getFerryScheduleForIsland(id!)
           .then(setFerrySchedule)
-          .catch(() => {})
+          .catch(() => { setFerryError(true); toast.error("여객선 시간표를 불러오지 못했어요"); })
           .finally(() => setFerryLoading(false));
         getIslandCongestion(id!)
           .then(setCongestion)
@@ -202,6 +203,8 @@ export function IslandDetail() {
           <div className="flex gap-2">
             {[1,2,3].map(i => <div key={i} className="h-16 w-28 bg-gray-100 rounded-xl animate-pulse" />)}
           </div>
+        ) : ferryError ? (
+          <p className="text-sm text-gray-400">지금 운항 정보를 가져오지 못했어요. 잠시 후 다시 시도해주세요</p>
         ) : ferrySchedule.length === 0 ? (
           <p className="text-sm text-gray-400">오늘 운항 정보가 없어요</p>
         ) : (
