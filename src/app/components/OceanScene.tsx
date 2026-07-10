@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Fish, Palmtree, Sailboat } from "lucide-react";
 
 // 두 배 너비 SVG를 -50% 이동시켜 이음매 없이 반복되는 파도 레이어.
@@ -60,8 +61,11 @@ interface OceanSceneProps {
   className?: string;
 }
 
+let rippleSeq = 0;
+
 // 히어로 배너 안에 배치하는 장식용 바다 애니메이션(파도 + 배 + 물고기 + 물방울).
-// 배경/콘텐츠 사이에 두는 순수 장식이라 클릭을 막지 않도록 pointer-events-none 처리.
+// 클릭하면 그 자리에서 물결 파문이 퍼진다. 배경/콘텐츠 사이에 두는 순수 장식이라 클릭을
+// 막으면 안 되므로 컨테이너는 pointer-events-none을 유지하고, 클릭은 window 리스너로 감지한다.
 export function OceanScene({
   waveColor = "#f5f6f8",
   creatureColor = "rgba(255,255,255,0.55)",
@@ -72,8 +76,29 @@ export function OceanScene({
   showIsland = showWave,
   className = "",
 }: OceanSceneProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      const el = containerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (x < 0 || x > rect.width || y < 0 || y > rect.height) return;
+
+      const id = ++rippleSeq;
+      setRipples((prev) => [...prev, { id, x, y }]);
+      window.setTimeout(() => setRipples((prev) => prev.filter((r) => r.id !== id)), 700);
+    };
+
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
+
   return (
-    <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`} aria-hidden="true">
+    <div ref={containerRef} className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`} aria-hidden="true">
       <div className="absolute inset-x-0 top-[16%] w-full animate-boat-drift">
         <Sailboat className="w-7 h-7" style={{ color: creatureColor }} strokeWidth={1.5} />
       </div>
@@ -93,6 +118,14 @@ export function OceanScene({
       {showWave && <WaveLayer color={waveColor} opacity={0.55} duration={14} height={waveHeight} />}
       {showIsland && <Island color={islandColor} side={islandSide} waveHeight={waveHeight} />}
       {showWave && <WaveLayer color={waveColor} opacity={1} duration={9} height={waveHeight} />}
+
+      {ripples.map((r) => (
+        <span
+          key={r.id}
+          className="absolute rounded-full border-2 border-white/50 animate-ripple"
+          style={{ left: r.x - 18, top: r.y - 18, width: 36, height: 36 }}
+        />
+      ))}
     </div>
   );
 }
