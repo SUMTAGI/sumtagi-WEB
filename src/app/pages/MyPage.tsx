@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { useState, useEffect } from "react";
-import { User, Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut, CreditCard, Heart, Users, AlertCircle, Clock } from "lucide-react";
+import { User, Calendar, ChevronRight, Bell, HelpCircle, LogOut, CreditCard, Heart, Users, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
 import { supabase } from "../lib/supabase";
@@ -177,7 +177,6 @@ export function MyPage() {
                   </div>
                   {[
                     { icon: Bell,        label: "알림 설정",   path: "/notification-settings" },
-                    { icon: Settings,    label: "앱 설정",     path: "/app-settings"          },
                     { icon: HelpCircle,  label: "고객센터",    path: "/support"               },
                   ].map(({ icon: Icon, label, path }) => (
                     <button
@@ -268,7 +267,6 @@ export function MyPage() {
             <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">설정</h3>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <MenuItem icon={<Bell className="w-5 h-5" strokeWidth={2} />} label="알림 설정" onClick={() => go("/notification-settings")} />
-              <MenuItem icon={<Settings className="w-5 h-5" strokeWidth={2} />} label="앱 설정" onClick={() => go("/app-settings")} />
               <MenuItem icon={<HelpCircle className="w-5 h-5" strokeWidth={2} />} label="고객센터" onClick={() => go("/support")} showDivider={false} />
             </div>
           </div>
