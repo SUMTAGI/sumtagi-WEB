@@ -31,6 +31,8 @@ const GroupTrip = lazy(() => import("./pages/GroupTrip").then(m => ({ default: m
 const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m.GroupJoin })));
 const AppSettings = lazy(() => import("./pages/AppSettings").then(m => ({ default: m.AppSettings })));
 const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
+const Privacy = lazy(() => import("./pages/Privacy").then(m => ({ default: m.Privacy })));
+const Terms = lazy(() => import("./pages/Terms").then(m => ({ default: m.Terms })));
 
 const Fallback = () => null;
 
@@ -62,6 +64,8 @@ export const router = createBrowserRouter([
       { path: "emergency", element: <Suspense fallback={<Fallback />}><Emergency /></Suspense> },
       { path: "schedule", element: <Suspense fallback={<Fallback />}><Schedule /></Suspense> },
       { path: "support", element: <Suspense fallback={<Fallback />}><Support /></Suspense> },
+      { path: "privacy", element: <Suspense fallback={<Fallback />}><Privacy /></Suspense> },
+      { path: "terms", element: <Suspense fallback={<Fallback />}><Terms /></Suspense> },
       {
         element: <ProtectedRoute />,
         children: [
