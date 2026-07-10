@@ -3,12 +3,16 @@ import { useParams, useNavigate, useSearchParams } from "react-router";
 import {
   Ship, Car, MapPin, Hotel, UtensilsCrossed, Users, DollarSign,
   Download, Share2, ChevronLeft, Trash2, Pencil, Check, X, Plus, Phone, ExternalLink, ClipboardList,
+  AlertTriangle, RefreshCw,
 } from "lucide-react";
 import type { GeneratedItinerary, Activity } from "../utils/itineraryGenerator";
 import { toast } from "sonner";
 import { RouteMap } from "../components/RouteMap";
 import { tripService } from "../../lib/tripService";
 import { tripBookingService, type TripBooking } from "../../lib/tripBookingService";
+import { checkTripRisks, type TripRisk } from "../../lib/tripRiskService";
+import { generateItinerary as generateAiItinerary } from "../../lib/api/aiItinerary";
+import { notificationService } from "../../lib/notificationService";
 
 const TYPE_OPTIONS: Activity["type"][] = ["ferry", "attraction", "accommodation", "meal"];
 const TYPE_LABEL: Record<Activity["type"], string> = {
@@ -26,11 +30,15 @@ export function Itinerary() {
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [newAct, setNewAct] = useState<Partial<Activity>>({ type: "attraction", time: "", title: "", location: "", description: "", price: undefined });
   const [bookings, setBookings] = useState<TripBooking[]>([]);
+  const [tripRow, setTripRow] = useState<any>(null);
+  const [risks, setRisks] = useState<TripRisk[]>([]);
+  const [reconstructing, setReconstructing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     tripService.getTripById(id).then(data => {
       if (data) {
+        setTripRow(data);
         const plan = data.plan ?? JSON.parse(localStorage.getItem(`plan_${id}`) ?? localStorage.getItem(`itinerary_${id}`) ?? 'null');
         if (plan) {
           setItinerary(plan);
@@ -51,9 +59,44 @@ export function Itinerary() {
     tripBookingService.getChecklist(id, itinerary.islands, itinerary.departurePort || "인천항").then(setBookings);
   }, [id, itinerary?.islands?.join(","), itinerary?.departurePort]);
 
+  useEffect(() => {
+    if (!itinerary || !isConfirmed) return;
+    checkTripRisks(itinerary.islands, itinerary.startDate, itinerary.endDate).then(setRisks);
+  }, [itinerary?.islands?.join(","), itinerary?.startDate, itinerary?.endDate, isConfirmed]);
+
   const handleToggleBooking = (booking: TripBooking) => {
     setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, is_done: !b.is_done } : b));
     tripBookingService.toggle(booking.id, booking.is_done);
+  };
+
+  const handleReconstruct = async () => {
+    if (!itinerary || !tripRow || !id || risks.length === 0) return;
+    setReconstructing(true);
+    try {
+      const riskNote = risks.map(r => r.message).join(" / ");
+      const result = await generateAiItinerary({
+        departurePort: itinerary.departurePort || "인천항",
+        islands: itinerary.islands,
+        startDate: itinerary.startDate,
+        endDate: itinerary.endDate,
+        travelers: itinerary.travelers,
+        travelStyle: tripRow.travel_type || "관광",
+        budget: tripRow.budget || "보통",
+        specialRequests: `기상 악화·여객선 결항 위험이 감지됐어요: ${riskNote}. 이 위험을 피하거나 완화할 수 있도록 일정을 조정해줘(실내 활동으로 대체, 일정 순서 조정 등).`,
+      });
+      const updated = persistItinerary({ ...result, confirmed: isConfirmed });
+      setItinerary(updated);
+      await notificationService.add(
+        "일정이 재구성됐어요",
+        `${riskNote} — 위험을 피하도록 일정을 다시 만들었어요.`,
+      );
+      toast.success("일정을 재구성했어요");
+      setRisks([]);
+    } catch (err: any) {
+      toast.error(`일정 재구성 실패: ${err?.message ?? "알 수 없는 오류"}`);
+    } finally {
+      setReconstructing(false);
+    }
   };
 
   const persistItinerary = (updated: GeneratedItinerary) => {
@@ -278,6 +321,31 @@ export function Itinerary() {
           )}
         </div>
       </div>
+
+      {/* Weather/Ferry Risk Banner */}
+      {risks.length > 0 && !isEditMode && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-4">
+          <div className="flex items-start gap-2 mb-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" strokeWidth={2} />
+            <div className="flex-1">
+              <p className="font-semibold text-amber-900 text-sm mb-1">
+                {risks.some(r => r.level === "cancelled") ? "여객선 결항이 확인됐어요" : "결항 가능성이 있어요"}
+              </p>
+              {risks.map((r, i) => (
+                <p key={i} className="text-xs text-amber-800">{r.message}</p>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={handleReconstruct}
+            disabled={reconstructing}
+            className="w-full mt-1 flex items-center justify-center gap-2 bg-amber-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-60 active:scale-95 transition-transform"
+          >
+            <RefreshCw className={`w-4 h-4 ${reconstructing ? "animate-spin" : ""}`} strokeWidth={2} />
+            {reconstructing ? "재구성 중..." : "대체 일정 만들기"}
+          </button>
+        </div>
+      )}
 
       {/* Day Tabs */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 overflow-x-auto">

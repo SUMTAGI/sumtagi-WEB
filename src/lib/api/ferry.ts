@@ -77,19 +77,69 @@ const ALL_ISLANDS = [
   { id: 'uldo',        name: '울도' },
 ];
 
-async function fetchAllToday(): Promise<any[]> {
+const PAGE_SIZE = 1000;
+
+// API가 429(쿼터 초과) 등 에러를 반환할 때 조용히 빈 배열로 삼키면 "오늘 결항"과
+// "지금 정보를 못 가져옴"을 구분할 수 없게 됨 — 호출부에서 구분해 보여줄 수 있도록 던진다.
+export class FerryApiError extends Error {
+  constructor(public status: number, body: string) {
+    super(`여객선 API 응답 실패 (HTTP ${status}): ${body.slice(0, 200)}`);
+    this.name = 'FerryApiError';
+  }
+}
+
+async function fetchPage(pageNo: number): Promise<{ items: any[]; totalCount: number }> {
   const params = new URLSearchParams({
     serviceKey: FERRY_API_KEY,
-    pageNo: '1',
-    numOfRows: '500',
+    pageNo: String(pageNo),
+    numOfRows: String(PAGE_SIZE),
     dataType: 'JSON',
     rlvtYmd: todayKst(),
   });
   const res = await fetch(`${BASE_URL}?${params}`);
-  if (!res.ok) return [];
+  if (!res.ok) throw new FerryApiError(res.status, await res.text().catch(() => ''));
   const json = await res.json();
   const raw = json?.response?.body?.items?.item ?? [];
-  return Array.isArray(raw) ? raw : [raw];
+  const totalCount = json?.response?.body?.totalCount ?? 0;
+  return { items: Array.isArray(raw) ? raw : [raw], totalCount };
+}
+
+const CACHE_TTL_MS = 60_000;
+let todayCache: { date: string; timestamp: number; items: any[] } | null = null;
+let inFlight: Promise<any[]> | null = null;
+
+// 하루 전체 항로 데이터가 numOfRows(페이지 크기)보다 많을 수 있어(예: 4000건 이상),
+// 첫 페이지만 받으면 뒤쪽 항로가 누락되어 실제로는 운항했는데도 '운항없음'으로 잘못 표시됨.
+// totalCount를 보고 남은 페이지를 모두 받아온다.
+//
+// Home/Schedule/IslandDetail 등 여러 화면이 짧은 시간 안에 각자 이 함수를 호출하면
+// 그때마다 페이지 여러 개짜리 요청이 중복으로 나가 하루 쿼터를 금방 소진하게 된다.
+// 같은 날짜 데이터는 60초 캐싱하고, 캐시가 없는 동안 동시에 여러 곳에서 호출돼도
+// 실제 fetch는 한 번만 나가도록 진행 중인 요청(inFlight)도 공유한다.
+async function fetchAllToday(): Promise<any[]> {
+  const date = todayKst();
+  if (todayCache && todayCache.date === date && Date.now() - todayCache.timestamp < CACHE_TTL_MS) {
+    return todayCache.items;
+  }
+  if (inFlight) return inFlight;
+
+  inFlight = (async () => {
+    const { items: firstItems, totalCount } = await fetchPage(1);
+    const items = [...firstItems];
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+    for (let pageNo = 2; pageNo <= totalPages; pageNo++) {
+      const { items: nextItems } = await fetchPage(pageNo);
+      items.push(...nextItems);
+    }
+    todayCache = { date, timestamp: Date.now(), items };
+    return items;
+  })();
+
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = null;
+  }
 }
 
 export async function getHomeFerryStatus(): Promise<FerryRouteStatus[]> {
@@ -105,12 +155,7 @@ export async function getHomeFerryStatus(): Promise<FerryRouteStatus[]> {
   });
 }
 
-export async function getFerryScheduleForIsland(islandId: string): Promise<FerrySchedule[]> {
-  const keyword = ROUTE_KEYWORDS[islandId];
-  if (!keyword) return [];
-
-  const items = await fetchAllToday();
-
+function schedulesFromItems(items: any[], keyword: string): FerrySchedule[] {
   const filtered = items.filter((item) => {
     const route: string = item.lcns_seawy_nm ?? item.nvg_seawy_nm ?? '';
     return route.includes(keyword);
@@ -134,4 +179,30 @@ export async function getFerryScheduleForIsland(islandId: string): Promise<Ferry
       status: item.nvg_stts_nm ?? '운항',
     }))
     .sort((a, b) => a.departureTime.localeCompare(b.departureTime));
+}
+
+export async function getFerryScheduleForIsland(islandId: string): Promise<FerrySchedule[]> {
+  const keyword = ROUTE_KEYWORDS[islandId];
+  if (!keyword) return [];
+
+  const items = await fetchAllToday();
+  return schedulesFromItems(items, keyword);
+}
+
+export interface IslandFerrySchedule {
+  islandId: string;
+  islandName: string;
+  schedules: FerrySchedule[];
+}
+
+// 홈 화면의 '교통시간표'에서 섬 하나씩 getFerryScheduleForIsland를 반복 호출하면
+// 매번 fetchAllToday()가 다시 실행돼 API를 섬 개수만큼 중복 호출하게 됨.
+// 전체 배편을 보여줄 땐 오늘자 데이터를 한 번만 받아서 섬별로 나눠준다.
+export async function getFerryScheduleForAllIslands(): Promise<IslandFerrySchedule[]> {
+  const items = await fetchAllToday();
+  return ALL_ISLANDS.map(({ id, name }) => ({
+    islandId: id,
+    islandName: name,
+    schedules: ROUTE_KEYWORDS[id] ? schedulesFromItems(items, ROUTE_KEYWORDS[id]) : [],
+  })).filter((entry) => entry.schedules.length > 0);
 }

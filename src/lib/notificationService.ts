@@ -3,6 +3,13 @@ import { supabase } from './supabase'
 const uid = async () => (await supabase.auth.getUser()).data.user?.id
 
 export const notificationService = {
+  add: async (title: string, message: string, type: string = 'general') => {
+    const id = await uid()
+    if (!id) return
+    const { error } = await supabase.from('notifications').insert({ user_id: id, title, message, type })
+    if (error) console.error('add notification error:', error)
+  },
+
   getAll: async () => {
     const id = await uid()
     if (!id) return []

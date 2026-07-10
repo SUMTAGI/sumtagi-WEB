@@ -13,6 +13,7 @@ import { getHomeFerryStatus, type FerryRouteStatus } from "../../lib/api/ferry";
 import { getAllIslandsDemand } from "../../lib/api/demandIntensity";
 import { getPopularIslands, type Island } from "../../lib/api/islands";
 import { IslandImage } from "../components/IslandImage";
+import { OceanScene } from "../components/OceanScene";
 
 // ─── Landing 전용 정적 데이터 ──────────────────────────────────────────────────
 
@@ -67,25 +68,6 @@ const FEATURE_ITEMS = [
 // ─── 공유 데이터 ───────────────────────────────────────────────────────────────
 
 
-// ─── Dashboard Mock 데이터 (TODO: API/Supabase 데이터로 교체) ─────────────────
-
-const AI_RECOMMENDATION = {
-  island: "덕적도",
-  reason: "이번 주말 파고 0.5m 이하, 맑음 예보로 해수욕하기 완벽한 날씨예요",
-  tags:   ["해수욕", "낚시", "캠핑"],
-  image:  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-  to:     "/island/deokjeok",
-} as const;
-
-const QUICK_SERVICES = [
-  { label: "배편 조회", Icon: Ship,     to: "/schedule",    iconColor: "#1664F5", bg: "#EEF4FF" },
-  { label: "AI 플래너", Icon: Sparkles, to: "/create-trip", iconColor: "#7C3AED", bg: "#F5F3FF" },
-  { label: "지도",      Icon: MapPin,   to: "/islands",     iconColor: "#0B9488", bg: "#CCFBF1" },
-  { label: "커뮤니티",  Icon: Users,    to: "/community",   iconColor: "#F97316", bg: "#FFF1E6" },
-  { label: "날씨·물때", Icon: Cloud,    to: "/",            iconColor: "#0284C7", bg: "#E0F2FE" },
-  { label: "여행 계획", Icon: Calendar, to: "/travel",      iconColor: "#DB2777", bg: "#FCE7F3" },
-] as const;
-
 // ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
 
 export function Home() {
@@ -96,6 +78,7 @@ export function Home() {
   const [confirmedTripId,    setConfirmedTripId]    = useState<string | null>(null);
   const [weather,            setWeather]            = useState<WeatherResult | null>(null);
   const [ferryStatus,        setFerryStatus]        = useState<FerryRouteStatus[]>([]);
+  const [ferryError,         setFerryError]          = useState(false);
   const [showFerryModal,     setShowFerryModal]     = useState(false);
   const [unreadNotifications] = useState(0);
   const [demandLevels,       setDemandLevels]       = useState<Record<string, 'low' | 'medium' | 'high'>>({});
@@ -130,7 +113,7 @@ export function Home() {
     });
 
     fetchIncheonWeather().then(setWeather);
-    getHomeFerryStatus().then(setFerryStatus).catch(() => {});
+    getHomeFerryStatus().then(setFerryStatus).catch(() => setFerryError(true));
     getAllIslandsDemand().then(setDemandLevels).catch(() => {});
     getPopularIslands(4).then(setPopularIslands).catch(() => {});
   }, []);
@@ -161,6 +144,7 @@ export function Home() {
 
   const normalCount    = ferryStatus.filter((s) => s.status === "정상").length;
   const ferryStripText =
+    ferryError                        ? "운항 정보 확인 불가" :
     ferryStatus.length === 0          ? "운항 정보 로딩 중" :
     normalCount === ferryStatus.length ? "전 노선 정상 운항" :
                                          `${normalCount}/${ferryStatus.length}개 노선 정상`;
@@ -178,6 +162,7 @@ export function Home() {
             displayName={displayName}
             weather={weather}
             ferryStatus={ferryStatus}
+            ferryError={ferryError}
             confirmedItinerary={confirmedItinerary}
             confirmedTripId={confirmedTripId}
             getDDay={getDDay}
@@ -189,12 +174,13 @@ export function Home() {
           /* ── 로그인 전: Landing (기존 코드 완전 유지) ─────────────── */
           <>
             {/* 히어로 섹션 */}
-            <section className="relative min-h-[85vh] flex flex-col justify-center overflow-hidden">
+            <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
               <div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: "url('https://images.unsplash.com/photo-1700621497504-d241a3803bbd?auto=format&fit=crop&w=1920&q=80')" }}
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/35 to-black/60" />
+              <OceanScene waveColor="#ffffff" creatureColor="rgba(255,255,255,0.7)" waveHeight={48} />
 
               <div className="relative z-10 max-w-[1280px] mx-auto w-full px-8 pb-20 pt-16">
                 <div className="mb-10">
@@ -423,15 +409,16 @@ export function Home() {
       <div className="lg:hidden">
         {user ? (
           <>
-        <section className="relative bg-gradient-to-br from-blue-500 to-blue-600 text-white px-6 py-8 overflow-hidden">
+        <section className="relative bg-gradient-to-br from-blue-500 to-blue-600 text-white px-6 pt-10 pb-14 overflow-hidden">
           <div
             className="absolute inset-0 opacity-30 bg-cover bg-center"
             style={{ backgroundImage: `url('https://images.unsplash.com/photo-1700621497504-d241a3803bbd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080')` }}
           />
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-blue-700/80" />
+          <OceanScene waveColor="#ffffff" waveHeight={28} />
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold">인천 섬 여행</h1>
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-3xl font-bold">인천 섬 여행</h1>
               <Link to="/notifications" className="relative active:scale-95 transition-transform">
                 <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-lg">
                   <Bell className="w-5 h-5 text-blue-600" strokeWidth={2} />
@@ -576,12 +563,13 @@ export function Home() {
 function MobileLanding({ popularIslands }: { popularIslands: Island[] }) {
   return (
     <div className="bg-white min-h-full">
-      <section className="relative min-h-[520px] flex items-end overflow-hidden px-6 pb-12 pt-16">
+      <section className="relative min-h-[640px] flex items-end overflow-hidden px-6 pb-16 pt-20">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('https://images.unsplash.com/photo-1700621497504-d241a3803bbd?auto=format&fit=crop&w=1080&q=80')" }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/35 to-black/75" />
+        <OceanScene showWave={false} creatureColor="rgba(255,255,255,0.7)" />
         <div className="relative z-10 text-white">
           <p className="text-xs font-semibold tracking-[0.18em] text-white/70 mb-3">
             서해 인천 섬 여행 플랫폼
@@ -670,6 +658,7 @@ interface DashboardProps {
   displayName: string;
   weather: WeatherResult | null;
   ferryStatus: FerryRouteStatus[];
+  ferryError?: boolean;
   confirmedItinerary: any;
   confirmedTripId: string | null;
   getDDay: (startDate: string) => number;
@@ -679,12 +668,13 @@ interface DashboardProps {
 }
 
 function DesktopDashboard({
-  displayName, weather, ferryStatus, confirmedItinerary, confirmedTripId, getDDay, getDDayMessage, demandLevels = {}, popularIslands,
+  displayName, weather, ferryStatus, ferryError = false, confirmedItinerary, confirmedTripId, getDDay, getDDayMessage, demandLevels = {}, popularIslands,
 }: DashboardProps) {
   const [savedIslands, setSavedIslands] = useState<Set<string>>(new Set());
 
   const normalCount = ferryStatus.filter((s) => s.status === "정상").length;
   const ferryText =
+    ferryError                        ? "확인 불가" :
     ferryStatus.length === 0          ? "로딩 중..." :
     normalCount === ferryStatus.length ? "전 노선 정상 운항" :
                                          `${normalCount}/${ferryStatus.length}개 노선 정상`;
@@ -718,33 +708,31 @@ function DesktopDashboard({
         {/* 장식 원형 */}
         <div className="absolute -top-10 -right-10 w-52 h-52 bg-white/[0.05] rounded-full" />
         <div className="absolute top-6 right-40 w-28 h-28 bg-white/[0.05] rounded-full" />
-        {/* 하단 물결 */}
-        <svg className="absolute bottom-0 left-0 right-0 w-full" viewBox="0 0 1440 40" fill="none" preserveAspectRatio="none">
-          <path d="M0,20 C360,40 720,0 1080,20 C1260,32 1380,8 1440,20 L1440,40 L0,40 Z" fill="#f5f6f8" fillOpacity="1" />
-        </svg>
+        {/* 배/물고기/물방울 + 하단 물결 애니메이션 */}
+        <OceanScene waveColor="#f5f6f8" waveHeight={56} />
 
-        <div className="relative z-10 max-w-[1280px] mx-auto px-8 pt-9 pb-14 flex items-center justify-between">
+        <div className="relative z-10 max-w-[1280px] mx-auto px-8 pt-16 pb-24 flex items-center justify-between">
           {/* 좌: 인사말 */}
           <div>
-            <p className="text-blue-200 text-sm font-medium mb-1.5">{dateStr}</p>
-            <h1 className="text-[30px] font-bold text-white tracking-tight leading-tight mb-2">
+            <p className="text-blue-200 text-base font-medium mb-2">{dateStr}</p>
+            <h1 className="text-[40px] font-bold text-white tracking-tight leading-tight mb-3">
               안녕하세요, {displayName}님
             </h1>
-            <p className="text-blue-200 text-sm">오늘도 좋은 섬 여행 되세요 🏝️</p>
+            <p className="text-blue-200 text-base">오늘도 좋은 섬 여행 되세요 🏝️</p>
           </div>
 
           {/* 우: 날씨 브리핑 글라스 카드 */}
           {weather && (
-            <div className="bg-white/[0.12] backdrop-blur-sm border border-white/[0.22] rounded-2xl px-6 py-4 min-w-[220px]">
-              <p className="text-blue-200 text-xs font-medium mb-2.5 flex items-center gap-1.5">
+            <div className="bg-white/[0.12] backdrop-blur-sm border border-white/[0.22] rounded-2xl px-7 py-6 min-w-[260px]">
+              <p className="text-blue-200 text-xs font-medium mb-3 flex items-center gap-1.5">
                 <Cloud className="w-3.5 h-3.5" strokeWidth={2} />
                 인천 앞바다 현재 날씨
               </p>
-              <div className="flex items-end gap-2 mb-2.5">
-                <span className="text-[36px] font-bold text-white leading-none">{weather.current.temp}°</span>
-                <span className="text-blue-100 text-sm font-medium mb-1">{weather.current.condition}</span>
+              <div className="flex items-end gap-2 mb-3">
+                <span className="text-[44px] font-bold text-white leading-none">{weather.current.temp}°</span>
+                <span className="text-blue-100 text-base font-medium mb-1">{weather.current.condition}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-blue-200 pt-2.5 border-t border-white/[0.18]">
+              <div className="flex items-center gap-3 text-sm text-blue-200 pt-3 border-t border-white/[0.18]">
                 <span>파고 {weather.current.waveHeight}m</span>
                 <span className="text-white/20">·</span>
                 <span>바람 {weather.current.windSpeed}m/s</span>
@@ -757,8 +745,8 @@ function DesktopDashboard({
       {/* ── Main Content ──────────────────────────────────────────────── */}
       <div className="max-w-[1280px] mx-auto px-8">
 
-        {/* Status Cards — 배너에서 이어지도록 -mt-10 */}
-        <div className="grid grid-cols-4 gap-4 -mt-10 mb-6 relative z-10">
+        {/* Status Cards — 배너 애니메이션을 너무 가리지 않도록 -mt-6만 겹침 */}
+        <div className="grid grid-cols-4 gap-4 -mt-6 mb-6 relative z-10">
 
           {/* 운항 현황 */}
           <Link to="/schedule"
@@ -770,6 +758,7 @@ function DesktopDashboard({
               </div>
               <div className="flex items-center gap-1.5">
                 <div className={`w-1.5 h-1.5 rounded-full ${
+                  ferryError ? "bg-gray-300" :
                   ferryStatus.length === 0 ? "bg-gray-300" :
                   normalCount === ferryStatus.length ? "bg-green-500 animate-pulse" : "bg-orange-400"
                 }`} />
@@ -818,39 +807,22 @@ function DesktopDashboard({
             </p>
           </div>
 
-          {/* 배편 검색 CTA */}
-          <Link to="/schedule"
+          {/* 지도 바로가기 CTA */}
+          <Link to="/islands"
             className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 shadow-[0_4px_24px_rgba(37,99,235,0.32)] hover:shadow-[0_8px_32px_rgba(37,99,235,0.44)] transition-all duration-200 hover:-translate-y-0.5 group"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
-                <Search className="w-5 h-5 text-white" strokeWidth={2} />
+                <MapPin className="w-5 h-5 text-white" strokeWidth={2} />
               </div>
             </div>
             <p className="text-[11px] text-blue-200 font-semibold mb-1.5 uppercase tracking-wide">지금 바로</p>
-            <p className="text-[19px] font-bold text-white leading-tight">배편 검색</p>
+            <p className="text-[19px] font-bold text-white leading-tight">지도 보기</p>
             <p className="text-xs text-blue-200 mt-2 flex items-center gap-1">
-              빠르게 조회하기
+              섬 위치 한눈에 보기
               <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
             </p>
           </Link>
-        </div>
-
-        {/* ── 빠른 서비스 ───────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl px-5 pt-5 pb-4 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60 mb-6">
-          <h2 className="text-[15px] font-bold text-gray-900 mb-4">빠른 서비스</h2>
-          <div className="grid grid-cols-6 gap-1">
-            {QUICK_SERVICES.map(({ label, Icon, to, iconColor, bg }) => (
-              <Link key={label} to={to}
-                className="flex flex-col items-center gap-2.5 py-3 rounded-2xl hover:bg-gray-50 transition-colors group"
-              >
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: bg }}>
-                  <Icon className="w-[22px] h-[22px]" style={{ color: iconColor }} strokeWidth={2} />
-                </div>
-                <span className="text-[12px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors text-center leading-tight">{label}</span>
-              </Link>
-            ))}
-          </div>
         </div>
 
         {/* ── 2단: 여행 일정 + 인기 섬 (Airbnb 스타일) ────────────── */}
@@ -970,36 +942,6 @@ function DesktopDashboard({
                   </Link>
                 </div>
               ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── AI 이번 주 추천 — 가로형 카드 ───────────────────────── */}
-        <div className="mb-10">
-          <h2 className="text-[15px] font-bold text-gray-900 mb-3">AI 이번 주 추천</h2>
-          <div className="bg-white rounded-2xl overflow-hidden shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60 flex">
-            <div className="relative w-56 shrink-0 overflow-hidden">
-              <img src={AI_RECOMMENDATION.image} alt={AI_RECOMMENDATION.island}
-                className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1 p-6 flex flex-col justify-center">
-              <span className="text-[11px] font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full inline-block mb-3 self-start uppercase tracking-wide">AI 추천</span>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{AI_RECOMMENDATION.island}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed mb-3">
-                {weather
-                  ? `현재 파고 ${weather.current.waveHeight}m, ${weather.current.condition} — ${AI_RECOMMENDATION.reason}`
-                  : AI_RECOMMENDATION.reason}
-              </p>
-              <div className="flex items-center gap-2 mb-4">
-                {AI_RECOMMENDATION.tags.map((tag) => (
-                  <span key={tag} className="text-xs font-medium text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">{tag}</span>
-                ))}
-              </div>
-              <Link to={AI_RECOMMENDATION.to}
-                className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 self-start transition-colors"
-              >
-                섬 정보 보기 <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
-              </Link>
             </div>
           </div>
         </div>

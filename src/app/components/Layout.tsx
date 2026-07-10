@@ -69,7 +69,7 @@ export function Layout() {
             <Ship className="w-[18px] h-[18px] text-white" strokeWidth={2.5} />
           </div>
           <span className="text-[17px] font-bold text-gray-900 tracking-tight">
-            섬여행
+            섬타기
           </span>
         </Link>
 
