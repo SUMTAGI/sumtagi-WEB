@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight, Check, Search, CheckCircle, Loader2 } from "lucide-react";
 import { fetchIslandData } from "../utils/itineraryGenerator";
@@ -35,6 +35,36 @@ function localDateStr() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
+
+function fmtDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function addDays(dateStr: string, n: number) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return fmtDate(d);
+}
+
+function upcomingWeekend(weeksAhead: number) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysUntilSat = ((6 - today.getDay()) % 7) + weeksAhead * 7;
+  const sat = new Date(today);
+  sat.setDate(sat.getDate() + daysUntilSat);
+  const sun = new Date(sat);
+  sun.setDate(sat.getDate() + 1);
+  return { start: fmtDate(sat), end: fmtDate(sun) };
+}
+
+const QUICK_DATE_PICKS = [
+  { label: "이번 주말", type: "weekend" as const, weeksAhead: 0 },
+  { label: "다음 주말", type: "weekend" as const, weeksAhead: 1 },
+  { label: "당일치기", type: "nights" as const, nights: 0 },
+  { label: "1박 2일", type: "nights" as const, nights: 1 },
+  { label: "2박 3일", type: "nights" as const, nights: 2 },
+  { label: "3박 4일", type: "nights" as const, nights: 3 },
+];
 
 const TRAVEL_STYLES = [
   { id: "관광",     emoji: "🏖️" },
@@ -81,6 +111,9 @@ export function CreateTrip() {
 
   const totalSteps = preSelectedIsland ? 2 : 3;
   const stepNames = preSelectedIsland ? ["날짜 선택", "인원 & 스타일"] : ["섬 선택", "날짜 선택", "인원 & 스타일"];
+  const stepDescriptions = preSelectedIsland
+    ? ["여행 일정을 생성하기 위해 여행 기간을 선택해주세요.", "함께 떠나는 인원과 원하는 여행 스타일을 알려주세요."]
+    : ["방문하고 싶은 섬을 자유롭게 선택해주세요.", "여행 일정을 생성하기 위해 여행 기간을 선택해주세요.", "함께 떠나는 인원과 원하는 여행 스타일을 알려주세요."];
 
   const computedPort = ISLAND_PORT_MAP[formData.islands[0] ?? ""] ?? "인천항";
 
@@ -105,6 +138,12 @@ export function CreateTrip() {
       setTimeout(() => setShakeStart(false), 500);
       return;
     }
+    if (formData.endDate && selectedDate > formData.endDate) {
+      toast.error("출발일은 귀가일 이전이어야 해요");
+      setShakeStart(true);
+      setTimeout(() => setShakeStart(false), 500);
+      return;
+    }
     setFormData({ ...formData, startDate: selectedDate });
   };
 
@@ -124,6 +163,30 @@ export function CreateTrip() {
       return;
     }
     setFormData({ ...formData, endDate: selectedDate });
+  };
+
+  const handleQuickDatePick = (pick: typeof QUICK_DATE_PICKS[number]) => {
+    if (pick.type === "weekend") {
+      const { start, end } = upcomingWeekend(pick.weeksAhead);
+      setFormData(prev => ({ ...prev, startDate: start, endDate: end }));
+    } else {
+      setFormData(prev => {
+        const start = prev.startDate || localDateStr();
+        return { ...prev, startDate: start, endDate: addDays(start, pick.nights) };
+      });
+    }
+  };
+
+  const endDateInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDirectSelect = () => {
+    setFormData(prev => (prev.startDate ? prev : { ...prev, startDate: localDateStr() }));
+    requestAnimationFrame(() => {
+      const el = endDateInputRef.current;
+      if (!el) return;
+      el.focus();
+      (el as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+    });
   };
 
   const handleSubmit = async () => {
@@ -415,7 +478,25 @@ export function CreateTrip() {
   // ================================================================
 
   const canProceedIsland = formData.islands.length > 0;
-  const canProceedDate = !!(formData.startDate && formData.endDate);
+
+  const hasDates = !!(formData.startDate && formData.endDate);
+  const nights = hasDates
+    ? Math.round((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / 86400000)
+    : null;
+  const dateError = nights !== null && nights < 0;
+  const durationLabel = dateError || nights === null ? null : nights === 0 ? "당일치기" : `${nights}박 ${nights + 1}일`;
+
+  const thisWeekend = upcomingWeekend(0);
+  const nextWeekend = upcomingWeekend(1);
+  const activeQuickPick = !hasDates || dateError
+    ? null
+    : formData.startDate === thisWeekend.start && formData.endDate === thisWeekend.end
+    ? "이번 주말"
+    : formData.startDate === nextWeekend.start && formData.endDate === nextWeekend.end
+    ? "다음 주말"
+    : QUICK_DATE_PICKS.find((p) => p.type === "nights" && p.nights === nights)?.label ?? "직접 선택";
+
+  const canProceedDate = hasDates && !dateError;
   const isLastStep = step === totalSteps - 1;
   const canSubmitStyle = !!formData.travelType;
 
@@ -531,87 +612,133 @@ export function CreateTrip() {
   );
 
   const renderDateStepDesktop = () => (
-    <div className="max-w-xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1.5">여행 날짜</h2>
-        <p className="text-gray-500">언제 떠나시나요?</p>
-      </div>
-
+    <div>
       {preSelectedIsland && (
-        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200 mb-6">
+        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200 mb-5">
           <p className="text-sm font-semibold text-blue-900 mb-1">선택된 섬</p>
           <p className="text-lg font-bold text-blue-700">{preSelectedIsland}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 mb-2">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 block">출발일</label>
-          <input
-            type="date"
-            value={formData.startDate}
-            onChange={handleStartDateChange}
-            className={`w-full px-4 py-3.5 text-base border-2 border-gray-300 rounded-xl bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 ${
-              shakeStart ? "animate-shake border-red-500" : ""
-            }`}
-            style={{ colorScheme: "light" }}
-            min={localDateStr()}
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 block">귀가일</label>
-          <input
-            type="date"
-            value={formData.endDate}
-            onChange={handleEndDateChange}
-            className={`w-full px-4 py-3.5 text-base border-2 border-gray-300 rounded-xl bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 ${
-              shakeEnd ? "animate-shake border-red-500" : ""
-            }`}
-            style={{ colorScheme: "light" }}
-            min={formData.startDate || localDateStr()}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div>
-          {formData.startDate && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
-              <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2} />
-              <p className="text-sm text-blue-700 font-medium">
-                {new Date(formData.startDate + "T00:00:00").toLocaleDateString("ko-KR", {
-                  month: "long", day: "numeric", weekday: "short",
-                })}
-              </p>
-            </div>
-          )}
-        </div>
-        <div>
-          {formData.endDate && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
-              <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2} />
-              <p className="text-sm text-blue-700 font-medium">
-                {new Date(formData.endDate + "T00:00:00").toLocaleDateString("ko-KR", {
-                  month: "long", day: "numeric", weekday: "short",
-                })}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {formData.startDate && formData.endDate && (
-        <div className="bg-blue-50 rounded-xl p-5 border border-blue-100 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-blue-600 font-medium mb-1">총 여행 기간</p>
-            <p className="text-xl font-bold text-gray-900">
-              {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / 86400000)}박{" "}
-              {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / 86400000) + 1}일
-            </p>
+      <div className="grid grid-cols-3 gap-6">
+        {/* ── 여행 날짜 카드 ────────────────────────── */}
+        <div className="col-span-2 bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="mb-5">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">여행 날짜</h2>
+            <p className="text-sm text-gray-500">언제 떠나시나요?</p>
           </div>
-          <CheckCircle className="w-9 h-9 text-blue-600" strokeWidth={2} />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 block">출발일</label>
+              <input
+                type="date"
+                value={formData.startDate}
+                onChange={handleStartDateChange}
+                className={`w-full px-4 py-3.5 text-base border-2 rounded-xl bg-white hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors ${
+                  shakeStart ? "animate-shake border-red-500" : dateError ? "border-red-300" : "border-gray-300"
+                }`}
+                style={{ colorScheme: "light" }}
+                min={localDateStr()}
+              />
+              {formData.startDate && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
+                  <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2} />
+                  <p className="text-sm text-blue-700 font-medium">
+                    {new Date(formData.startDate + "T00:00:00").toLocaleDateString("ko-KR", {
+                      month: "long", day: "numeric", weekday: "short",
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 block">귀가일</label>
+              <input
+                ref={endDateInputRef}
+                type="date"
+                value={formData.endDate}
+                onChange={handleEndDateChange}
+                className={`w-full px-4 py-3.5 text-base border-2 rounded-xl bg-white hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors ${
+                  shakeEnd ? "animate-shake border-red-500" : dateError ? "border-red-300" : "border-gray-300"
+                }`}
+                style={{ colorScheme: "light" }}
+                min={formData.startDate || localDateStr()}
+              />
+              {formData.endDate && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
+                  <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2} />
+                  <p className="text-sm text-blue-700 font-medium">
+                    {new Date(formData.endDate + "T00:00:00").toLocaleDateString("ko-KR", {
+                      month: "long", day: "numeric", weekday: "short",
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {dateError ? (
+            <div className="rounded-xl p-4 border border-red-200 bg-red-50 mt-5">
+              <p className="text-sm text-red-600 font-medium">귀가일은 출발일 이후여야 합니다.</p>
+            </div>
+          ) : (
+            <div className={`rounded-xl p-4 border flex items-center justify-between mt-5 transition-colors ${
+              hasDates ? "bg-blue-50 border-blue-100" : "bg-gray-50 border-gray-100"
+            }`}>
+              <div>
+                <p className={`text-xs font-medium mb-1 ${hasDates ? "text-blue-600" : "text-gray-400"}`}>총 여행 기간</p>
+                <p className={`text-lg font-bold ${hasDates ? "text-gray-900" : "text-gray-400"}`}>
+                  {durationLabel ?? "날짜를 선택하면 표시돼요"}
+                </p>
+              </div>
+              <CheckCircle className={`w-8 h-8 shrink-0 ${hasDates ? "text-blue-600" : "text-gray-300"}`} strokeWidth={2} />
+            </div>
+          )}
+
+          <p className="text-xs text-gray-400 mt-3">• 계절과 배편을 고려하여 추천 일정을 생성합니다.</p>
         </div>
-      )}
+
+        {/* ── 사이드: 빠른 선택 + AI 추천 ────────────────────────── */}
+        <div className="space-y-5">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">빠른 선택</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {QUICK_DATE_PICKS.map((pick) => {
+                const isActive = activeQuickPick === pick.label;
+                return (
+                  <button
+                    key={pick.label}
+                    onClick={() => handleQuickDatePick(pick)}
+                    className={`px-3 py-2.5 rounded-xl border-2 text-xs font-medium transition-colors ${
+                      isActive
+                        ? "border-blue-600 bg-blue-50 text-blue-600 font-semibold"
+                        : "border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 text-gray-600"
+                    }`}
+                  >
+                    {pick.label}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={handleDirectSelect}
+              className={`w-full mt-2 px-3 py-2.5 rounded-xl border-2 text-xs font-medium transition-colors ${
+                activeQuickPick === "직접 선택"
+                  ? "border-blue-600 bg-blue-50 text-blue-600 font-semibold"
+                  : "border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 text-gray-600"
+              }`}
+            >
+              직접 선택
+            </button>
+          </div>
+
+          <div className="bg-blue-50 rounded-2xl border border-blue-100 p-5">
+            <p className="text-sm font-semibold text-blue-900 mb-1.5">💡 AI 추천</p>
+            <p className="text-sm text-blue-700 leading-relaxed">가을에는 2박 3일 여행이 가장 만족도가 높아요.</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -712,10 +839,10 @@ export function CreateTrip() {
           데스크탑 레이아웃 (lg 이상)
           ================================================================ */}
       <div className="hidden lg:block">
-        <div className="max-w-[1040px] mx-auto px-8">
+        <div className="max-w-[1120px] mx-auto px-8">
 
           {/* 헤더 */}
-          <div className="pt-8 pb-5 flex items-center gap-3">
+          <div className="pt-6 pb-4 flex items-center gap-3">
             <button
               onClick={handleBack}
               className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors shrink-0"
@@ -728,11 +855,13 @@ export function CreateTrip() {
           </div>
 
           {/* Step 표시 + progress */}
-          <div className="pb-6 border-b border-gray-100">
+          <div className="pb-5 border-b border-gray-100">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-gray-700">
-                Step {step + 1} / {totalSteps} · {stepNames[step]}
-              </p>
+              <div>
+                <p className="text-xs font-semibold text-blue-600 mb-1">Step {step + 1} / {totalSteps}</p>
+                <h2 className="text-base font-bold text-gray-900">{stepNames[step]}</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{stepDescriptions[step]}</p>
+              </div>
             </div>
             <div className="flex gap-2">
               {Array.from({ length: totalSteps }, (_, i) => (
@@ -745,15 +874,15 @@ export function CreateTrip() {
           </div>
 
           {/* 단계 콘텐츠 */}
-          <div className="py-10 min-h-[420px]">
+          <div className="py-7 min-h-[420px]">
             {renderStepDesktop()}
           </div>
 
           {/* 이전/다음 네비게이션 */}
-          <div className="flex items-center justify-between py-6 border-t border-gray-100">
+          <div className="flex items-center justify-between py-5 border-t border-gray-100">
             <button
               onClick={handleBack}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 px-5 py-3 rounded-xl hover:bg-gray-50 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" strokeWidth={2} />
               이전
@@ -761,7 +890,7 @@ export function CreateTrip() {
             <button
               onClick={handleNextDesktop}
               disabled={nextDisabledDesktop}
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600 text-base"
             >
               {isLastStep ? (
                 isGenerating ? (
