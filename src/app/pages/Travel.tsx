@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Calendar, Ship, Sparkles, MapPin, MapPinned, Trash2, Pencil, ListChecks, Info, ChevronRight, Clock, DollarSign, Plus, Heart, TrendingUp, Sun, Check } from "lucide-react";
+import { Calendar, Ship, Sparkles, MapPin, Trash2, Pencil, ListChecks, Info, ChevronRight, Clock, DollarSign, Plus, Heart, Sun, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ListSkeleton } from "../components/SkeletonLoader";
 import { tripService } from "../../lib/tripService";
 import { favoritesService } from "../../lib/favoritesService";
-import { getPopularIslands, type Island } from "../../lib/api/islands";
 
 export function Travel() {
   const navigate = useNavigate();
@@ -17,16 +16,14 @@ export function Travel() {
   const [isLoading, setIsLoading] = useState(true);
   const [tripCount, setTripCount] = useState(0);
   const [favoriteCount, setFavoriteCount] = useState(0);
-  const [popularIslands, setPopularIslands] = useState<Island[]>([]);
 
   useEffect(() => {
     const load = async () => {
-      const [trip, trips, count, favorites, popular] = await Promise.all([
+      const [trip, trips, count, favorites] = await Promise.all([
         tripService.getUpcomingTrip(),
         tripService.getVisitedTrips(),
         tripService.getTripCount(),
         favoritesService.getFavorites(),
-        getPopularIslands(4),
       ]);
       if (trip) {
         setCurrentItinerary({ ...trip, startDate: trip.start_date, islands: trip.islands ?? [] });
@@ -37,7 +34,6 @@ export function Travel() {
       setConfirmedTrips(trips);
       setTripCount(count);
       setFavoriteCount(favorites.length);
-      setPopularIslands(popular);
       setIsLoading(false);
     };
     load();
@@ -328,44 +324,6 @@ export function Travel() {
                   >
                     직접 일정 만들기
                   </button>
-                </div>
-
-                {/* 인기 섬 추천 */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <MapPinned className="w-4 h-4 text-blue-600" strokeWidth={2} />
-                    AI 추천 인기 섬
-                  </h3>
-                  {popularIslands.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">추천 정보를 불러오는 중이에요</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {popularIslands.map((island, i) => (
-                        <Link key={island.id} to={`/island/${island.id}`} className="flex items-center gap-2.5 group">
-                          <div className="w-6 h-6 bg-blue-50 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold text-blue-600">
-                            {i + 1}
-                          </div>
-                          <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 bg-blue-50 flex items-center justify-center">
-                            {island.image ? (
-                              <img src={island.image} alt={island.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-xs font-bold text-blue-600">{island.name.charAt(0)}</span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{island.name}</p>
-                            <p className="text-xs text-gray-400 flex items-center gap-1">
-                              <Clock className="w-3 h-3" strokeWidth={2} />
-                              {island.ferry_time || "정보 없음"}
-                            </p>
-                          </div>
-                          {island.popularity_trend === "up" && (
-                            <TrendingUp className="w-3.5 h-3.5 text-red-500 shrink-0" strokeWidth={2.5} />
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* 지난 여행 */}

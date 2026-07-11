@@ -9,6 +9,7 @@ import { IslandImage } from "../components/IslandImage";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
 import { getIslandById, formatFerryPrice, formatAccommodationPrice, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
 import { favoritesService } from "../../lib/favoritesService";
+import { recentlyViewedService } from "../../lib/recentlyViewed";
 import { getFerryScheduleForIsland, type FerrySchedule } from "../../lib/api/ferry";
 import { getIslandCongestion, type IslandCongestionData } from "../../lib/api/congestion";
 
@@ -37,6 +38,7 @@ export function IslandDetail() {
       setIsland(islandData);
       setIsFavorite(fav);
       if (islandData) {
+        recentlyViewedService.record({ id: id!, name: islandData.name, image: islandData.image });
         getFerryScheduleForIsland(id!)
           .then(setFerrySchedule)
           .catch(() => { setFerryError(true); toast.error("여객선 시간표를 불러오지 못했어요"); })

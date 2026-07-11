@@ -1,8 +1,8 @@
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { useState, useEffect } from "react";
 import {
   Calendar, ChevronRight, Bell, HelpCircle, LogOut,
-  CreditCard, Heart, Users, AlertCircle, Clock, Sparkles,
+  CreditCard, Heart, Users, AlertCircle, Clock, Sparkles, MapPinned, Compass,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
@@ -21,8 +21,7 @@ const SETTINGS_MENU = [
   { icon: HelpCircle, label: "고객센터", path: "/support" },
 ];
 
-const TRAVEL_CARDS = [
-  { icon: Calendar, label: "내 여행 일정", desc: "예정·완료 일정 관리", path: "/travel", featured: true },
+const TOOL_CARDS = [
   { icon: Users, label: "그룹 여행", desc: "친구·가족과 일정 공유", path: "/group-trip" },
   { icon: CreditCard, label: "경비 관리", desc: "예산과 지출 기록", path: "/budget" },
   { icon: Heart, label: "찜한 여행지", desc: "저장한 섬과 코스", path: "/favorites" },
@@ -34,9 +33,10 @@ export function MyPage() {
 
   const [loading, setLoading] = useState(true);
   const [upcomingTrip, setUpcomingTrip] = useState<any>(null);
-  const [visitedCount, setVisitedCount] = useState(0);
+  const [visitedTrips, setVisitedTrips] = useState<any[]>([]);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [groupCount, setGroupCount] = useState(0);
+  const [tripCount, setTripCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -45,14 +45,20 @@ export function MyPage() {
       tripService.getVisitedTrips(),
       favoritesService.getFavorites(),
       groupTripService.getMyGroups(),
-    ]).then(([trip, visited, favorites, groups]) => {
+      tripService.getTripCount(),
+    ]).then(([trip, visited, favorites, groups, count]) => {
       setUpcomingTrip(trip);
-      setVisitedCount(visited.length);
+      setVisitedTrips(visited);
       setFavoriteCount(favorites.length);
       setGroupCount(groups.length);
+      setTripCount(count);
       setLoading(false);
     });
   }, [user]);
+
+  const visitedCount = visitedTrips.length;
+  const visitedIslandCount = new Set(visitedTrips.flatMap((t) => t.islands ?? [])).size;
+  const travelStyleLabel = visitedCount === 0 ? "아직 없음" : "다양한 스타일";
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -75,9 +81,9 @@ export function MyPage() {
   };
 
   const STAT_ITEMS = [
-    { label: "완료한 여행", value: visitedCount, path: "/travel" },
-    { label: "찜한 여행지", value: favoriteCount, path: "/favorites" },
-    { label: "그룹 여행", value: groupCount, path: "/group-trip" },
+    { label: "총 여행 횟수", value: tripCount, path: "/travel", icon: Calendar },
+    { label: "방문한 섬 수", value: visitedIslandCount, path: "/travel", icon: MapPinned },
+    { label: "즐겨찾기", value: favoriteCount, path: "/favorites", icon: Heart },
   ];
 
   return (
@@ -90,10 +96,10 @@ export function MyPage() {
           <p className="text-sm lg:text-lg text-gray-500">계정 정보와 여행 활동을 한눈에 확인하세요</p>
         </div>
 
-        {/* 상단 대시보드: 프로필(좌) + 예정 여행(우) */}
+        {/* 상단 대시보드: 프로필(좌) + 여행 통계(우) */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-3 lg:gap-6 mb-4 lg:mb-6">
 
-          {/* 프로필 + 통계 */}
+          {/* 프로필 */}
           <div className="bg-white rounded-2xl border border-gray-100 p-4 lg:p-7 flex flex-col">
             <div className="flex items-start gap-3 lg:gap-4">
               <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shrink-0">
@@ -115,98 +121,109 @@ export function MyPage() {
               </button>
             </div>
 
-            {loading ? (
-              <div className="mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-gray-100">
-                <div className="h-10 lg:h-14 bg-gray-50 rounded-lg animate-pulse" />
-              </div>
-            ) : (
-              <div className="mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-gray-100 grid grid-cols-3 divide-x divide-gray-100">
-                {STAT_ITEMS.map(({ label, value, path }) => (
-                  <button
-                    key={label}
-                    onClick={() => go(path)}
-                    className="flex flex-col items-center justify-center px-1 py-1 lg:py-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="text-base lg:text-2xl font-bold text-gray-900">{value}</span>
-                    <span className="text-[11px] lg:text-sm text-gray-500 mt-0.5 lg:mt-1 text-center leading-tight">{label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 예정된 여행 */}
-          {loading ? (
-            <div className="bg-white rounded-2xl border border-gray-100 animate-pulse" />
-          ) : upcomingTrip ? (
-            <button
-              onClick={() => go(`/itinerary/${upcomingTrip.id}`)}
-              className="w-full h-full text-left bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 lg:p-8 text-white relative overflow-hidden hover:from-blue-700 hover:to-blue-800 transition-colors flex flex-col justify-center"
-            >
-              <div className="absolute top-0 right-0 w-40 h-40 lg:w-56 lg:h-56 bg-white/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
-              <div className="relative z-10 flex items-center justify-between gap-4 lg:gap-6">
-                <div className="min-w-0">
-                  <p className="text-blue-200 text-xs lg:text-sm font-medium mb-0.5 lg:mb-1">예정된 여행</p>
-                  <h4 className="text-lg lg:text-2xl font-bold truncate">{upcomingTrip.title ?? "여행"}</h4>
-                  <p className="text-blue-200 text-sm lg:text-base mt-0.5 lg:mt-1 truncate">
-                    {(upcomingTrip.islands ?? []).join(", ") || "섬 정보 없음"}
-                  </p>
-                </div>
-                <div className="shrink-0 flex items-center gap-3 lg:gap-4">
+            {!loading && (
+              upcomingTrip ? (
+                <Link
+                  to={`/itinerary/${upcomingTrip.id}`}
+                  className="mt-4 lg:mt-6 flex items-center justify-between gap-2 bg-blue-50 rounded-xl px-3 py-2.5 lg:px-4 lg:py-3 hover:bg-blue-100/70 transition-colors"
+                >
+                  <span className="text-xs lg:text-sm text-blue-700 font-medium truncate">
+                    다음 여행 · {upcomingTrip.title ?? "여행"}
+                  </span>
                   {(() => {
                     const dday = getDDay(upcomingTrip.start_date);
                     return dday >= 0 ? (
-                      <span className="bg-white/20 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-sm lg:text-base font-bold whitespace-nowrap">
-                        {dday === 0 ? "오늘 출발" : `D-${dday}`}
+                      <span className="text-xs lg:text-sm font-bold text-blue-600 shrink-0">
+                        {dday === 0 ? "오늘" : `D-${dday}`}
                       </span>
                     ) : null;
                   })()}
-                  <ChevronRight className="w-5 h-5 lg:w-7 lg:h-7" strokeWidth={2} />
+                </Link>
+              ) : (
+                <button
+                  onClick={() => go("/create-trip")}
+                  className="mt-4 lg:mt-6 flex items-center justify-between gap-2 bg-gray-50 rounded-xl px-3 py-2.5 lg:px-4 lg:py-3 hover:bg-gray-100 transition-colors text-left"
+                >
+                  <span className="text-xs lg:text-sm text-gray-500 font-medium">예정된 여행이 없어요</span>
+                  <span className="text-xs lg:text-sm font-semibold text-blue-600 shrink-0">여행 계획 →</span>
+                </button>
+              )
+            )}
+          </div>
+
+          {/* 여행 통계 */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 lg:p-7">
+            <h3 className="text-sm lg:text-base font-semibold text-gray-500 mb-3 lg:mb-4">여행 통계</h3>
+            {loading ? (
+              <div className="h-16 lg:h-20 bg-gray-50 rounded-lg animate-pulse" />
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-4">
+                {STAT_ITEMS.map(({ label, value, path, icon: Icon }) => (
+                  <button
+                    key={label}
+                    onClick={() => go(path)}
+                    className="flex flex-col items-center justify-center gap-1.5 lg:gap-2 py-3 lg:py-4 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors"
+                  >
+                    <Icon className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" strokeWidth={2} />
+                    <span className="text-lg lg:text-2xl font-bold text-gray-900">{value}</span>
+                    <span className="text-[11px] lg:text-sm text-gray-500 text-center leading-tight">{label}</span>
+                  </button>
+                ))}
+                <div className="flex flex-col items-center justify-center gap-1.5 lg:gap-2 py-3 lg:py-4 rounded-xl bg-gray-50">
+                  <Compass className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" strokeWidth={2} />
+                  <span className="text-sm lg:text-lg font-bold text-gray-900 text-center leading-tight">{travelStyleLabel}</span>
+                  <span className="text-[11px] lg:text-sm text-gray-500 text-center leading-tight">여행 스타일</span>
                 </div>
               </div>
-            </button>
-          ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 h-full flex flex-col items-center justify-center text-center gap-2 lg:gap-3 px-6 py-5 lg:px-8 lg:py-6">
-              <div className="w-11 h-11 lg:w-16 lg:h-16 bg-blue-50 rounded-full flex items-center justify-center">
-                <Sparkles className="w-5 h-5 lg:w-7 lg:h-7 text-blue-500" strokeWidth={1.75} />
-              </div>
-              <div>
-                <h4 className="text-sm lg:text-xl font-bold text-gray-900">아직 예정된 여행이 없어요</h4>
-                <p className="text-xs lg:text-base text-gray-500 mt-0.5 lg:mt-1">AI가 취향에 맞는 섬 여행 일정을 만들어드려요</p>
-              </div>
-              <button
-                onClick={() => go("/create-trip")}
-                className="mt-1 lg:mt-2 inline-flex items-center gap-1.5 lg:gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 lg:px-6 lg:py-3 rounded-xl transition-colors text-sm lg:text-base"
-              >
-                <Calendar className="w-4 h-4 lg:w-5 lg:h-5" strokeWidth={2} />
-                여행 계획 만들기
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* 여행 관리 */}
+        {/* 최근 여행 */}
+        {!loading && visitedTrips.length > 0 && (
+          <div className="mb-4 lg:mb-6">
+            <div className="flex items-center justify-between mb-3 lg:mb-4 px-1">
+              <h3 className="text-sm lg:text-base font-semibold text-gray-500">최근 여행</h3>
+              <button onClick={() => go("/travel")} className="text-xs lg:text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                전체 보기
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 lg:gap-4">
+              {visitedTrips.slice(0, 3).map((trip) => (
+                <button
+                  key={trip.id}
+                  onClick={() => go(`/itinerary/${trip.id}`)}
+                  className="bg-white rounded-2xl border border-gray-100 px-4 py-3 lg:px-5 lg:py-4 text-left hover:border-blue-200 hover:bg-blue-50/30 transition-colors"
+                >
+                  <p className="font-semibold text-sm lg:text-base text-gray-900 truncate">{trip.title ?? "여행"}</p>
+                  <p className="text-xs lg:text-sm text-gray-500 mt-0.5 truncate">{(trip.islands ?? []).join(", ") || "섬 정보 없음"}</p>
+                  <p className="text-xs lg:text-sm text-gray-400 mt-1.5">{trip.start_date}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 여행 도구 */}
         <div className="mb-4 lg:mb-6">
-          <h3 className="text-sm lg:text-base font-semibold text-gray-500 mb-3 lg:mb-4 px-1">여행 관리</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-4">
-            {TRAVEL_CARDS.map(({ icon: Icon, label, desc, path, featured }) => (
+          <h3 className="text-sm lg:text-base font-semibold text-gray-500 mb-3 lg:mb-4 px-1">여행 도구</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 lg:gap-4">
+            {TOOL_CARDS.map(({ icon: Icon, label, desc, path }) => (
               <button
                 key={path}
                 onClick={() => go(path)}
-                className={`flex items-center gap-3 lg:gap-4 rounded-2xl px-4 py-3 lg:px-5 lg:py-4 transition-colors text-left border ${
-                  featured
-                    ? "bg-blue-600 border-blue-600 hover:bg-blue-700"
-                    : "bg-white border-gray-100 hover:border-blue-200 hover:bg-blue-50/30"
-                }`}
+                className="flex items-center gap-3 lg:gap-4 rounded-2xl px-4 py-3 lg:px-5 lg:py-4 transition-colors text-left border bg-white border-gray-100 hover:border-blue-200 hover:bg-blue-50/30"
               >
-                <div className={`w-9 h-9 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 ${featured ? "bg-white/15" : "bg-blue-50"}`}>
-                  <Icon className={`w-4 h-4 lg:w-6 lg:h-6 ${featured ? "text-white" : "text-blue-600"}`} strokeWidth={2} />
+                <div className="w-9 h-9 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 bg-blue-50">
+                  <Icon className="w-4 h-4 lg:w-6 lg:h-6 text-blue-600" strokeWidth={2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className={`font-semibold text-sm lg:text-base ${featured ? "text-white" : "text-gray-900"}`}>{label}</p>
-                  <p className={`text-xs lg:text-sm mt-0.5 truncate ${featured ? "text-blue-100" : "text-gray-500"}`}>{desc}</p>
+                  <p className="font-semibold text-sm lg:text-base text-gray-900">{label}</p>
+                  <p className="text-xs lg:text-sm mt-0.5 truncate text-gray-500">
+                    {desc}{path === "/group-trip" && groupCount > 0 ? ` · ${groupCount}개` : ""}
+                  </p>
                 </div>
-                <ChevronRight className={`w-4 h-4 lg:w-5 lg:h-5 shrink-0 ${featured ? "text-white/70" : "text-gray-300"}`} strokeWidth={2} />
+                <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 text-gray-300" strokeWidth={2} />
               </button>
             ))}
           </div>
