@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Calendar, Ship, Sparkles, MapPin, Trash2, Pencil, ListChecks, Info, ChevronRight, Clock, DollarSign, Plus } from "lucide-react";
+import { Calendar, Ship, Sparkles, MapPin, MapPinned, Trash2, Pencil, ListChecks, Info, ChevronRight, Clock, DollarSign, Plus, Heart, TrendingUp, Sun, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ListSkeleton } from "../components/SkeletonLoader";
 import { tripService } from "../../lib/tripService";
+import { favoritesService } from "../../lib/favoritesService";
+import { getPopularIslands, type Island } from "../../lib/api/islands";
 
 export function Travel() {
   const navigate = useNavigate();
@@ -13,12 +15,18 @@ export function Travel() {
   const [confirmedTrips, setConfirmedTrips] = useState<any[]>([]);
   const [checklistProgress, setChecklistProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [tripCount, setTripCount] = useState(0);
+  const [favoriteCount, setFavoriteCount] = useState(0);
+  const [popularIslands, setPopularIslands] = useState<Island[]>([]);
 
   useEffect(() => {
     const load = async () => {
-      const [trip, trips] = await Promise.all([
+      const [trip, trips, count, favorites, popular] = await Promise.all([
         tripService.getUpcomingTrip(),
         tripService.getVisitedTrips(),
+        tripService.getTripCount(),
+        favoritesService.getFavorites(),
+        getPopularIslands(4),
       ]);
       if (trip) {
         setCurrentItinerary({ ...trip, startDate: trip.start_date, islands: trip.islands ?? [] });
@@ -27,6 +35,9 @@ export function Travel() {
       const progress = await tripService.getChecklistProgress(trip?.id ?? null);
       setChecklistProgress(progress);
       setConfirmedTrips(trips);
+      setTripCount(count);
+      setFavoriteCount(favorites.length);
+      setPopularIslands(popular);
       setIsLoading(false);
     };
     load();
@@ -62,10 +73,10 @@ export function Travel() {
           데스크탑 레이아웃 (lg 이상)
           ================================================================ */}
       <div className="hidden lg:block">
-        <div className="max-w-[1280px] mx-auto px-8 py-10">
+        <div className="max-w-[1280px] mx-auto px-8 py-8">
 
           {/* 페이지 헤더 */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-1">여행 계획</h1>
             <p className="text-gray-500">일정 관리와 지난 여행 기록</p>
           </div>
@@ -79,14 +90,14 @@ export function Travel() {
               <div className="col-span-2 space-y-5">
 
                 {/* 요약 지표 */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-3">
                     <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
                       <Calendar className="w-4 h-4 text-blue-600" strokeWidth={2} />
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-gray-900">{currentItinerary ? 1 : 0}건</p>
-                      <p className="text-xs text-gray-500">예정된 여행</p>
+                      <p className="text-2xl font-bold text-gray-900 leading-none mb-1">{currentItinerary ? 1 : 0}건</p>
+                      <p className="text-xs text-gray-400">예정된 여행</p>
                     </div>
                   </div>
                   <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-3">
@@ -94,8 +105,26 @@ export function Travel() {
                       <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-gray-900">{confirmedTrips.length}건</p>
-                      <p className="text-xs text-gray-500">지난 여행</p>
+                      <p className="text-2xl font-bold text-gray-900 leading-none mb-1">{confirmedTrips.length}건</p>
+                      <p className="text-xs text-gray-400">지난 여행</p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-3">
+                    <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900 leading-none mb-1">{tripCount}건</p>
+                      <p className="text-xs text-gray-400">AI 일정 생성</p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-3">
+                    <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                      <Heart className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900 leading-none mb-1">{favoriteCount}개</p>
+                      <p className="text-xs text-gray-400">즐겨찾기 섬</p>
                     </div>
                   </div>
                 </div>
@@ -202,23 +231,68 @@ export function Travel() {
                   </>
                 ) : (
                   /* 여행 없음 상태 */
-                  <div className="bg-white rounded-2xl border border-gray-100 p-7 flex items-center gap-5">
-                    <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center shrink-0">
+                  <div className="bg-white rounded-2xl border border-gray-100 px-8 py-8 flex flex-col items-center text-center">
+                    <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mb-3">
                       <Sparkles className="w-7 h-7 text-blue-500" strokeWidth={1.75} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">아직 예정된 여행이 없어요</h3>
-                      <p className="text-sm text-gray-500">AI가 취향에 맞는 섬 여행 일정을 자동으로 만들어드려요</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1.5">아직 예정된 여행이 없습니다</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                      AI가 여행 스타일을 분석하여<br />맞춤형 섬 여행 일정을 추천해드립니다.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => navigate("/create-trip")}
+                        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
+                      >
+                        <Sparkles className="w-4 h-4" strokeWidth={2} />
+                        AI 일정 생성
+                      </button>
+                      <button
+                        onClick={() => navigate("/create-trip")}
+                        className="inline-flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm border border-gray-200"
+                      >
+                        <ListChecks className="w-4 h-4" strokeWidth={2} />
+                        직접 일정 만들기
+                      </button>
                     </div>
-                    <button
-                      onClick={() => navigate("/create-trip")}
-                      className="shrink-0 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl transition-colors text-sm whitespace-nowrap"
-                    >
-                      <Calendar className="w-4 h-4" strokeWidth={2} />
-                      일정 만들기 시작
-                    </button>
                   </div>
                 )}
+
+                {/* 여행 정보 */}
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <DollarSign className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                      <span className="text-xs text-gray-500">예상 여행 비용</span>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">15~25만원</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">교통 + 숙박 기준</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Clock className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                      <span className="text-xs text-gray-500">평균 이동 시간</span>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">약 1시간 30분</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">인천항 출발 기준</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Sun className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                      <span className="text-xs text-gray-500">추천 계절</span>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">봄 · 가을</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">쾌적하게 즐기기 좋아요</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                      <span className="text-xs text-gray-500">배편 운항</span>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">매일 운항</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">기상 상황에 따라 변동</p>
+                  </div>
+                </div>
               </div>
 
               {/* ── 오른쪽: 사이드 패널 (1/3) ──────────────────────── */}
@@ -230,9 +304,17 @@ export function Travel() {
                     <Plus className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
                     새 여행 계획
                   </h3>
-                  <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+                  <p className="text-sm text-gray-500 mb-3 leading-relaxed">
                     AI가 여행 스타일을 분석해 최적의 섬 일정을 추천해드려요.
                   </p>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mb-4">
+                    {["여행 일정", "배편", "관광지", "맛집", "이동 시간"].map((item) => (
+                      <div key={item} className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Check className="w-3 h-3 text-blue-600 shrink-0" strokeWidth={2.5} />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
                   <button
                     onClick={() => navigate("/create-trip")}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
@@ -240,6 +322,50 @@ export function Travel() {
                     <Sparkles className="w-4 h-4" strokeWidth={2} />
                     AI 일정 생성
                   </button>
+                  <button
+                    onClick={() => navigate("/create-trip")}
+                    className="w-full mt-2 text-gray-500 hover:text-gray-700 font-medium py-2 rounded-xl transition-colors text-sm"
+                  >
+                    직접 일정 만들기
+                  </button>
+                </div>
+
+                {/* 인기 섬 추천 */}
+                <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <MapPinned className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                    AI 추천 인기 섬
+                  </h3>
+                  {popularIslands.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">추천 정보를 불러오는 중이에요</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {popularIslands.map((island, i) => (
+                        <Link key={island.id} to={`/island/${island.id}`} className="flex items-center gap-2.5 group">
+                          <div className="w-6 h-6 bg-blue-50 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold text-blue-600">
+                            {i + 1}
+                          </div>
+                          <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 bg-blue-50 flex items-center justify-center">
+                            {island.image ? (
+                              <img src={island.image} alt={island.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-xs font-bold text-blue-600">{island.name.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{island.name}</p>
+                            <p className="text-xs text-gray-400 flex items-center gap-1">
+                              <Clock className="w-3 h-3" strokeWidth={2} />
+                              {island.ferry_time || "정보 없음"}
+                            </p>
+                          </div>
+                          {island.popularity_trend === "up" && (
+                            <TrendingUp className="w-3.5 h-3.5 text-red-500 shrink-0" strokeWidth={2.5} />
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* 지난 여행 */}
