@@ -803,7 +803,7 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
 
   return (
     <Link to={`/island/${island.id}`} className="block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden active:scale-98 transition-transform">
-      <div className="relative h-40">
+      <div className="relative h-60">
         <IslandImage src={island.image} alt={island.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
         <div className="absolute bottom-3 left-3 right-3">
@@ -813,8 +813,8 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
       </div>
 
       <div className="p-4">
-        <p className="text-sm text-gray-600 mb-3">{island.description}</p>
-        <div className="space-y-1 mb-3">
+        <p className="text-sm text-gray-600 mb-2">{island.description}</p>
+        <div className="space-y-0.5 mb-2">
           {island.features.slice(0, 2).map((feature, index) => (
             <div key={index} className="flex items-center gap-2 text-xs text-gray-700">
               <div className="w-1 h-1 rounded-full bg-blue-500" />
@@ -822,7 +822,7 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-200">
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200">
           <div className="flex items-center gap-2 text-sm">
             <Ship className="w-4 h-4 text-gray-400" strokeWidth={2} />
             <span className="text-gray-900 font-medium">{island.ferry_time}</span>
@@ -832,8 +832,8 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
             <span className="text-gray-900 font-medium">{island.best_season}</span>
           </div>
         </div>
-        <div className="mt-3 pt-3 border-t border-gray-200">
-          <div className="flex items-center justify-between mb-2">
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-1.5">
             <span className="text-sm text-gray-600">여객선 요금</span>
             <span className="font-bold text-blue-500">
               {formatFerryPrice(island.ferry_price)}
