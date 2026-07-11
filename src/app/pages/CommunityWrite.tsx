@@ -1,54 +1,109 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ChevronLeft, Image as ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { communityService } from "../../lib/communityService";
 
 const ISLANDS = ['강화도', '영흥도', '자월도', '덕적도', '백령도', '대청도', '연평도'];
+const MAX_IMAGES = 5;
 
 export function CommunityWrite() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const type = (searchParams.get('type') ?? 'feed') as 'feed' | 'qna';
+  const editId = searchParams.get('editId');
+  const isEdit = !!editId;
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [island, setIsland] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [newPreviews, setNewPreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingPost, setIsLoadingPost] = useState(isEdit);
+
+  useEffect(() => {
+    if (!editId) return;
+    (async () => {
+      const post = await communityService.getPost(editId);
+      if (post) {
+        setTitle(post.title ?? '');
+        setContent(post.content ?? '');
+        setIsland(post.island_name ?? '');
+        if (Array.isArray(post.images) && post.images.length > 0) {
+          setExistingImages(post.images);
+        } else if (post.image_url) {
+          setExistingImages([post.image_url]);
+        }
+      }
+      setIsLoadingPost(false);
+    })();
+  }, [editId]);
+
+  const imageCount = existingImages.length + newFiles.length;
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    const remaining = MAX_IMAGES - imageCount;
+    const picked = files.slice(0, remaining);
+    setNewFiles(prev => [...prev, ...picked]);
+    setNewPreviews(prev => [...prev, ...picked.map(f => URL.createObjectURL(f))]);
+    e.target.value = '';
+  };
+
+  const removeExisting = (index: number) => {
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNew = (index: number) => {
+    setNewFiles(prev => prev.filter((_, i) => i !== index));
+    setNewPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
     if (!content.trim()) return;
     setIsSubmitting(true);
     try {
-      let imageUrl: string | undefined;
-      if (imageFile) {
-        imageUrl = await communityService.uploadImage(imageFile);
+      const uploaded = newFiles.length > 0 ? await communityService.uploadImages(newFiles) : [];
+      const images = [...existingImages, ...uploaded];
+      const finalTitle = title || content.substring(0, 30);
+      if (isEdit) {
+        await communityService.updatePost({
+          id: editId!,
+          title: finalTitle,
+          content,
+          islandName: island || undefined,
+          images,
+        });
+        toast.success('수정됐어요');
+      } else {
+        await communityService.createPost({
+          title: finalTitle,
+          content,
+          islandName: island || undefined,
+          type,
+          images,
+        });
+        toast.success('등록됐어요');
       }
-      await communityService.createPost({
-        title: title || content.substring(0, 30),
-        content,
-        islandName: island || undefined,
-        type,
-        imageUrl,
-      });
-      toast.success('등록됐어요');
       navigate('/community', { replace: true });
     } catch {
-      toast.error('등록에 실패했어요');
+      toast.error(isEdit ? '수정에 실패했어요' : '등록에 실패했어요');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoadingPost) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white">
@@ -58,14 +113,14 @@ export function CommunityWrite() {
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
         <h1 className="flex-1 text-lg font-bold text-gray-900">
-          {type === 'feed' ? '리뷰 작성' : '질문하기'}
+          {isEdit ? (type === 'feed' ? '리뷰 수정' : '질문 수정') : (type === 'feed' ? '리뷰 작성' : '질문하기')}
         </h1>
         <button
           onClick={handleSubmit}
           disabled={isSubmitting || !content.trim()}
           className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 active:scale-95 transition-transform"
         >
-          {isSubmitting ? '등록 중...' : '등록'}
+          {isSubmitting ? '처리 중...' : (isEdit ? '수정' : '등록')}
         </button>
       </div>
 
@@ -121,41 +176,52 @@ export function CommunityWrite() {
           />
         </div>
 
-        {/* Image */}
+        {/* Images */}
         <div>
           <p className="text-sm font-medium text-gray-700 mb-2">
-            사진 <span className="text-gray-400 font-normal text-xs">(선택)</span>
+            사진 <span className="text-gray-400 font-normal text-xs">({imageCount}/{MAX_IMAGES}, 선택)</span>
           </p>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={handleImageSelect}
           />
-          {imagePreview ? (
-            <div className="relative">
-              <img
-                src={imagePreview}
-                alt=""
-                className="w-full rounded-xl max-h-64 object-cover"
-              />
+          <div className="grid grid-cols-3 gap-2">
+            {existingImages.map((src, i) => (
+              <div key={`existing-${i}`} className="relative aspect-square">
+                <img src={src} alt="" className="w-full h-full rounded-xl object-cover" />
+                <button
+                  onClick={() => removeExisting(i)}
+                  className="absolute top-1.5 right-1.5 bg-black/50 text-white rounded-full p-1 active:scale-95"
+                >
+                  <X className="w-3.5 h-3.5" strokeWidth={2} />
+                </button>
+              </div>
+            ))}
+            {newPreviews.map((src, i) => (
+              <div key={`new-${i}`} className="relative aspect-square">
+                <img src={src} alt="" className="w-full h-full rounded-xl object-cover" />
+                <button
+                  onClick={() => removeNew(i)}
+                  className="absolute top-1.5 right-1.5 bg-black/50 text-white rounded-full p-1 active:scale-95"
+                >
+                  <X className="w-3.5 h-3.5" strokeWidth={2} />
+                </button>
+              </div>
+            ))}
+            {imageCount < MAX_IMAGES && (
               <button
-                onClick={() => { setImageFile(null); setImagePreview(null); }}
-                className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 active:scale-95"
+                onClick={() => fileInputRef.current?.click()}
+                className="aspect-square flex flex-col items-center justify-center gap-1 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl hover:border-blue-400 hover:text-blue-500 transition-colors active:scale-95"
               >
-                <X className="w-4 h-4" strokeWidth={2} />
+                <ImageIcon className="w-6 h-6" strokeWidth={1.5} />
+                <span className="text-xs">추가</span>
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex flex-col items-center justify-center gap-2 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl w-full py-10 hover:border-blue-400 hover:text-blue-500 transition-colors active:scale-95"
-            >
-              <ImageIcon className="w-8 h-8" strokeWidth={1.5} />
-              <span className="text-sm">사진을 추가하세요</span>
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
