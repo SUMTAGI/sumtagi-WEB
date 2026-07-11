@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Calendar, ChevronRight, Bell, HelpCircle, LogOut,
   CreditCard, Heart, Users, AlertCircle, Clock, Sparkles, MapPinned, Compass,
+  Building2, ClipboardCheck, CheckCircle2, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
@@ -29,7 +30,7 @@ const TOOL_CARDS = [
 
 export function MyPage() {
   const navigate = useNavigate();
-  const { user, displayName } = useAuth();
+  const { user, displayName, hostApplication, isHost } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [upcomingTrip, setUpcomingTrip] = useState<any>(null);
@@ -85,6 +86,14 @@ export function MyPage() {
     { label: "방문한 섬 수", value: visitedIslandCount, path: "/travel", icon: MapPinned },
     { label: "즐겨찾기", value: favoriteCount, path: "/favorites", icon: Heart },
   ];
+
+  const hostMenu = isHost
+    ? { icon: CheckCircle2, iconBg: "bg-blue-50", iconColor: "text-blue-600", label: "호스트 대시보드", desc: "승인 완료 · 기능 준비 중이에요" }
+    : hostApplication?.status === "pending"
+    ? { icon: ClipboardCheck, iconBg: "bg-amber-50", iconColor: "text-amber-600", label: "호스트 신청 검토 중", desc: "제출한 신청서를 검토하고 있어요" }
+    : hostApplication?.status === "rejected"
+    ? { icon: XCircle, iconBg: "bg-red-50", iconColor: "text-red-500", label: "호스트 신청 수정 / 재신청", desc: "반려됨 · 정보를 수정하고 재신청하세요" }
+    : { icon: Building2, iconBg: "bg-blue-50", iconColor: "text-blue-600", label: "숙소 운영자 신청", desc: "섬타기에 숙소를 등록해보세요" };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -226,6 +235,26 @@ export function MyPage() {
                 <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 text-gray-300" strokeWidth={2} />
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* 숙소 운영 */}
+        <div className="mb-4 lg:mb-6">
+          <h3 className="text-sm lg:text-base font-semibold text-gray-500 mb-3 lg:mb-4 px-1">숙소 운영</h3>
+          <div className="space-y-2.5 lg:space-y-3">
+            <button
+              onClick={() => go("/host/apply")}
+              className="w-full flex items-center gap-3 lg:gap-4 rounded-2xl px-4 py-3 lg:px-5 lg:py-4 transition-colors text-left border bg-white border-gray-100 hover:border-blue-200 hover:bg-blue-50/30"
+            >
+              <div className={`w-9 h-9 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 ${hostMenu.iconBg}`}>
+                <hostMenu.icon className={`w-4 h-4 lg:w-6 lg:h-6 ${hostMenu.iconColor}`} strokeWidth={2} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm lg:text-base text-gray-900">{hostMenu.label}</p>
+                <p className="text-xs lg:text-sm mt-0.5 truncate text-gray-500">{hostMenu.desc}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 text-gray-300" strokeWidth={2} />
+            </button>
           </div>
         </div>
 

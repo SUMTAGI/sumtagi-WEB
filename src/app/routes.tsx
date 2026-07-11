@@ -30,6 +30,7 @@ const Schedule = lazy(() => import("./pages/Schedule").then(m => ({ default: m.S
 const GroupTrip = lazy(() => import("./pages/GroupTrip").then(m => ({ default: m.GroupTrip })));
 const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m.GroupJoin })));
 const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
+const HostApply = lazy(() => import("./pages/HostApply").then(m => ({ default: m.HostApply })));
 const Privacy = lazy(() => import("./pages/Privacy").then(m => ({ default: m.Privacy })));
 const Terms = lazy(() => import("./pages/Terms").then(m => ({ default: m.Terms })));
 
@@ -82,6 +83,7 @@ export const router = createBrowserRouter([
           { path: "community/write", element: <Suspense fallback={<Fallback />}><CommunityWrite /></Suspense> },
           { path: "group-trip", element: <Suspense fallback={<Fallback />}><GroupTrip /></Suspense> },
           { path: "group-join/:code", element: <Suspense fallback={<Fallback />}><GroupJoin /></Suspense> },
+          { path: "host/apply", element: <Suspense fallback={<Fallback />}><HostApply /></Suspense> },
         ],
       },
       { path: "*", element: <Suspense fallback={<Fallback />}><NotFound /></Suspense> },
