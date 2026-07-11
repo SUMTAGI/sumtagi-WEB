@@ -48,7 +48,7 @@ export function Splash({ onComplete }: SplashProps) {
 
         {/* App name */}
         <div className="mt-8 text-center animate-slideUp" style={{ animationDelay: "0.2s" }}>
-          <h1 className="text-3xl font-bold text-white mb-2">섬여행</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">섬타기</h1>
           <p className="text-blue-100 text-sm flex items-center justify-center gap-2">
             <Waves className="w-4 h-4" strokeWidth={2} />
             당신의 완벽한 섬 여행 파트너

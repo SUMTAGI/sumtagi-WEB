@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import {
-  Calendar, ChevronRight, Settings, Bell, HelpCircle, LogOut,
+  Calendar, ChevronRight, Bell, HelpCircle, LogOut,
   CreditCard, Heart, Users, AlertCircle, Clock, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,7 +18,6 @@ const UTILITY_MENU = [
 
 const SETTINGS_MENU = [
   { icon: Bell, label: "알림 설정", path: "/notification-settings" },
-  { icon: Settings, label: "앱 설정", path: "/app-settings" },
   { icon: HelpCircle, label: "고객센터", path: "/support" },
 ];
 

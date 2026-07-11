@@ -669,4 +669,75 @@
   input[type="checkbox"]:checked {
     animation: checkmark 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* ── Ocean scene animations ──────────────────────────────────────────── */
+
+  /* Seamless looping wave layer: SVG path is drawn twice back-to-back,
+     shifting by exactly half its width loops without a visible seam. */
+  @keyframes waveDrift {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  .animate-wave-drift {
+    animation: waveDrift 8s linear infinite;
+  }
+
+  /* Boat drifting left-to-right across the horizon with a gentle bob/tilt */
+  @keyframes boatDrift {
+    0%   { transform: translateX(-8%)  translateY(0)    rotate(-3deg); }
+    25%  { transform: translateX(28%)  translateY(-5px) rotate(2deg); }
+    50%  { transform: translateX(60%)  translateY(0)     rotate(-2deg); }
+    75%  { transform: translateX(90%)  translateY(-4px) rotate(2deg); }
+    100% { transform: translateX(116%) translateY(0)    rotate(-3deg); }
+  }
+
+  .animate-boat-drift {
+    animation: boatDrift 16s ease-in-out infinite;
+  }
+
+  /* Fish swimming left-to-right with a light vertical wiggle */
+  @keyframes fishSwim {
+    0%   { transform: translateX(-10%) translateY(0); }
+    50%  { transform: translateX(55%)  translateY(-10px); }
+    100% { transform: translateX(120%) translateY(0); }
+  }
+
+  .animate-fish-swim {
+    animation: fishSwim 11s ease-in-out infinite;
+  }
+
+  /* Mirrored fish swimming right-to-left */
+  @keyframes fishSwimReverse {
+    0%   { transform: translateX(110%) translateY(0)    scaleX(-1); }
+    50%  { transform: translateX(45%)  translateY(-8px) scaleX(-1); }
+    100% { transform: translateX(-20%) translateY(0)    scaleX(-1); }
+  }
+
+  .animate-fish-swim-reverse {
+    animation: fishSwimReverse 13s ease-in-out infinite;
+  }
+
+  /* Bubbles rising and fading out near the surface */
+  @keyframes bubbleRise {
+    0%   { transform: translateY(0) scale(0.7); opacity: 0; }
+    15%  { opacity: 0.7; }
+    85%  { opacity: 0.25; }
+    100% { transform: translateY(-90px) scale(1.15); opacity: 0; }
+  }
+
+  .animate-bubble-rise {
+    animation: bubbleRise 5s ease-in infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-wave-drift,
+    .animate-boat-drift,
+    .animate-fish-swim,
+    .animate-fish-swim-reverse,
+    .animate-bubble-rise {
+      animation: none;
+    }
+  }
+
 }
