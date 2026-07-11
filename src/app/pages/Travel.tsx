@@ -78,6 +78,28 @@ export function Travel() {
               {/* ── 왼쪽: 현재 여행 (2/3) ──────────────────────────── */}
               <div className="col-span-2 space-y-5">
 
+                {/* 요약 지표 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-3">
+                    <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                      <Calendar className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">{currentItinerary ? 1 : 0}건</p>
+                      <p className="text-xs text-gray-500">예정된 여행</p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-3">
+                    <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                      <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">{confirmedTrips.length}건</p>
+                      <p className="text-xs text-gray-500">지난 여행</p>
+                    </div>
+                  </div>
+                </div>
+
                 {currentItinerary ? (
                   <>
                     {/* 다가오는 여행 카드 */}
@@ -180,20 +202,19 @@ export function Travel() {
                   </>
                 ) : (
                   /* 여행 없음 상태 */
-                  <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-                    <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5">
-                      <Sparkles className="w-10 h-10 text-blue-500" strokeWidth={1.75} />
+                  <div className="bg-white rounded-2xl border border-gray-100 p-7 flex items-center gap-5">
+                    <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center shrink-0">
+                      <Sparkles className="w-7 h-7 text-blue-500" strokeWidth={1.75} />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">아직 예정된 여행이 없어요</h3>
-                    <p className="text-gray-500 mb-7 leading-relaxed">
-                      AI가 취향에 맞는 섬 여행 일정을 자동으로 만들어드려요.<br />
-                      날짜와 스타일만 선택하면 바로 시작할 수 있어요.
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">아직 예정된 여행이 없어요</h3>
+                      <p className="text-sm text-gray-500">AI가 취향에 맞는 섬 여행 일정을 자동으로 만들어드려요</p>
+                    </div>
                     <button
                       onClick={() => navigate("/create-trip")}
-                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-7 py-3.5 rounded-xl transition-colors"
+                      className="shrink-0 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl transition-colors text-sm whitespace-nowrap"
                     >
-                      <Calendar className="w-5 h-5" strokeWidth={2} />
+                      <Calendar className="w-4 h-4" strokeWidth={2} />
                       일정 만들기 시작
                     </button>
                   </div>
@@ -203,25 +224,23 @@ export function Travel() {
               {/* ── 오른쪽: 사이드 패널 (1/3) ──────────────────────── */}
               <div className="space-y-5">
 
-                {/* 새 여행 만들기 — 이미 진행 중인 여행이 있을 때만 노출(없을 때는 왼쪽 빈 상태 CTA와 중복) */}
-                {currentItinerary && (
-                  <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Plus className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
-                      새 여행 계획
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4 leading-relaxed">
-                      AI가 여행 스타일을 분석해 최적의 섬 일정을 추천해드려요.
-                    </p>
-                    <button
-                      onClick={() => navigate("/create-trip")}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
-                    >
-                      <Sparkles className="w-4 h-4" strokeWidth={2} />
-                      AI 일정 생성
-                    </button>
-                  </div>
-                )}
+                {/* 새 여행 만들기 */}
+                <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
+                    새 여행 계획
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+                    AI가 여행 스타일을 분석해 최적의 섬 일정을 추천해드려요.
+                  </p>
+                  <button
+                    onClick={() => navigate("/create-trip")}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" strokeWidth={2} />
+                    AI 일정 생성
+                  </button>
+                </div>
 
                 {/* 지난 여행 */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
