@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import {
   Ship, MapPin, Calendar, Sparkles, Shield, Heart,
-  Bell, Camera, Users, DollarSign, Cloud, Waves, ArrowRight,
+  Bell, Camera, Users, DollarSign, Cloud, Waves, ArrowRight, MessageCircle, ThumbsUp, Eye,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { WeatherWidget, WeeklyForecast } from "../components/WeatherWidget";
@@ -10,9 +10,21 @@ import { tripService } from "../../lib/tripService";
 import { useAuth } from "../../lib/useAuth";
 import { getHomeFerryStatus, type FerryRouteStatus } from "../../lib/api/ferry";
 import { getAllIslandsDemand } from "../../lib/api/demandIntensity";
-import { getPopularIslands, type Island } from "../../lib/api/islands";
+import { getPopularIslands, getIslands, type Island } from "../../lib/api/islands";
+import { getRecommendedIslands, getTravelStyleMessage } from "../utils/islandRecommendations";
+import { communityService } from "../../lib/communityService";
+import { recentlyViewedService, type RecentIsland } from "../../lib/recentlyViewed";
 import { IslandImage } from "../components/IslandImage";
 import { OceanScene } from "../components/OceanScene";
+
+// 계절에 맞춰 "오늘의 AI 추천" 스타일을 결정 — 실제 취향 데이터가 쌓이기 전까지의 합리적 기본값
+function seasonalTravelStyle(): string {
+  const month = new Date().getMonth() + 1;
+  if (month <= 2 || month === 12) return "힐링";
+  if (month <= 5) return "자연관광";
+  if (month <= 8) return "액티비티";
+  return "맛집탐방";
+}
 
 // 실제 파고(m)를 장식용 파도의 시각적 높이(px)에 반영 — 바다가 거칠수록 파도가 커 보이도록.
 // 데이터가 없으면 잔잔한 기본값(0.5m)으로 폴백하고, 과하게 커지지 않도록 base의 1.9배로 clamp.
@@ -35,6 +47,9 @@ export function Home() {
   const [unreadNotifications] = useState(0);
   const [demandLevels,       setDemandLevels]       = useState<Record<string, 'low' | 'medium' | 'high'>>({});
   const [popularIslands,     setPopularIslands]     = useState<Island[]>([]);
+  const [popularPosts,       setPopularPosts]       = useState<any[]>([]);
+  const [recentIslands,      setRecentIslands]      = useState<RecentIsland[]>([]);
+  const [allIslands,         setAllIslands]         = useState<Island[]>([]);
 
   useEffect(() => {
     tripService.getLatestConfirmedTrip().then((trip) => {
@@ -53,6 +68,13 @@ export function Home() {
     getHomeFerryStatus().then(setFerryStatus).catch(() => setFerryError(true));
     getAllIslandsDemand().then(setDemandLevels).catch(() => {});
     getPopularIslands(4).then(setPopularIslands).catch(() => {});
+    getIslands().then(setAllIslands).catch(() => {});
+    communityService.getPosts("feed")
+      .then((posts) => setPopularPosts(
+        [...posts].sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0)).slice(0, 3)
+      ))
+      .catch(() => {});
+    setRecentIslands(recentlyViewedService.getRecent(4));
   }, []);
 
   const getDDay = (startDate: string) => {
@@ -82,11 +104,12 @@ export function Home() {
           ferryStatus={ferryStatus}
           ferryError={ferryError}
           confirmedItinerary={confirmedItinerary}
-          confirmedTripId={confirmedTripId}
           getDDay={getDDay}
-          getDDayMessage={getDDayMessage}
           demandLevels={demandLevels}
           popularIslands={popularIslands}
+          popularPosts={popularPosts}
+          recentIslands={recentIslands}
+          allIslands={allIslands}
         />
       </div>
       {/* ── 데스크탑 레이아웃 끝 ──────────────────────────────────────── */}
@@ -251,17 +274,21 @@ interface DashboardProps {
   ferryStatus: FerryRouteStatus[];
   ferryError?: boolean;
   confirmedItinerary: any;
-  confirmedTripId: string | null;
   getDDay: (startDate: string) => number;
-  getDDayMessage: (dday: number) => string;
   demandLevels?: Record<string, 'low' | 'medium' | 'high'>;
   popularIslands: Island[];
+  popularPosts: any[];
+  recentIslands: RecentIsland[];
+  allIslands: Island[];
 }
 
 function DesktopDashboard({
-  displayName, weather, ferryStatus, ferryError = false, confirmedItinerary, confirmedTripId, getDDay, getDDayMessage, demandLevels = {}, popularIslands,
+  displayName, weather, ferryStatus, ferryError = false, confirmedItinerary, getDDay, demandLevels = {}, popularIslands, popularPosts, recentIslands, allIslands,
 }: DashboardProps) {
   const [savedIslands, setSavedIslands] = useState<Set<string>>(new Set());
+  const aiStyle = seasonalTravelStyle();
+  const aiRecommendedIslands = getRecommendedIslands(aiStyle);
+  const islandByName = new Map(allIslands.map((i) => [i.name, i]));
 
   const normalCount = ferryStatus.filter((s) => s.status === "정상").length;
   const ferryText =
@@ -303,7 +330,7 @@ function DesktopDashboard({
         {/* 배/물고기/물방울 + 하단 물결 애니메이션 */}
         <OceanScene waveColor="#f5f6f8" waveHeight={oceanWaveHeight(56, weather?.current.waveHeight)} />
 
-        <div className="relative z-10 max-w-[1280px] mx-auto px-8 pt-16 pb-24 flex items-center justify-between">
+        <div className="relative z-10 max-w-[1360px] mx-auto px-8 pt-14 pb-20 flex items-center justify-between">
           {/* 좌: 인사말 */}
           <div>
             <p className="text-blue-200 text-base font-medium mb-2">{dateStr}</p>
@@ -335,7 +362,7 @@ function DesktopDashboard({
       </section>
 
       {/* ── Main Content ──────────────────────────────────────────────── */}
-      <div className="max-w-[1280px] mx-auto px-8">
+      <div className="max-w-[1360px] mx-auto px-8">
 
         {/* Status Cards — 배너 애니메이션을 너무 가리지 않도록 -mt-6만 겹침 */}
         <div className="grid grid-cols-4 gap-4 -mt-6 mb-6 relative z-10">
@@ -417,65 +444,48 @@ function DesktopDashboard({
           </Link>
         </div>
 
-        {/* ── 2단: 여행 일정 + 인기 섬 (Airbnb 스타일) ────────────── */}
-        <div className="grid grid-cols-[5fr_7fr] gap-5 mb-6">
+        {/* ── 1단(추천): AI 추천 섬 + 인기 섬 ────────────── */}
+        <div className="grid grid-cols-2 gap-5 mb-6">
 
-          {/* 좌: 내 여행 일정 */}
+          {/* 좌: 오늘의 AI 추천 */}
           <div>
-            <h2 className="text-[15px] font-bold text-gray-900 mb-3">내 여행 일정</h2>
-            {confirmedItinerary ? (
-              <div className="bg-white rounded-2xl p-6 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
-                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">확정 일정</span>
-                  </div>
-                  {dday !== null && dday >= 0 && (
-                    <span className="text-xs font-bold text-white bg-blue-600 px-3 py-1 rounded-full">
-                      {dday === 0 ? "D-Day" : `D-${dday}`}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-1">{confirmedItinerary.title}</h3>
-                <p className="text-sm text-gray-500 mb-1">{confirmedItinerary.startDate}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-500 pb-3 mb-3 border-b border-gray-100">
-                  <Ship className="w-3.5 h-3.5 text-gray-400 shrink-0" strokeWidth={2} />
-                  <span>{confirmedItinerary.departurePort || "인천항"}</span>
-                  <span className="text-gray-300">→</span>
-                  <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" strokeWidth={2} />
-                  <span>{confirmedItinerary.islands?.join(", ")}</span>
-                </div>
-                <p className="text-sm font-medium text-blue-600 mb-4">{getDDayMessage(dday ?? 0)}</p>
-                <div className="space-y-2.5 mb-5">
-                  {confirmedItinerary.days[0]?.activities?.slice(0, 3).map((activity: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3 text-sm">
-                      <span className="text-gray-400 shrink-0 w-12 font-medium">{activity.time}</span>
-                      <span className="text-gray-700">{activity.title}</span>
+            <h2 className="text-[15px] font-bold text-gray-900 mb-3 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-blue-600" strokeWidth={2} />
+              오늘의 AI 추천
+            </h2>
+            <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60 h-[calc(100%-2rem)]">
+              <p className="text-sm text-gray-500 mb-4">
+                {getTravelStyleMessage(aiStyle)} · <span className="font-medium text-blue-600">{aiStyle}</span> 스타일 섬을 모아봤어요
+              </p>
+              <div className="space-y-3">
+                {aiRecommendedIslands.map((rec, i) => {
+                  const real = islandByName.get(rec.name);
+                  const content = (
+                    <>
+                      <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold text-blue-600">
+                        {i + 1}
+                      </div>
+                      <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-gray-100">
+                        <IslandImage src={real?.image ?? rec.image} alt={rec.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{rec.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{rec.reason}</p>
+                      </div>
+                    </>
+                  );
+                  return real ? (
+                    <Link key={rec.id} to={`/island/${real.id}`} className="flex items-center gap-3 group">
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={rec.id} className="flex items-center gap-3 opacity-80">
+                      {content}
                     </div>
-                  ))}
-                </div>
-                <Link to={`/itinerary/${confirmedTripId}`}
-                  className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  전체 일정 보기 <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
-                </Link>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="bg-white rounded-2xl p-8 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border-2 border-dashed border-gray-200 flex flex-col items-center text-center min-h-[280px] justify-center">
-                <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-4">
-                  <Sparkles className="w-7 h-7 text-purple-500" strokeWidth={1.75} />
-                </div>
-                <h3 className="text-base font-semibold text-gray-900 mb-2">아직 여행 계획이 없어요</h3>
-                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                  AI가 취향에 맞는 섬 여행 일정을<br />자동으로 만들어드려요
-                </p>
-                <Link to="/create-trip"
-                  className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors"
-                >
-                  AI 플래너 시작하기
-                </Link>
-              </div>
-            )}
+            </div>
           </div>
 
           {/* 우: 인기 섬 추천 — Airbnb 스타일 3열 이미지 카드 */}
@@ -534,6 +544,99 @@ function DesktopDashboard({
                   </Link>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── 2단(실시간 관광정보): 운항 현황 + 주간 날씨 ────────────── */}
+        <div className="grid grid-cols-2 gap-5 mb-6">
+          <div>
+            <h2 className="text-[15px] font-bold text-gray-900 mb-3">실시간 운항 현황</h2>
+            <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60">
+              {ferryStatus.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">{ferryError ? "운항 정보를 불러올 수 없어요" : "불러오는 중..."}</p>
+              ) : (
+                <div className="space-y-3">
+                  {ferryStatus.slice(0, 4).map((s) => (
+                    <div key={s.islandName} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700 font-medium">{s.islandName}</span>
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        s.status === "결항" ? "bg-red-50 text-red-600" :
+                        s.status === "운항없음" ? "bg-gray-100 text-gray-400" :
+                        "bg-green-50 text-green-700"}`}>
+                        {s.status === "정상" ? "정상 운항" : s.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <h2 className="text-[15px] font-bold text-gray-900 mb-3">주간 날씨</h2>
+            <WeeklyForecast forecast={weather?.forecast ?? []} />
+          </div>
+        </div>
+
+        {/* ── 3단(탐색): 최근 본 섬 + 커뮤니티 인기글 ────────────── */}
+        <div className="grid grid-cols-2 gap-5 mb-8">
+          <div>
+            <h2 className="text-[15px] font-bold text-gray-900 mb-3 flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-gray-500" strokeWidth={2} />
+              최근 본 섬
+            </h2>
+            <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60">
+              {recentIslands.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">최근 둘러본 섬이 여기에 표시돼요</p>
+              ) : (
+                <div className="grid grid-cols-4 gap-3">
+                  {recentIslands.map((ri) => (
+                    <Link key={ri.id} to={`/island/${ri.id}`} className="group text-center">
+                      <div className="aspect-square rounded-xl overflow-hidden mb-1.5 bg-gray-100">
+                        <IslandImage src={ri.image} alt={ri.name}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700 truncate">{ri.name}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[15px] font-bold text-gray-900 flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4 text-gray-500" strokeWidth={2} />
+                커뮤니티 인기글
+              </h2>
+              <Link to="/community"
+                className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                전체 보기 <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
+              </Link>
+            </div>
+            <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60">
+              {popularPosts.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">아직 커뮤니티 글이 없어요</p>
+              ) : (
+                <div className="space-y-3 divide-y divide-gray-50">
+                  {popularPosts.map((post) => (
+                    <Link key={post.id} to="/community" className="flex items-center justify-between gap-3 pt-3 first:pt-0 group">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                          {post.title && post.title !== post.content ? post.title : post.content}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">{post.author_name ?? "여행자"}{post.island_name ? ` · ${post.island_name}` : ""}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 text-xs text-gray-400">
+                        <span className="flex items-center gap-0.5"><ThumbsUp className="w-3 h-3" strokeWidth={2} />{post.likes_count ?? 0}</span>
+                        <span className="flex items-center gap-0.5"><MessageCircle className="w-3 h-3" strokeWidth={2} />{post.comments_count ?? 0}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
