@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/Layout";
 import { AuthLayout } from "./components/AuthLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 
 const Home = lazy(() => import("./pages/Home").then(m => ({ default: m.Home })));
 const Travel = lazy(() => import("./pages/Travel").then(m => ({ default: m.Travel })));
@@ -31,6 +32,7 @@ const GroupTrip = lazy(() => import("./pages/GroupTrip").then(m => ({ default: m
 const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m.GroupJoin })));
 const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
 const HostApply = lazy(() => import("./pages/HostApply").then(m => ({ default: m.HostApply })));
+const AdminHostApplications = lazy(() => import("./pages/AdminHostApplications").then(m => ({ default: m.AdminHostApplications })));
 const Privacy = lazy(() => import("./pages/Privacy").then(m => ({ default: m.Privacy })));
 const Terms = lazy(() => import("./pages/Terms").then(m => ({ default: m.Terms })));
 
@@ -84,6 +86,12 @@ export const router = createBrowserRouter([
           { path: "group-trip", element: <Suspense fallback={<Fallback />}><GroupTrip /></Suspense> },
           { path: "group-join/:code", element: <Suspense fallback={<Fallback />}><GroupJoin /></Suspense> },
           { path: "host/apply", element: <Suspense fallback={<Fallback />}><HostApply /></Suspense> },
+          {
+            element: <AdminRoute />,
+            children: [
+              { path: "admin/hosts", element: <Suspense fallback={<Fallback />}><AdminHostApplications /></Suspense> },
+            ],
+          },
         ],
       },
       { path: "*", element: <Suspense fallback={<Fallback />}><NotFound /></Suspense> },
