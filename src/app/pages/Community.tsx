@@ -1,24 +1,50 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router";
-import { ChevronLeft, Heart, Share2, MapPin, Send, MessageCircle, Trash2, PenSquare, TrendingUp } from "lucide-react";
+import { ChevronLeft, Heart, MapPin, Send, MessageCircle, Trash2, PenSquare, TrendingUp, Search, X, Flag, RefreshCw, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { communityService } from "../../lib/communityService";
 import { useAuth } from "../../lib/useAuth";
 
 const ISLANDS = ['강화도', '영흥도', '자월도', '덕적도', '백령도', '대청도', '연평도'];
+const REPORT_REASONS = ['스팸/광고', '욕설/혐오 발언', '음란물', '거짓 정보', '기타'];
+const PAGE_SIZE = 20;
+
+function ScrollSentinel({ onIntersect, enabled }: { onIntersect: () => void; enabled: boolean }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) onIntersect();
+    }, { rootMargin: '200px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [enabled, onIntersect]);
+  return <div ref={ref} className="h-1" />;
+}
 
 export function Community() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed");
   const [posts, setPosts] = useState<any[]>([]);
-  const [qna, setQna] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [page, setPage] = useState(0);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [islandFilter, setIslandFilter] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<'recent' | 'likes'>('recent');
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, any[]>>({});
+  const [commentsError, setCommentsError] = useState<Record<string, boolean>>({});
   const [commentTexts, setCommentTexts] = useState<Record<string, string>>({});
+  const [replyTo, setReplyTo] = useState<Record<string, { id: string; name: string } | null>>({});
+  const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: string; postId?: string } | null>(null);
 
   const currentUserId = user?.id ?? null;
 
@@ -29,44 +55,72 @@ export function Community() {
     return false;
   };
 
-  const load = async () => {
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const load = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(false);
+    setPage(0);
+    setHasMore(true);
     try {
-      const [feedData, qnaData] = await Promise.all([
-        communityService.getPosts('feed', islandFilter ?? undefined),
-        communityService.getPosts('qna', islandFilter ?? undefined),
-      ]);
-      setPosts(feedData);
-      setQna(qnaData);
+      const data = await communityService.getPosts(activeTab, {
+        islandFilter: islandFilter ?? undefined,
+        search: search || undefined,
+        sortBy,
+        page: 0,
+        pageSize: PAGE_SIZE,
+      });
+      const liked = await communityService.getMyLikedPostIds(data.map((p: any) => p.id));
+      setPosts(data);
+      setLikedIds(liked);
+      setHasMore(data.length === PAGE_SIZE);
+    } catch {
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab, islandFilter, search, sortBy]);
 
-  useEffect(() => { load(); }, [islandFilter]);
+  useEffect(() => { load(); }, [load]);
+
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const data = await communityService.getPosts(activeTab, {
+        islandFilter: islandFilter ?? undefined,
+        search: search || undefined,
+        sortBy,
+        page: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+      const liked = await communityService.getMyLikedPostIds(data.map((p: any) => p.id));
+      setPosts(prev => [...prev, ...data]);
+      setLikedIds(prev => new Set([...prev, ...liked]));
+      setPage(nextPage);
+      setHasMore(data.length === PAGE_SIZE);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [activeTab, islandFilter, search, sortBy, page, isLoadingMore, hasMore]);
 
   const toggleLike = async (post: any) => {
     if (!requireLogin()) return;
     const id = post.id as string;
     const liked = likedIds.has(id);
-    const previous = post.likes_count ?? 0;
-    const next = liked ? (post.likes_count ?? 0) - 1 : (post.likes_count ?? 0) + 1;
+    const previousCount = post.likes_count ?? 0;
+    const nextCount = liked ? previousCount - 1 : previousCount + 1;
     setLikedIds(prev => { const s = new Set(prev); liked ? s.delete(id) : s.add(id); return s; });
-    const updater = (arr: any[]) => arr.map(p => p.id === id ? { ...p, likes_count: next } : p);
-    setPosts(updater);
-    setQna(updater);
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, likes_count: nextCount } : p));
     try {
-      await communityService.updateLikes(id, next);
+      await communityService.toggleLike(id, liked);
     } catch {
-      setLikedIds(prev => {
-        const restored = new Set(prev);
-        liked ? restored.add(id) : restored.delete(id);
-        return restored;
-      });
-      const rollback = (arr: any[]) =>
-        arr.map(p => p.id === id ? { ...p, likes_count: previous } : p);
-      setPosts(rollback);
-      setQna(rollback);
+      setLikedIds(prev => { const s = new Set(prev); liked ? s.add(id) : s.delete(id); return s; });
+      setPosts(prev => prev.map(p => p.id === id ? { ...p, likes_count: previousCount } : p));
       toast.error("좋아요를 반영하지 못했어요");
     }
   };
@@ -75,8 +129,11 @@ export function Community() {
     if (!window.confirm('게시글을 삭제할까요?')) return;
     await communityService.deletePost(postId);
     setPosts(prev => prev.filter(p => p.id !== postId));
-    setQna(prev => prev.filter(p => p.id !== postId));
     toast.success('삭제됐어요');
+  };
+
+  const handleEditPost = (postId: string) => {
+    navigate(`/community/write?type=${activeTab}&editId=${postId}`);
   };
 
   const toggleComments = async (postId: string) => {
@@ -85,9 +142,13 @@ export function Community() {
       return;
     }
     setExpandedPostId(postId);
-    if (!comments[postId]) {
+    if (comments[postId]) return;
+    try {
       const data = await communityService.getComments(postId);
       setComments(prev => ({ ...prev, [postId]: data }));
+      setCommentsError(prev => ({ ...prev, [postId]: false }));
+    } catch {
+      setCommentsError(prev => ({ ...prev, [postId]: true }));
     }
   };
 
@@ -95,17 +156,42 @@ export function Community() {
     if (!requireLogin()) return;
     const text = (commentTexts[postId] ?? '').trim();
     if (!text) return;
+    const parent = replyTo[postId] ?? null;
     try {
-      await communityService.createComment(postId, text);
+      await communityService.createComment(postId, text, parent?.id);
       setCommentTexts(prev => ({ ...prev, [postId]: '' }));
+      setReplyTo(prev => ({ ...prev, [postId]: null }));
       const data = await communityService.getComments(postId);
       setComments(prev => ({ ...prev, [postId]: data }));
-      const updater = (arr: any[]) =>
-        arr.map(p => p.id === postId ? { ...p, comments_count: (p.comments_count ?? 0) + 1 } : p);
-      setPosts(updater);
-      setQna(updater);
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: (p.comments_count ?? 0) + 1 } : p));
     } catch {
       toast.error("댓글을 등록하지 못했어요");
+    }
+  };
+
+  const handleEditComment = async (postId: string, comment: any) => {
+    const next = window.prompt('댓글 수정', comment.content);
+    if (next === null || next.trim() === '') return;
+    try {
+      await communityService.updateComment(comment.id, next.trim());
+      const data = await communityService.getComments(postId);
+      setComments(prev => ({ ...prev, [postId]: data }));
+    } catch {
+      toast.error('댓글 수정에 실패했어요');
+    }
+  };
+
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    if (!window.confirm('댓글을 삭제할까요?')) return;
+    try {
+      await communityService.deleteComment(commentId);
+      const data = await communityService.getComments(postId);
+      setComments(prev => ({ ...prev, [postId]: data }));
+      setPosts(prev => prev.map(p => p.id === postId
+        ? { ...p, comments_count: Math.max((p.comments_count ?? 1) - 1, 0) }
+        : p));
+    } catch {
+      toast.error('댓글 삭제에 실패했어요');
     }
   };
 
@@ -118,6 +204,22 @@ export function Community() {
     }
   };
 
+  const submitReport = async (reason: string) => {
+    if (!reportTarget) return;
+    try {
+      if (reportTarget.type === 'post') {
+        await communityService.reportPost(reportTarget.id, reason);
+      } else {
+        await communityService.reportComment(reportTarget.id, reason);
+      }
+      toast.success('신고했어요. 검토 후 조치할게요');
+    } catch {
+      toast.error('신고에 실패했어요');
+    } finally {
+      setReportTarget(null);
+    }
+  };
+
   const timeAgo = (iso: string) => {
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60000);
@@ -127,15 +229,71 @@ export function Community() {
     return `${Math.floor(h / 24)}일 전`;
   };
 
-  const currentPosts = activeTab === 'feed' ? posts : qna;
+  const postImages = (post: any): string[] => {
+    if (Array.isArray(post.images) && post.images.length > 0) return post.images;
+    if (post.image_url) return [post.image_url];
+    return [];
+  };
+
+  const currentPosts = posts;
 
   const renderPost = (post: any, compact = false) => {
     const id = post.id as string;
     const isLiked = likedIds.has(id);
     const isExpanded = expandedPostId === id;
     const postComments = comments[id] ?? [];
+    const topLevelComments = postComments.filter((c: any) => !c.parent_id);
+    const repliesOf = (cid: string) => postComments.filter((c: any) => c.parent_id === cid);
     const isQna = activeTab === 'qna';
     const isMyPost = currentUserId && post.user_id === currentUserId;
+    const images = postImages(post);
+    const reply = replyTo[id];
+
+    const renderComment = (c: any, isReply = false) => {
+      const isMineComment = currentUserId && c.user_id === currentUserId;
+      return (
+        <div key={c.id} className={`flex gap-2 ${isReply ? "ml-8" : ""}`}>
+          <div className={`${isReply ? "w-6 h-6" : "w-7 h-7"} bg-blue-100 rounded-full flex items-center justify-center shrink-0`}>
+            <span className="text-blue-600 text-xs font-bold">
+              {c.author_name?.[0] ?? '?'}
+            </span>
+          </div>
+          <div className="flex-1 bg-white rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-xs font-semibold text-gray-900">{c.author_name}</span>
+              {isQna && !isReply && (
+                <span className="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-semibold">A</span>
+              )}
+              <span className="text-xs text-gray-400">{timeAgo(c.created_at)}</span>
+            </div>
+            <p className="text-sm text-gray-700">{c.content}</p>
+            <div className="flex items-center gap-3 mt-1">
+              {!isReply && (
+                <button
+                  onClick={() => setReplyTo(prev => ({ ...prev, [id]: { id: c.id, name: c.author_name } }))}
+                  className="text-xs text-gray-400 hover:text-blue-600"
+                >
+                  답글
+                </button>
+              )}
+              {isMineComment ? (
+                <>
+                  <button onClick={() => handleEditComment(id, c)} className="text-xs text-gray-400 hover:text-blue-600">수정</button>
+                  <button onClick={() => handleDeleteComment(id, c.id)} className="text-xs text-gray-400 hover:text-red-500">삭제</button>
+                </>
+              ) : (
+                <button
+                  onClick={() => { if (!requireLogin()) return; setReportTarget({ type: 'comment', id: c.id, postId: id }); }}
+                  className="text-xs text-gray-400 hover:text-red-500"
+                >
+                  신고
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
 
     return (
       <div key={id} className={`bg-white ${compact ? "rounded-xl border border-gray-100" : "border-b border-gray-100"}`}>
@@ -162,12 +320,30 @@ export function Community() {
               </div>
               <span className="text-xs text-gray-400">{timeAgo(post.created_at as string)}</span>
             </div>
-            {isMyPost && (
+            {isMyPost ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleEditPost(id)}
+                  className="text-gray-300 hover:text-blue-500 transition-colors active:scale-95"
+                  aria-label="게시글 수정"
+                >
+                  <PenSquare className="w-4 h-4" strokeWidth={2} />
+                </button>
+                <button
+                  onClick={() => handleDeletePost(id)}
+                  className="text-gray-300 hover:text-red-400 transition-colors active:scale-95"
+                  aria-label="게시글 삭제"
+                >
+                  <Trash2 className="w-4 h-4" strokeWidth={2} />
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={() => handleDeletePost(id)}
-                className="text-gray-300 hover:text-red-400 transition-colors active:scale-95"
+                onClick={() => { if (!requireLogin()) return; setReportTarget({ type: 'post', id }); }}
+                className="text-gray-300 hover:text-red-400 transition-colors active:scale-95 shrink-0"
+                aria-label="게시글 신고"
               >
-                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                <Flag className="w-4 h-4" strokeWidth={2} />
               </button>
             )}
           </div>
@@ -180,13 +356,17 @@ export function Community() {
           {/* Content */}
           <p className="text-gray-700 text-sm leading-relaxed mb-3">{post.content as string}</p>
 
-          {/* Image */}
-          {post.image_url && (
-            <img
-              src={post.image_url}
-              alt=""
-              className="w-full rounded-xl mb-3 max-h-72 object-cover"
-            />
+          {/* Images */}
+          {images.length > 0 && (
+            images.length === 1 ? (
+              <img src={images[0]} alt="" className="w-full rounded-xl mb-3 max-h-72 object-cover" />
+            ) : (
+              <div className="flex gap-2 overflow-x-auto mb-3 pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                {images.map((src, i) => (
+                  <img key={i} src={src} alt="" className="h-56 w-auto rounded-xl object-cover shrink-0" />
+                ))}
+              </div>
+            )
           )}
 
           {/* Actions */}
@@ -227,31 +407,36 @@ export function Community() {
         {/* Comments section */}
         {isExpanded && (
           <div className="bg-gray-50 border-t border-gray-100 px-4 py-3">
-            {postComments.length === 0 ? (
+            {commentsError[id] ? (
+              <div className="text-center py-2">
+                <p className="text-xs text-gray-400 mb-1">댓글을 불러오지 못했어요</p>
+                <button
+                  onClick={() => { setComments(prev => { const c = { ...prev }; delete c[id]; return c; }); toggleComments(id); }}
+                  className="text-xs text-blue-600 font-medium"
+                >
+                  다시 시도
+                </button>
+              </div>
+            ) : postComments.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-2">
                 {isQna ? '아직 답변이 없어요' : '아직 댓글이 없어요'}
               </p>
             ) : (
               <div className="space-y-3 mb-3">
-                {postComments.map((c: any) => (
-                  <div key={c.id} className="flex gap-2">
-                    <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 text-xs font-bold">
-                        {c.author_name?.[0] ?? '?'}
-                      </span>
-                    </div>
-                    <div className="flex-1 bg-white rounded-xl px-3 py-2">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-semibold text-gray-900">{c.author_name}</span>
-                        {isQna && (
-                          <span className="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-semibold">A</span>
-                        )}
-                        <span className="text-xs text-gray-400">{timeAgo(c.created_at)}</span>
-                      </div>
-                      <p className="text-sm text-gray-700">{c.content}</p>
-                    </div>
+                {topLevelComments.map((c: any) => (
+                  <div key={c.id} className="space-y-2">
+                    {renderComment(c)}
+                    {repliesOf(c.id).map((r: any) => renderComment(r, true))}
                   </div>
                 ))}
+              </div>
+            )}
+            {reply && (
+              <div className="flex items-center gap-1.5 text-xs text-blue-600 mb-2">
+                <span>{reply.name}님에게 답글 남기는 중</span>
+                <button onClick={() => setReplyTo(prev => ({ ...prev, [id]: null }))}>
+                  <X className="w-3 h-3" strokeWidth={2} />
+                </button>
               </div>
             )}
             <div className="flex gap-2">
@@ -275,8 +460,75 @@ export function Community() {
     );
   };
 
+  const searchBar = (
+    <div className="relative">
+      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" strokeWidth={2} />
+      <input
+        value={searchInput}
+        onChange={e => setSearchInput(e.target.value)}
+        placeholder="리뷰/질문 검색"
+        className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      {searchInput && (
+        <button onClick={() => setSearchInput('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <X className="w-3.5 h-3.5" strokeWidth={2} />
+        </button>
+      )}
+    </div>
+  );
+
+  const sortToggle = (
+    <div className="flex gap-1.5 shrink-0">
+      {([
+        { key: 'recent', label: '최신순' },
+        { key: 'likes', label: '인기순' },
+      ] as const).map(({ key, label }) => (
+        <button
+          key={key}
+          onClick={() => setSortBy(key)}
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            sortBy === key ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-gray-200 text-gray-500'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const errorState = (
+    <div className="flex flex-col items-center justify-center py-16 gap-2">
+      <RefreshCw className="w-8 h-8 text-gray-300" strokeWidth={2} />
+      <p className="text-sm text-gray-500">불러오는 데 실패했어요</p>
+      <button onClick={load} className="text-sm text-blue-600 font-medium">다시 시도</button>
+    </div>
+  );
+
+  const reportModal = reportTarget && (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-end lg:items-center justify-center" onClick={() => setReportTarget(null)}>
+      <div
+        className="bg-white rounded-t-2xl lg:rounded-2xl w-full lg:w-96 p-5"
+        onClick={e => e.stopPropagation()}
+      >
+        <p className="font-semibold text-gray-900 mb-3">신고 사유를 선택해주세요</p>
+        <div className="space-y-1">
+          {REPORT_REASONS.map(reason => (
+            <button
+              key={reason}
+              onClick={() => submitReport(reason)}
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+            >
+              {reason}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-gray-50 min-h-screen">
+      {reportModal}
 
       {/* ================================================================
           데스크탑 레이아웃 (lg 이상)
@@ -353,15 +605,21 @@ export function Community() {
 
             {/* ── 가운데: 피드 ─────────────────────────────────────── */}
             <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1">{searchBar}</div>
+                {sortToggle}
+              </div>
               {isLoading ? (
                 <div className="flex items-center justify-center h-40">
                   <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                 </div>
+              ) : loadError ? (
+                errorState
               ) : currentPosts.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-gray-100 text-center py-20">
                   <MessageCircle className="w-14 h-14 text-gray-200 mx-auto mb-3" strokeWidth={2} />
                   <p className="font-semibold text-gray-500">
-                    {activeTab === 'feed' ? '아직 리뷰가 없어요' : '아직 질문이 없어요'}
+                    {search ? '검색 결과가 없어요' : (activeTab === 'feed' ? '아직 리뷰가 없어요' : '아직 질문이 없어요')}
                   </p>
                   <p className="text-sm text-gray-400 mt-1">
                     {activeTab === 'feed' ? '첫 번째 리뷰를 남겨보세요!' : '궁금한 점을 물어보세요!'}
@@ -370,6 +628,12 @@ export function Community() {
               ) : (
                 <div className="space-y-3">
                   {currentPosts.map(post => renderPost(post, true))}
+                  <ScrollSentinel onIntersect={loadMore} enabled={hasMore && !isLoadingMore} />
+                  {isLoadingMore && (
+                    <div className="flex justify-center py-3">
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -416,7 +680,7 @@ export function Community() {
       </div>
 
       {/* ================================================================
-          모바일 레이아웃 (lg 미만) — 기존 코드 완전 보존
+          모바일 레이아웃 (lg 미만)
           ================================================================ */}
       <div className="lg:hidden">
         {/* Header */}
@@ -436,24 +700,30 @@ export function Community() {
           </Link>
         </div>
 
-        {/* Tabs */}
-        <div className="px-4 pt-3 pb-2 bg-white flex gap-2">
-          <button
-            onClick={() => setActiveTab("feed")}
-            className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
-              activeTab === "feed" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
-            }`}
-          >
-            리뷰
-          </button>
-          <button
-            onClick={() => setActiveTab("qna")}
-            className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
-              activeTab === "qna" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
-            }`}
-          >
-            질문 & 답변
-          </button>
+        {/* Search */}
+        <div className="px-4 pt-3 bg-white">{searchBar}</div>
+
+        {/* Tabs + sort */}
+        <div className="px-4 pt-3 pb-2 bg-white flex items-center justify-between gap-2">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab("feed")}
+              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
+                activeTab === "feed" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              리뷰
+            </button>
+            <button
+              onClick={() => setActiveTab("qna")}
+              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
+                activeTab === "qna" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              질문 & 답변
+            </button>
+          </div>
+          {sortToggle}
         </div>
 
         {/* Island filter chips */}
@@ -487,18 +757,28 @@ export function Community() {
             <div className="flex items-center justify-center h-40">
               <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
+          ) : loadError ? (
+            errorState
           ) : currentPosts.length === 0 ? (
             <div className="text-center py-16">
               <MessageCircle className="w-14 h-14 text-gray-200 mx-auto mb-3" strokeWidth={2} />
               <p className="font-medium text-gray-500">
-                {activeTab === 'feed' ? '아직 리뷰가 없어요' : '아직 질문이 없어요'}
+                {search ? '검색 결과가 없어요' : (activeTab === 'feed' ? '아직 리뷰가 없어요' : '아직 질문이 없어요')}
               </p>
               <p className="text-sm text-gray-400 mt-1">
                 {activeTab === 'feed' ? '첫 번째 리뷰를 남겨보세요!' : '궁금한 점을 물어보세요!'}
               </p>
             </div>
           ) : (
-            <div>{currentPosts.map(post => renderPost(post))}</div>
+            <div>
+              {currentPosts.map(post => renderPost(post))}
+              <ScrollSentinel onIntersect={loadMore} enabled={hasMore && !isLoadingMore} />
+              {isLoadingMore && (
+                <div className="flex justify-center py-3">
+                  <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
