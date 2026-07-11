@@ -113,9 +113,9 @@ export function Support() {
               <ContactOption
                 icon={<Mail className="w-5 h-5" strokeWidth={2} />}
                 label="이메일"
-                value="help@island.kr"
+                value="kimsungil322@gmail.com"
                 onClick={() => {
-                  navigator.clipboard?.writeText("help@island.kr");
+                  navigator.clipboard?.writeText("kimsungil322@gmail.com");
                   toast.success("이메일이 복사됐어요");
                 }}
               />
