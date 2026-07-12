@@ -56,7 +56,7 @@ export function Itinerary() {
 
   useEffect(() => {
     if (!id || !itinerary) return;
-    tripBookingService.getChecklist(id, itinerary.islands, itinerary.departurePort || "인천항").then(setBookings);
+    tripBookingService.getChecklist(id, itinerary.islands, itinerary.departurePort || "인천항", itinerary.days).then(setBookings);
   }, [id, itinerary?.islands?.join(","), itinerary?.departurePort]);
 
   useEffect(() => {

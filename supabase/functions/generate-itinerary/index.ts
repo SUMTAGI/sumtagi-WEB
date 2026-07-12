@@ -46,9 +46,64 @@ function buildFerryContext(departurePort: string, islands: string[]): string {
   return `${body}\n복귀 배편은 출발 배편의 역방향으로 오후 14:00~15:30 사이 출발합니다.\n주의: 실제 운항 여부는 당일 기상에 따라 달라질 수 있습니다.`;
 }
 
+// ─── 실제 관광지/맛집/숙박 컨텍스트 (Supabase DB, LLM 환각 방지) ───────────────
+// 한국어 섬 이름 → id (aiItinerary.ts ISLAND_NAME_TO_ID와 동일 22개 미러)
+const ISLAND_NAME_TO_ID: Record<string, string> = {
+  '백령도': 'baengnyeong', '대청도': 'daecheong',   '소청도': 'socheong',
+  '연평도': 'yeonpyeong',  '덕적도': 'deokjeok',    '자월도': 'jawol',
+  '승봉도': 'seungbong',   '대이작도': 'daeijak',   '소이작도': 'soijak',
+  '영흥도': 'yeonghung',   '풍도': 'pungdo',        '굴업도': 'guleop',
+  '육도': 'yukdo',         '선재도': 'seonjae',
+  '신도': 'sindo',         '시도': 'sido',          '모도': 'modo',
+  '장봉도': 'jangbongdo',  '소야도': 'soya',        '문갑도': 'mungap',
+  '백아도': 'baegado',     '울도': 'uldo',
+};
+
+async function fetchIslandTourContext(islands: string[]): Promise<string> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !supabaseAnonKey) return "";
+
+  const islandId = ISLAND_NAME_TO_ID[islands[0]];
+  if (!islandId) return "";
+
+  const headers = { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` };
+  const fetchTable = async (table: string, select: string, orderBy: string) => {
+    const url = `${supabaseUrl}/rest/v1/${table}?island_id=eq.${islandId}&select=${select}&order=${orderBy}&limit=8`;
+    try {
+      const res = await fetch(url, { headers });
+      if (!res.ok) return [];
+      return await res.json();
+    } catch {
+      return [];
+    }
+  };
+
+  const [attractions, restaurants, accommodations] = await Promise.all([
+    fetchTable("attractions", "name,category,description", "order_index.asc"),
+    fetchTable("restaurants", "name,cuisine,specialty", "order_index.asc"),
+    fetchTable("accommodations", "name,type", "order_index.asc"),
+  ]);
+
+  if (attractions.length === 0 && restaurants.length === 0 && accommodations.length === 0) return "";
+
+  const lines: string[] = [];
+  if (attractions.length > 0) {
+    lines.push(`관광지: ${attractions.map((a: any) => `${a.name}${a.category ? `(${a.category})` : ""}`).join(", ")}`);
+  }
+  if (restaurants.length > 0) {
+    lines.push(`맛집: ${restaurants.map((r: any) => `${r.name}${r.specialty ? `(${r.specialty})` : r.cuisine ? `(${r.cuisine})` : ""}`).join(", ")}`);
+  }
+  if (accommodations.length > 0) {
+    lines.push(`숙박: ${accommodations.map((a: any) => `${a.name}${a.type ? `(${a.type})` : ""}`).join(", ")}`);
+  }
+
+  return `\n[참고: 실제 관광지/맛집/숙박 정보 — 아래 실제 이름을 최대한 활용해서 일정을 구성하세요.\n목록에 없는 구체적 상호명은 지어내지 말고, 필요하면 "현지 식당", "민박" 같은 일반적 표현을 쓰세요.]\n${lines.join("\n")}`;
+}
+
 // ─── 프롬프트 생성 ────────────────────────────────────────────────────────────
 
-function buildPrompt(req: ItineraryRequest): { system: string; user: string } {
+function buildPrompt(req: ItineraryRequest, tourContext: string): { system: string; user: string } {
   const ms = new Date(req.endDate).getTime() - new Date(req.startDate).getTime();
   const numDays = Math.ceil(ms / (1000 * 60 * 60 * 24)) + 1;
 
@@ -57,7 +112,9 @@ function buildPrompt(req: ItineraryRequest): { system: string; user: string } {
 마크다운 코드블록(\`\`\`), 설명 텍스트, 주석은 절대 포함하지 마세요.
 첫 날은 배편 탑승으로 시작하고 마지막 날은 복귀 배편으로 끝내세요.
 일정에 등장하는 모든 장소(숙소·식당·관광지)는 반드시 사용자가 지정한 섬 안에만 있어야 합니다.
-[참고 배편 정보]에 나오지 않는 다른 섬 이름을 절대 등장시키지 마세요.`;
+[참고 배편 정보]에 나오지 않는 다른 섬 이름을 절대 등장시키지 마세요.
+[참고: 실제 관광지/맛집/숙박 정보]가 주어지면 그 안의 실제 이름을 우선적으로 활용하세요.
+tips/cautions/highlights는 각각 핵심만 최대 6개로 간결하게 작성하세요. 비슷한 문구를 반복하지 마세요.`;
 
   const user = `다음 조건으로 ${numDays}일 섬 여행 일정을 만들어주세요:
 - 출발 항구: ${req.departurePort}
@@ -70,6 +127,7 @@ ${req.specialRequests ? `- 특별 요청: ${req.specialRequests}` : ""}
 
 [참고 배편 정보]
 ${buildFerryContext(req.departurePort, req.islands)}
+${tourContext}
 
 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
@@ -121,6 +179,7 @@ const ITINERARY_SCHEMA = {
           dayNumber: { type: "INTEGER" },
           activities: {
             type: "ARRAY",
+            maxItems: 6,
             items: {
               type: "OBJECT",
               properties: {
@@ -139,10 +198,10 @@ const ITINERARY_SCHEMA = {
         required: ["date", "dayNumber", "activities"],
       },
     },
-    tips: { type: "ARRAY", items: { type: "STRING" } },
-    cautions: { type: "ARRAY", items: { type: "STRING" } },
+    tips: { type: "ARRAY", items: { type: "STRING" }, maxItems: 6 },
+    cautions: { type: "ARRAY", items: { type: "STRING" }, maxItems: 6 },
     estimatedTotalCost: { type: "INTEGER" },
-    highlights: { type: "ARRAY", items: { type: "STRING" } },
+    highlights: { type: "ARRAY", items: { type: "STRING" }, maxItems: 6 },
   },
   required: ["title", "days"],
 };
@@ -309,7 +368,8 @@ serve(async (req: Request) => {
       );
     }
 
-    const prompt = buildPrompt(body);
+    const tourContext = await fetchIslandTourContext(body.islands);
+    const prompt = buildPrompt(body, tourContext);
 
     // LLM 호출 (1회 자동 재시도)
     let raw: string;
