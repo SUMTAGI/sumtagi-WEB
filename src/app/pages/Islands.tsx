@@ -4,7 +4,7 @@ import L from "leaflet";
 import { Ship, Clock, Search, X, ChevronDown, ChevronRight, TrendingUp, LayoutGrid, Map as MapIcon } from "lucide-react";
 import { CardGridSkeleton } from "../components/SkeletonLoader";
 import { IslandImage } from "../components/IslandImage";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { getIslands, formatFerryPrice, type Island } from "../../lib/api/islands";
 import { getAllIslandsCongestion, type IslandCongestionData } from "../../lib/api/congestion";
 
@@ -114,7 +114,10 @@ export function Islands() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [searchParams] = useSearchParams();
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    searchParams.get("view") === "map" ? "map" : "list"
+  );
 
   // 지도 뷰 전용 상태
   const [selected, setSelected] = useState<MarkerItem | null>(null);

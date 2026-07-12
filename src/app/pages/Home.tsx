@@ -427,7 +427,7 @@ function DesktopDashboard({
           </div>
 
           {/* 지도 바로가기 CTA */}
-          <Link to="/islands"
+          <Link to="/islands?view=map"
             className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 shadow-[0_4px_24px_rgba(37,99,235,0.32)] hover:shadow-[0_8px_32px_rgba(37,99,235,0.44)] transition-all duration-200 hover:-translate-y-0.5 group"
           >
             <div className="flex items-center justify-between mb-4">

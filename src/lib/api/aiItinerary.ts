@@ -45,10 +45,10 @@ export interface AIItineraryRequest {
   specialFilter?:  string;                    // 특수 여행 유형 ("eco"|"barrier_free"|"pet_friendly")
 }
 
-export type GeneratedBy = "llm" | "fallback";
+export type GeneratedBy = "llm" | "fallback" | "quick";
 
 export type GeneratedItineraryWithMeta = GeneratedItinerary & {
-  generatedBy: GeneratedBy;  // "llm" = AI 생성, "fallback" = 규칙 기반 대체
+  generatedBy: GeneratedBy;  // "llm" = AI 생성, "fallback" = AI 실패로 규칙 기반 대체, "quick" = 사용자가 규칙 기반을 직접 선택
   tips?: string[];
   cautions?: string[];
   highlights?: string[];
@@ -141,6 +141,53 @@ async function enrichRequestContext(req: AIItineraryRequest): Promise<AIItinerar
   return { ...req, routingHints, demandLevels, specialFilter }
 }
 
+// ─── 규칙 기반 일정 조립 (AI 미사용, fallback과 명시적 빠른 생성이 공유) ──────
+
+async function buildScriptItinerary(
+  req: AIItineraryRequest,
+  generatedBy: "fallback" | "quick"
+): Promise<GeneratedItineraryWithMeta> {
+  const islandIds = req.islands.map((name) => ISLAND_NAME_TO_ID[name] ?? name)
+
+  // 특수 여행 유형이면 관광공사 데이터를 보강
+  let extraAttractions: any[] = []
+  if (isSpecialTravelStyle(req.travelStyle)) {
+    extraAttractions = await prefetchSpecialTourData(req.travelStyle, islandIds).catch(() => [])
+  }
+
+  const formData: TripFormData = {
+    departurePort: req.departurePort,
+    startDate:     req.startDate,
+    endDate:       req.endDate,
+    travelers:     req.travelers,
+    travelType:    req.travelStyle,
+    islands:       req.islands,
+    budget:        req.budget,
+  };
+
+  const base = generateItineraryFallback(formData)
+
+  // 특수 여행 관광지가 있으면 첫날에 삽입
+  if (extraAttractions.length > 0 && base.days.length > 0) {
+    const extra = extraAttractions.slice(0, 2).map((a: any, i: number) => ({
+      id:          `special-fallback-${i}`,
+      type:        'attraction' as const,
+      time:        `${15 + i}:30`,
+      title:       a.name,
+      location:    a.island,
+      duration:    a.duration ?? 90,
+      description: a.description,
+      congestionLevel: 'low' as const,
+    }))
+    base.days[0].activities.push(...extra)
+  }
+
+  return {
+    ...base,
+    generatedBy,
+  };
+}
+
 // ─── 공개 API: AI 시도 → 실패 시 규칙 기반 fallback ─────────────────────────
 
 export async function generateItinerary(
@@ -157,44 +204,14 @@ export async function generateItinerary(
     console.warn(`AI 일정 생성 실패 (${reason}), 규칙 기반 fallback 실행`);
     onFallback?.(reason);
 
-    const islandIds = req.islands.map((name) => ISLAND_NAME_TO_ID[name] ?? name)
-
-    // 특수 여행 유형이면 관광공사 데이터를 fallback 데이터로 보강
-    let extraAttractions: any[] = []
-    if (isSpecialTravelStyle(req.travelStyle)) {
-      extraAttractions = await prefetchSpecialTourData(req.travelStyle, islandIds).catch(() => [])
-    }
-
-    const formData: TripFormData = {
-      departurePort: req.departurePort,
-      startDate:     req.startDate,
-      endDate:       req.endDate,
-      travelers:     req.travelers,
-      travelType:    req.travelStyle,
-      islands:       req.islands,
-      budget:        req.budget,
-    };
-
-    const base = generateItineraryFallback(formData)
-
-    // 특수 여행 관광지가 있으면 첫날에 삽입
-    if (extraAttractions.length > 0 && base.days.length > 0) {
-      const extra = extraAttractions.slice(0, 2).map((a: any, i: number) => ({
-        id:          `special-fallback-${i}`,
-        type:        'attraction' as const,
-        time:        `${15 + i}:30`,
-        title:       a.name,
-        location:    a.island,
-        duration:    a.duration ?? 90,
-        description: a.description,
-        congestionLevel: 'low' as const,
-      }))
-      base.days[0].activities.push(...extra)
-    }
-
-    return {
-      ...base,
-      generatedBy: "fallback" as const,
-    };
+    return buildScriptItinerary(req, "fallback");
   }
+}
+
+// ─── 공개 API: 규칙 기반으로만 즉시 생성 (AI 미사용, 사용자가 명시적으로 선택) ──
+
+export async function generateQuickItinerary(
+  req: AIItineraryRequest
+): Promise<GeneratedItineraryWithMeta> {
+  return buildScriptItinerary(req, "quick");
 }
