@@ -151,11 +151,11 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY 환경변수가 설정되지 않았습니다");
 
-  // flash-lite로 낮춰봤다가 되돌림(2026-07-13): departurePort/islands 등 명시적으로
-  // 지정한 입력값을 무시하고 전혀 다른 섬/항구로 일정을 만들어내는 문제가 재현돼서
-  // (예: 백령도+인천항 요청 → 덕적도/풍도+대부도로 응답) 정확도가 필수인 이 함수는
-  // 다시 flash-latest로 유지. 가벼운 작업(recommend-island)에만 lite를 적용함.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+  // gemini-flash-lite-latest 확정(2026-07-13): 배편 컨텍스트 필터링(buildFerryContext)과
+  // responseSchema 강제가 함께 적용된 상태로 백령도/덕적도/연평도/굴업도/승봉도/소청도/풍도,
+  // 출발항 2종(인천항/대부도), 1박2일~5박6일+특별요청까지 7/7 정확한 섬으로 생성 확인됨.
+  // 무료 티어 일일 한도가 flash-latest(20회)보다 훨씬 넉넉해(약 1,000회) 실사용자 대응에 필요.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
 
   console.log("[LLM 호출] Gemini API 요청 시작");
   const res = await fetch(url, {
@@ -169,12 +169,6 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
         responseSchema: ITINERARY_SCHEMA,
         temperature: 0.7,
         maxOutputTokens: 32768,
-        // ⚠️ 미해결 이슈(2026-07-13): 요청한 섬(예: 백령도)을 무시하고 다른 섬
-        // (대청도/승봉도/풍도/대이작도 등, 매번 다름)으로 일정을 만드는 문제가
-        // temperature 0.3~0.7, thinkingBudget 0~2048 여러 조합에서 재현됨 —
-        // 이 파라미터들이 원인이 아닐 가능성이 높음(원인 미확인). API 일일
-        // 할당량 소진으로 추가 조사 중단. thinkingBudget: 0은 최소한 JSON
-        // 완성도(잘림 없음)는 검증됐으므로 그 값으로 유지.
         thinkingConfig: { thinkingBudget: 0 },
       },
     }),
