@@ -104,9 +104,11 @@ export function CreateTrip() {
     fetchIslandData();
     getIslands().then(setRealIslands).catch(() => {});
     const islandName = searchParams.get("name");
+    const styleParam = searchParams.get("style");
     if (islandName) {
+      // IslandDetail의 "일정 만들기"(?name=) 또는 홈 검색창 AI 추천(?name=&style=)에서 진입
       setPreSelectedIsland(islandName);
-      setFormData(prev => ({ ...prev, islands: [islandName] }));
+      setFormData(prev => ({ ...prev, islands: [islandName], travelType: styleParam || prev.travelType }));
     }
   }, [searchParams]);
 
@@ -121,12 +123,11 @@ export function CreateTrip() {
   // 실제 Supabase islands 테이블 데이터 — 이름으로 매칭(없는 섬은 실사진/설명 없이 이름만 표시)
   const islandByName = new Map(realIslands.map(i => [i.name, i]));
 
+  // 섬간 이동이 번거로워 한 번에 한 섬만 선택 가능 — 다른 섬을 누르면 선택이 교체됨
   const handleIslandToggle = (island: string) => {
     setFormData(prev => ({
       ...prev,
-      islands: prev.islands.includes(island)
-        ? prev.islands.filter(i => i !== island)
-        : [...prev.islands, island],
+      islands: prev.islands[0] === island ? [] : [island],
     }));
   };
 
@@ -253,7 +254,7 @@ export function CreateTrip() {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">방문할 섬 선택</h2>
-        <p className="text-sm text-gray-600">어느 섬으로 떠나고 싶으세요?</p>
+        <p className="text-sm text-gray-600">어느 섬으로 떠나고 싶으세요? 섬간 이동이 어려워 한 번에 한 섬만 선택할 수 있어요.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -276,7 +277,7 @@ export function CreateTrip() {
         <>
           <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
             <p className="text-sm text-blue-700">
-              <span className="font-semibold">{formData.islands.length}개 섬</span> 선택됨: {formData.islands.join(", ")}
+              <span className="font-semibold">{formData.islands[0]}</span> 선택됨
             </p>
           </div>
           <button
@@ -565,7 +566,7 @@ export function CreateTrip() {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-1.5">방문할 섬 선택</h2>
-        <p className="text-gray-500">어느 섬으로 떠나고 싶으세요? 여러 섬을 함께 선택할 수 있어요.</p>
+        <p className="text-gray-500">어느 섬으로 떠나고 싶으세요? 섬간 이동이 어려워 한 번에 한 섬만 선택할 수 있어요.</p>
       </div>
 
       <div className="relative mb-5">
@@ -582,7 +583,7 @@ export function CreateTrip() {
       {formData.islands.length > 0 && (
         <div className="bg-blue-50 rounded-xl px-4 py-3 border border-blue-100 mb-5">
           <p className="text-sm text-blue-700">
-            <span className="font-semibold">{formData.islands.length}개 섬</span> 선택됨 · {formData.islands.join(", ")}
+            <span className="font-semibold">{formData.islands[0]}</span> 선택됨
           </p>
         </div>
       )}

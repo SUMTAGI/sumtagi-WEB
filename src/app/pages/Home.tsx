@@ -16,6 +16,7 @@ import { communityService } from "../../lib/communityService";
 import { recentlyViewedService, type RecentIsland } from "../../lib/recentlyViewed";
 import { IslandImage } from "../components/IslandImage";
 import { OceanScene } from "../components/OceanScene";
+import { AiIslandSearchBar } from "../components/AiIslandSearchBar";
 
 // 계절에 맞춰 "오늘의 AI 추천" 스타일을 결정 — 실제 취향 데이터가 쌓이기 전까지의 합리적 기본값
 function seasonalTravelStyle(): string {
@@ -137,6 +138,10 @@ export function Home() {
                   <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full" />
                 )}
               </Link>
+            </div>
+
+            <div className="mb-4">
+              <AiIslandSearchBar variant="hero" placeholder="어떤 여행을 원하세요?" />
             </div>
 
             {confirmedItinerary ? (
@@ -337,7 +342,10 @@ function DesktopDashboard({
             <h1 className="text-[40px] font-bold text-white tracking-tight leading-tight mb-3">
               안녕하세요, {displayName}님
             </h1>
-            <p className="text-blue-200 text-base">오늘도 좋은 섬 여행 되세요 🏝️</p>
+            <p className="text-blue-200 text-base mb-5">오늘도 좋은 섬 여행 되세요 🏝️</p>
+            <div className="max-w-md">
+              <AiIslandSearchBar variant="hero" />
+            </div>
           </div>
 
           {/* 우: 날씨 브리핑 글라스 카드 */}
