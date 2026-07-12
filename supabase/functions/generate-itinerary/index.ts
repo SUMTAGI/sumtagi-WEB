@@ -93,6 +93,51 @@ ${FERRY_CONTEXT}
 
 // ─── Provider별 API 호출 ──────────────────────────────────────────────────────
 
+// 파싱 실패 시 원인 진단용 — 마지막 Gemini 호출의 finishReason/토큰 사용량
+let lastGeminiDebug: { finishReason?: string; usageMetadata?: unknown; partsCount?: number } | null = null;
+
+// Gemini responseSchema — responseMimeType만으로는 문법을 강제하지 않아 모델이
+// 마지막 닫는 괄호를 빼먹고 finishReason: STOP으로 조기 종료하는 문제가 있었음.
+// 스키마를 주면 constrained decoding으로 구조적으로 유효한 JSON만 나오도록 강제됨.
+const ITINERARY_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    title: { type: "STRING" },
+    days: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          date: { type: "STRING" },
+          dayNumber: { type: "INTEGER" },
+          activities: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                time: { type: "STRING" },
+                type: { type: "STRING" },
+                title: { type: "STRING" },
+                location: { type: "STRING" },
+                description: { type: "STRING" },
+                duration: { type: "INTEGER" },
+                estimatedCost: { type: "INTEGER" },
+              },
+              required: ["time", "type", "title", "location", "duration"],
+            },
+          },
+        },
+        required: ["date", "dayNumber", "activities"],
+      },
+    },
+    tips: { type: "ARRAY", items: { type: "STRING" } },
+    cautions: { type: "ARRAY", items: { type: "STRING" } },
+    estimatedTotalCost: { type: "INTEGER" },
+    highlights: { type: "ARRAY", items: { type: "STRING" } },
+  },
+  required: ["title", "days"],
+};
+
 async function callGemini(prompt: { system: string; user: string }): Promise<string> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY 환경변수가 설정되지 않았습니다");
@@ -108,8 +153,13 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
       contents: [{ role: "user", parts: [{ text: prompt.user }] }],
       generationConfig: {
         responseMimeType: "application/json",
+        responseSchema: ITINERARY_SCHEMA,
         temperature: 0.7,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 32768,
+        // gemini-flash-latest(2.5)는 기본적으로 내부 추론(thinking) 토큰을 소모하는데
+        // 이 토큰이 maxOutputTokens 예산에 포함돼, JSON 응답이 끝나기 직전에 잘리는
+        // 문제가 있었음. 구조화된 JSON 생성에는 추론이 불필요하므로 0으로 끔.
+        thinkingConfig: { thinkingBudget: 0 },
       },
     }),
   });
@@ -121,8 +171,17 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
   }
 
   const data = await res.json();
-  const text = data.candidates[0].content.parts[0].text;
-  console.log(`[LLM 응답] Gemini 수신 완료 | 길이: ${text.length}자 | 앞 200자: ${text.slice(0, 200)}`);
+  const candidate = data.candidates?.[0];
+  // parts가 여러 조각으로 나뉘어 오는 경우 parts[0]만 읽으면 뒷부분이 조용히 누락됨
+  const text = (candidate?.content?.parts ?? []).map((p: any) => p.text ?? "").join("");
+  lastGeminiDebug = {
+    finishReason: candidate?.finishReason,
+    usageMetadata: data.usageMetadata,
+    partsCount: candidate?.content?.parts?.length ?? 0,
+  };
+  console.log(
+    `[LLM 응답] Gemini 수신 완료 | finishReason: ${candidate?.finishReason} | parts: ${candidate?.content?.parts?.length ?? 0}개 | usage: ${JSON.stringify(data.usageMetadata)} | 길이: ${text.length}자 | 앞 200자: ${text.slice(0, 200)}`
+  );
   return text;
 }
 
@@ -260,9 +319,9 @@ serve(async (req: Request) => {
       parsed = JSON.parse(cleaned);
       console.log(`[파싱 성공] days: ${parsed.days?.length}일 | title: ${parsed.title}`);
     } catch {
-      console.error(`[파싱 실패] fallback 트리거 | raw 앞 300자: ${raw.slice(0, 300)}`);
+      console.error(`[파싱 실패] fallback 트리거 | raw 앞 300자: ${raw.slice(0, 300)} | debug: ${JSON.stringify(lastGeminiDebug)}`);
       return new Response(
-        JSON.stringify({ error: "LLM_PARSE_FAILED", raw }),
+        JSON.stringify({ error: "LLM_PARSE_FAILED", raw, debug: lastGeminiDebug }),
         { status: 422, headers: { ...CORS, "Content-Type": "application/json" } }
       );
     }
