@@ -272,6 +272,11 @@ export function Itinerary() {
               ⚡ 기본 일정으로 대체됨
             </span>
           )}
+          {(itinerary as any).generatedBy === "quick" && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-100 bg-gray-600/70 px-2.5 py-0.5 rounded-full mb-2 self-start">
+              ⚡ 빠른 일정
+            </span>
+          )}
 
           <div className="flex flex-wrap gap-3 text-sm text-blue-100">
             <div className="flex items-center gap-1">

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight, Check, Search, CheckCircle, Loader2 } from "lucide-react";
 import { fetchIslandData } from "../utils/itineraryGenerator";
-import { generateItinerary } from "../../lib/api/aiItinerary";
+import { generateItinerary, generateQuickItinerary } from "../../lib/api/aiItinerary";
 import { getIslands, type Island } from "../../lib/api/islands";
 import { toast } from "sonner";
 import { Confetti } from "../components/Confetti";
@@ -91,6 +91,7 @@ export function CreateTrip() {
     budget: "보통",
     specialRequests: "",
   });
+  const [generationMode, setGenerationMode] = useState<"ai" | "quick">("quick");
   const [shakeStart, setShakeStart] = useState(false);
   const [shakeEnd, setShakeEnd] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -194,22 +195,23 @@ export function CreateTrip() {
     setIsGenerating(true);
 
     try {
-      const itinerary = await generateItinerary(
-        {
-          departurePort: computedPort,
-          islands:       formData.islands,
-          startDate:     formData.startDate,
-          endDate:       formData.endDate,
-          travelers:     formData.travelers,
-          travelStyle:   formData.travelType,
-          budget:        formData.budget,
-          specialRequests: formData.specialRequests.trim() || undefined,
-          provider:      "gemini",
-        },
-        () => {
-          toast.warning("AI 일정 생성에 실패했어요. 기본 일정으로 대체합니다.");
-        }
-      );
+      const request = {
+        departurePort: computedPort,
+        islands:       formData.islands,
+        startDate:     formData.startDate,
+        endDate:       formData.endDate,
+        travelers:     formData.travelers,
+        travelStyle:   formData.travelType,
+        budget:        formData.budget,
+        specialRequests: formData.specialRequests.trim() || undefined,
+        provider:      "gemini" as const,
+      };
+
+      const itinerary = generationMode === "quick"
+        ? await generateQuickItinerary(request)
+        : await generateItinerary(request, () => {
+            toast.warning("AI 일정 생성에 실패했어요. 기본 일정으로 대체합니다.");
+          });
 
       const title = `${formData.islands.join(", ")} 여행`;
       const trip = await tripService.createTrip(
@@ -444,15 +446,46 @@ export function CreateTrip() {
       </div>
 
       <div>
-        <h3 className="text-sm font-medium text-gray-700 mb-3">AI에게 하고 싶은 말이 있나요? <span className="text-gray-400 font-normal">(선택)</span></h3>
-        <textarea
-          value={formData.specialRequests}
-          onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
-          placeholder="예: 아이랑 같이 가요, 낚시하고 싶어요, 걷는 건 최소화해주세요"
-          rows={3}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none"
-        />
+        <h3 className="text-sm font-medium text-gray-700 mb-3">일정 생성 방식</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setGenerationMode("quick")}
+            className={`p-4 rounded-xl border-2 text-left transition-all relative ${
+              generationMode === "quick" ? "border-blue-600 bg-blue-50" : "border-gray-200 active:scale-95"
+            }`}
+          >
+            <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+              추천
+            </span>
+            <div className="text-2xl mb-1">⚡</div>
+            <div className={`font-semibold text-sm ${generationMode === "quick" ? "text-blue-600" : "text-gray-900"}`}>빠른 일정 생성</div>
+            <div className="text-xs text-gray-500 mt-0.5">AI 없이 즉시 기본 일정 생성</div>
+          </button>
+          <button
+            onClick={() => setGenerationMode("ai")}
+            className={`p-4 rounded-xl border-2 text-left transition-all ${
+              generationMode === "ai" ? "border-blue-600 bg-blue-50" : "border-gray-200 active:scale-95"
+            }`}
+          >
+            <div className="text-2xl mb-1">✨</div>
+            <div className={`font-semibold text-sm ${generationMode === "ai" ? "text-blue-600" : "text-gray-900"}`}>AI 추천 일정</div>
+            <div className="text-xs text-gray-500 mt-0.5">관광 데이터 기반 맞춤 일정 (다소 소요)</div>
+          </button>
+        </div>
       </div>
+
+      {generationMode === "ai" && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-700 mb-3">AI에게 하고 싶은 말이 있나요? <span className="text-gray-400 font-normal">(선택)</span></h3>
+          <textarea
+            value={formData.specialRequests}
+            onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
+            placeholder="예: 아이랑 같이 가요, 낚시하고 싶어요, 걷는 건 최소화해주세요"
+            rows={3}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none"
+          />
+        </div>
+      )}
 
       {formData.travelType && (
         <button
@@ -463,10 +496,12 @@ export function CreateTrip() {
           {isGenerating ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2} />
-              AI가 일정을 만들고 있어요...
+              {generationMode === "ai" ? "AI가 일정을 만들고 있어요..." : "일정을 만들고 있어요..."}
             </>
-          ) : (
+          ) : generationMode === "ai" ? (
             "AI 일정 생성하기 ✨"
+          ) : (
+            "빠른 일정 생성하기 ⚡"
           )}
         </button>
       )}
@@ -810,16 +845,47 @@ export function CreateTrip() {
         </div>
       </div>
 
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">AI에게 하고 싶은 말이 있나요? <span className="text-gray-400 font-normal">(선택)</span></h3>
-        <textarea
-          value={formData.specialRequests}
-          onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
-          placeholder="예: 아이랑 같이 가요, 낚시하고 싶어요, 걷는 건 최소화해주세요"
-          rows={3}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none"
-        />
+      <div className="mb-7">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">일정 생성 방식</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setGenerationMode("quick")}
+            className={`p-4 rounded-xl border-2 text-left transition-colors relative ${
+              generationMode === "quick" ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-blue-200"
+            }`}
+          >
+            <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+              추천
+            </span>
+            <div className="text-2xl mb-1">⚡</div>
+            <div className={`font-semibold text-sm ${generationMode === "quick" ? "text-blue-600" : "text-gray-900"}`}>빠른 일정 생성</div>
+            <div className="text-xs text-gray-500 mt-0.5">AI 없이 즉시 기본 일정 생성</div>
+          </button>
+          <button
+            onClick={() => setGenerationMode("ai")}
+            className={`p-4 rounded-xl border-2 text-left transition-colors ${
+              generationMode === "ai" ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-blue-200"
+            }`}
+          >
+            <div className="text-2xl mb-1">✨</div>
+            <div className={`font-semibold text-sm ${generationMode === "ai" ? "text-blue-600" : "text-gray-900"}`}>AI 추천 일정</div>
+            <div className="text-xs text-gray-500 mt-0.5">관광 데이터 기반 맞춤 일정 (다소 소요)</div>
+          </button>
+        </div>
       </div>
+
+      {generationMode === "ai" && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">AI에게 하고 싶은 말이 있나요? <span className="text-gray-400 font-normal">(선택)</span></h3>
+          <textarea
+            value={formData.specialRequests}
+            onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
+            placeholder="예: 아이랑 같이 가요, 낚시하고 싶어요, 걷는 건 최소화해주세요"
+            rows={3}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none"
+          />
+        </div>
+      )}
     </div>
   );
 
@@ -896,10 +962,12 @@ export function CreateTrip() {
                 isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
-                    AI가 일정을 만들고 있어요...
+                    {generationMode === "ai" ? "AI가 일정을 만들고 있어요..." : "일정을 만들고 있어요..."}
                   </>
-                ) : (
+                ) : generationMode === "ai" ? (
                   "AI 일정 생성하기 ✨"
+                ) : (
+                  "빠른 일정 생성하기 ⚡"
                 )
               ) : (
                 <>

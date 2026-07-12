@@ -241,15 +241,15 @@ export function Travel() {
                         onClick={() => navigate("/create-trip")}
                         className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
                       >
-                        <Sparkles className="w-4 h-4" strokeWidth={2} />
-                        AI 일정 생성
+                        <ListChecks className="w-4 h-4" strokeWidth={2} />
+                        직접 일정 만들기
                       </button>
                       <button
                         onClick={() => navigate("/create-trip")}
                         className="inline-flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm border border-gray-200"
                       >
-                        <ListChecks className="w-4 h-4" strokeWidth={2} />
-                        직접 일정 만들기
+                        <Sparkles className="w-4 h-4" strokeWidth={2} />
+                        AI 일정 생성
                       </button>
                     </div>
 
@@ -336,14 +336,14 @@ export function Travel() {
                       onClick={() => navigate("/create-trip")}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
                     >
-                      <Sparkles className="w-4 h-4" strokeWidth={2} />
-                      AI 일정 생성
+                      <ListChecks className="w-4 h-4" strokeWidth={2} />
+                      직접 일정 만들기
                     </button>
                     <button
                       onClick={() => navigate("/create-trip")}
                       className="w-full mt-2 text-gray-500 hover:text-gray-700 font-medium py-2 rounded-xl transition-colors text-sm"
                     >
-                      직접 일정 만들기
+                      AI 일정 생성
                     </button>
                   </div>
                 ) : (
