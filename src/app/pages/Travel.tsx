@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { Calendar, Ship, Sparkles, MapPin, Trash2, Pencil, ListChecks, Info, ChevronRight, Clock, DollarSign, Plus, Heart, Sun, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ListSkeleton } from "../components/SkeletonLoader";
+import { IslandImage } from "../components/IslandImage";
 import { tripService } from "../../lib/tripService";
 import { favoritesService } from "../../lib/favoritesService";
 
@@ -15,7 +16,7 @@ export function Travel() {
   const [checklistProgress, setChecklistProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [tripCount, setTripCount] = useState(0);
-  const [favoriteCount, setFavoriteCount] = useState(0);
+  const [favorites, setFavorites] = useState<any[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -33,7 +34,7 @@ export function Travel() {
       setChecklistProgress(progress);
       setConfirmedTrips(trips);
       setTripCount(count);
-      setFavoriteCount(favorites.length);
+      setFavorites(favorites);
       setIsLoading(false);
     };
     load();
@@ -119,7 +120,7 @@ export function Travel() {
                       <Heart className="w-4 h-4 text-blue-600" strokeWidth={2} />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900 leading-none mb-1">{favoriteCount}개</p>
+                      <p className="text-2xl font-bold text-gray-900 leading-none mb-1">{favorites.length}개</p>
                       <p className="text-xs text-gray-400">즐겨찾기 섬</p>
                     </div>
                   </div>
@@ -251,42 +252,61 @@ export function Travel() {
                         직접 일정 만들기
                       </button>
                     </div>
+
+                    {/* AI 일정 생성 시 포함되는 정보 */}
+                    <div className="w-full mt-7 pt-6 border-t border-gray-100">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">AI가 이렇게 만들어드려요</p>
+                      <div className="grid grid-cols-5 gap-x-2 gap-y-2">
+                        {["여행 일정", "배편", "관광지", "맛집", "이동 시간"].map((item) => (
+                          <div key={item} className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Check className="w-3 h-3 text-blue-600 shrink-0" strokeWidth={2.5} />
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {/* 여행 정보 */}
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <DollarSign className="w-4 h-4 text-blue-600" strokeWidth={2} />
-                      <span className="text-xs text-gray-500">예상 여행 비용</span>
-                    </div>
-                    <p className="text-sm font-bold text-gray-900">15~25만원</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">교통 + 숙박 기준</p>
+                <div>
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900">인천 앞바다 섬 평균 정보</h3>
+                    <span className="text-xs text-gray-400">AI 추천에 활용되는 일반 통계예요</span>
                   </div>
-                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Clock className="w-4 h-4 text-blue-600" strokeWidth={2} />
-                      <span className="text-xs text-gray-500">평균 이동 시간</span>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <DollarSign className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                        <span className="text-xs text-gray-500">평균 여행 비용</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">15~25만원</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">교통 + 숙박 기준 · 1인</p>
                     </div>
-                    <p className="text-sm font-bold text-gray-900">약 1시간 30분</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">인천항 출발 기준</p>
-                  </div>
-                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Sun className="w-4 h-4 text-blue-600" strokeWidth={2} />
-                      <span className="text-xs text-gray-500">추천 계절</span>
+                    <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Clock className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                        <span className="text-xs text-gray-500">평균 이동 시간</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">약 1시간 30분</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">인천항 출발 기준</p>
                     </div>
-                    <p className="text-sm font-bold text-gray-900">봄 · 가을</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">쾌적하게 즐기기 좋아요</p>
-                  </div>
-                  <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
-                      <span className="text-xs text-gray-500">배편 운항</span>
+                    <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Sun className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                        <span className="text-xs text-gray-500">추천 계절</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">봄 · 가을</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">쾌적하게 즐기기 좋아요</p>
                     </div>
-                    <p className="text-sm font-bold text-gray-900">매일 운항</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">기상 상황에 따라 변동</p>
+                    <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Ship className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                        <span className="text-xs text-gray-500">배편 운항</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">매일 운항</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">기상 상황에 따라 변동</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -294,37 +314,60 @@ export function Travel() {
               {/* ── 오른쪽: 사이드 패널 (1/3) ──────────────────────── */}
               <div className="space-y-5">
 
-                {/* 새 여행 만들기 */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Plus className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
-                    새 여행 계획
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-3 leading-relaxed">
-                    AI가 여행 스타일을 분석해 최적의 섬 일정을 추천해드려요.
-                  </p>
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mb-4">
-                    {["여행 일정", "배편", "관광지", "맛집", "이동 시간"].map((item) => (
-                      <div key={item} className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Check className="w-3 h-3 text-blue-600 shrink-0" strokeWidth={2.5} />
-                        {item}
-                      </div>
-                    ))}
+                {/* 새 여행 만들기 (여행이 이미 있을 때만 노출 — 없을 때는 중앙 CTA가 유일한 진입점) */}
+                {currentItinerary ? (
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
+                      새 여행 계획
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-3 leading-relaxed">
+                      AI가 여행 스타일을 분석해 최적의 섬 일정을 추천해드려요.
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mb-4">
+                      {["여행 일정", "배편", "관광지", "맛집", "이동 시간"].map((item) => (
+                        <div key={item} className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Check className="w-3 h-3 text-blue-600 shrink-0" strokeWidth={2.5} />
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => navigate("/create-trip")}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" strokeWidth={2} />
+                      AI 일정 생성
+                    </button>
+                    <button
+                      onClick={() => navigate("/create-trip")}
+                      className="w-full mt-2 text-gray-500 hover:text-gray-700 font-medium py-2 rounded-xl transition-colors text-sm"
+                    >
+                      직접 일정 만들기
+                    </button>
                   </div>
-                  <button
-                    onClick={() => navigate("/create-trip")}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
-                  >
-                    <Sparkles className="w-4 h-4" strokeWidth={2} />
-                    AI 일정 생성
-                  </button>
-                  <button
-                    onClick={() => navigate("/create-trip")}
-                    className="w-full mt-2 text-gray-500 hover:text-gray-700 font-medium py-2 rounded-xl transition-colors text-sm"
-                  >
-                    직접 일정 만들기
-                  </button>
-                </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Info className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                      여행 팁
+                    </h3>
+                    <ul className="space-y-2.5 text-xs text-gray-500 leading-relaxed">
+                      <li className="flex items-start gap-2">
+                        <span className="text-gray-300 mt-0.5">•</span>
+                        주말·공휴일은 1주일 전 미리 예약하세요
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-gray-300 mt-0.5">•</span>
+                        출발 전날 운항 여부를 꼭 확인해주세요
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-gray-300 mt-0.5">•</span>
+                        자외선 차단제, 편한 신발 챙기는 거 잊지 마세요
+                      </li>
+                    </ul>
+                  </div>
+                )}
 
                 {/* 지난 여행 */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -333,10 +376,38 @@ export function Travel() {
                     지난 여행
                   </h3>
                   {confirmedTrips.length === 0 ? (
-                    <div className="text-center py-6">
-                      <Ship className="w-10 h-10 text-gray-200 mx-auto mb-2" strokeWidth={1.5} />
-                      <p className="text-sm text-gray-400">아직 지난 여행이 없어요</p>
-                    </div>
+                    favorites.length > 0 ? (
+                      <div>
+                        <p className="text-xs text-gray-400 mb-3">다녀온 여행은 아직 없지만, 찜한 섬이 있어요</p>
+                        <div className="space-y-2.5">
+                          {favorites.slice(0, 3).map((fav) => (
+                            <Link
+                              key={fav.id}
+                              to={`/island/${fav.island_id}`}
+                              className="flex items-center gap-3 group"
+                            >
+                              <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0">
+                                <IslandImage src={fav.islands?.image} alt={fav.islands?.name} className="w-full h-full object-cover" />
+                              </div>
+                              <span className="text-sm text-gray-700 group-hover:text-blue-600 transition-colors truncate">
+                                {fav.islands?.name}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                        <Link to="/favorites" className="block text-xs text-blue-600 font-medium hover:text-blue-700 mt-3">
+                          찜한 섬 전체보기 →
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Ship className="w-10 h-10 text-gray-200 mx-auto mb-2" strokeWidth={1.5} />
+                        <p className="text-sm text-gray-400 mb-3">아직 지난 여행이 없어요</p>
+                        <Link to="/islands" className="text-xs text-blue-600 font-medium hover:text-blue-700">
+                          섬 둘러보기 →
+                        </Link>
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-3">
                       {confirmedTrips.map(trip => (
