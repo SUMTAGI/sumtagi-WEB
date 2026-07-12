@@ -20,24 +20,31 @@ interface ItineraryRequest {
 }
 
 // ─── 배편 컨텍스트 (LLM 환각 방지) ──────────────────────────────────────────
+// 요청과 무관한 다른 섬의 항로까지 다 보여주면 모델이 그쪽으로 일정을 만들어버리는
+// 문제가 있었음(예: 백령도 요청인데 대청도/풍도로 응답) → 실제 요청과 매칭되는
+// 항로만 골라서 보여주도록 변경.
 
-const FERRY_CONTEXT = `
-인천항 출발 참고 배편:
-- 인천항→백령도: 08:00 출발, 12:00 도착 (45,000원/인)
-- 인천항→대청도: 08:30 출발, 12:30 도착 (45,000원/인)
-- 인천항→연평도: 09:00 출발, 12:30 도착 (40,000원/인)
-- 인천항→덕적도: 09:00 출발, 11:30 도착 (28,000원/인)
-- 인천항→자월도: 09:30 출발, 12:00 도착 (25,000원/인)
-- 인천항→승봉도: 10:00 출발, 12:00 도착 (23,000원/인)
-- 인천항→대이작도: 10:30 출발, 12:30 도착 (25,000원/인)
-대부도항 출발 참고 배편:
-- 대부도→자월도: 09:00 출발, 11:00 도착 (25,000원/인)
-- 대부도→승봉도: 09:30 출발, 11:00 도착 (23,000원/인)
-- 대부도→풍도:   11:30 출발, 14:00 도착 (27,000원/인)
-- 대부도→덕적도: 11:00 출발, 13:00 도착 (28,000원/인)
-복귀 배편은 출발 배편의 역방향으로 오후 14:00~15:30 사이 출발합니다.
-주의: 실제 운항 여부는 당일 기상에 따라 달라질 수 있습니다.
-`;
+const FERRY_ROUTES: { from: string; to: string; depart: string; arrive: string; price: number }[] = [
+  { from: "인천항", to: "백령도",   depart: "08:00", arrive: "12:00", price: 45000 },
+  { from: "인천항", to: "대청도",   depart: "08:30", arrive: "12:30", price: 45000 },
+  { from: "인천항", to: "연평도",   depart: "09:00", arrive: "12:30", price: 40000 },
+  { from: "인천항", to: "덕적도",   depart: "09:00", arrive: "11:30", price: 28000 },
+  { from: "인천항", to: "자월도",   depart: "09:30", arrive: "12:00", price: 25000 },
+  { from: "인천항", to: "승봉도",   depart: "10:00", arrive: "12:00", price: 23000 },
+  { from: "인천항", to: "대이작도", depart: "10:30", arrive: "12:30", price: 25000 },
+  { from: "대부도", to: "자월도",   depart: "09:00", arrive: "11:00", price: 25000 },
+  { from: "대부도", to: "승봉도",   depart: "09:30", arrive: "11:00", price: 23000 },
+  { from: "대부도", to: "풍도",     depart: "11:30", arrive: "14:00", price: 27000 },
+  { from: "대부도", to: "덕적도",   depart: "11:00", arrive: "13:00", price: 28000 },
+];
+
+function buildFerryContext(departurePort: string, islands: string[]): string {
+  const relevant = FERRY_ROUTES.filter((r) => r.from === departurePort && islands.includes(r.to));
+  const body = relevant.length > 0
+    ? relevant.map((r) => `- ${r.from}→${r.to}: ${r.depart} 출발, ${r.arrive} 도착 (${r.price.toLocaleString()}원/인)`).join("\n")
+    : `- ${departurePort}→${islands.join(", ")}: 정확한 시간표는 확인되지 않음 — 오전 출발/오후 복귀로 가정하고 구체적 시각은 지어내지 말 것`;
+  return `${body}\n복귀 배편은 출발 배편의 역방향으로 오후 14:00~15:30 사이 출발합니다.\n주의: 실제 운항 여부는 당일 기상에 따라 달라질 수 있습니다.`;
+}
 
 // ─── 프롬프트 생성 ────────────────────────────────────────────────────────────
 
@@ -48,11 +55,13 @@ function buildPrompt(req: ItineraryRequest): { system: string; user: string } {
   const system = `당신은 인천 섬 여행 전문 플래너입니다.
 사용자 조건에 맞는 여행 일정을 반드시 순수 JSON만으로 응답하세요.
 마크다운 코드블록(\`\`\`), 설명 텍스트, 주석은 절대 포함하지 마세요.
-첫 날은 배편 탑승으로 시작하고 마지막 날은 복귀 배편으로 끝내세요.`;
+첫 날은 배편 탑승으로 시작하고 마지막 날은 복귀 배편으로 끝내세요.
+일정에 등장하는 모든 장소(숙소·식당·관광지)는 반드시 사용자가 지정한 섬 안에만 있어야 합니다.
+[참고 배편 정보]에 나오지 않는 다른 섬 이름을 절대 등장시키지 마세요.`;
 
   const user = `다음 조건으로 ${numDays}일 섬 여행 일정을 만들어주세요:
 - 출발 항구: ${req.departurePort}
-- 목적지 섬: ${req.islands.join(", ")}
+- 목적지 섬 (반드시 이 섬만 방문, 다른 섬으로 절대 바꾸지 말 것): ${req.islands.join(", ")}
 - 여행 기간: ${req.startDate} ~ ${req.endDate} (${numDays}일)
 - 인원: ${req.travelers}명
 - 여행 스타일: ${req.travelStyle}
@@ -60,7 +69,7 @@ function buildPrompt(req: ItineraryRequest): { system: string; user: string } {
 ${req.specialRequests ? `- 특별 요청: ${req.specialRequests}` : ""}
 
 [참고 배편 정보]
-${FERRY_CONTEXT}
+${buildFerryContext(req.departurePort, req.islands)}
 
 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
@@ -142,6 +151,10 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY 환경변수가 설정되지 않았습니다");
 
+  // flash-lite로 낮춰봤다가 되돌림(2026-07-13): departurePort/islands 등 명시적으로
+  // 지정한 입력값을 무시하고 전혀 다른 섬/항구로 일정을 만들어내는 문제가 재현돼서
+  // (예: 백령도+인천항 요청 → 덕적도/풍도+대부도로 응답) 정확도가 필수인 이 함수는
+  // 다시 flash-latest로 유지. 가벼운 작업(recommend-island)에만 lite를 적용함.
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
 
   console.log("[LLM 호출] Gemini API 요청 시작");
@@ -156,9 +169,12 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
         responseSchema: ITINERARY_SCHEMA,
         temperature: 0.7,
         maxOutputTokens: 32768,
-        // gemini-flash-latest(2.5)는 기본적으로 내부 추론(thinking) 토큰을 소모하는데
-        // 이 토큰이 maxOutputTokens 예산에 포함돼, JSON 응답이 끝나기 직전에 잘리는
-        // 문제가 있었음. 구조화된 JSON 생성에는 추론이 불필요하므로 0으로 끔.
+        // ⚠️ 미해결 이슈(2026-07-13): 요청한 섬(예: 백령도)을 무시하고 다른 섬
+        // (대청도/승봉도/풍도/대이작도 등, 매번 다름)으로 일정을 만드는 문제가
+        // temperature 0.3~0.7, thinkingBudget 0~2048 여러 조합에서 재현됨 —
+        // 이 파라미터들이 원인이 아닐 가능성이 높음(원인 미확인). API 일일
+        // 할당량 소진으로 추가 조사 중단. thinkingBudget: 0은 최소한 JSON
+        // 완성도(잘림 없음)는 검증됐으므로 그 값으로 유지.
         thinkingConfig: { thinkingBudget: 0 },
       },
     }),
