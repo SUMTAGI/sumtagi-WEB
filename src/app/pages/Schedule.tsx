@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { ChevronLeft, Ship, Clock, MapPin, Bell, Bus, Car, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { getFerryScheduleForIsland, getFerryScheduleForAllIslands, type FerrySchedule as LiveFerrySchedule } from "../../lib/api/ferry";
+import { getFerryScheduleForIsland, getFerryScheduleForAllIslands, getStaticFerrySchedules, type FerrySchedule as LiveFerrySchedule, type StaticFerrySchedule } from "../../lib/api/ferry";
 import { getIslands, type Island } from "../../lib/api/islands";
 
 interface FerrySchedule {
@@ -29,6 +29,21 @@ function toFerrySchedule(live: LiveFerrySchedule, island: Island | undefined, id
     price: island?.ferry_price ?? 0,
     vessel: live.ferryName,
     status: live.status,
+  };
+}
+
+// 실시간 API 실패 시에만 쓰는 정기 시간표 폴백 — status를 "정기 시간표"로 고정해 실시간 상태와 구분
+function toStaticFerrySchedule(row: StaticFerrySchedule, island: Island | undefined, idx: number): FerrySchedule {
+  return {
+    id: `static_${row.islandId}_${row.departureTime}_${idx}`,
+    route: `${row.departurePort} ↔ ${island?.name ?? ""}`,
+    departure: row.departurePort,
+    arrival: island?.name ?? "",
+    departureTime: row.departureTime,
+    duration: island?.ferry_time ?? "",
+    price: island?.ferry_price ?? 0,
+    vessel: row.ferryName ?? "",
+    status: "정기 시간표",
   };
 }
 
@@ -135,16 +150,38 @@ export function Schedule() {
   const [ferryGroups, setFerryGroups] = useState<FerryGroup[]>([]);
   const [isFerryLoading, setIsFerryLoading] = useState(true);
   const [ferryError, setFerryError] = useState(false);
+  const [usingStaticFallback, setUsingStaticFallback] = useState(false);
   const [selectedIsland, setSelectedIsland] = useState<string>("백령도");
 
   useEffect(() => {
     getIslands().then(setIslands).catch(() => toast.error("섬 정보를 불러오지 못했어요"));
   }, []);
 
+  // 실시간 API가 실패하면 정기 시간표(ferry_schedules 테이블)로 폴백 — 일부 섬은 정기 시간표도
+  // 없을 수 있어(신규 확장 섬), 그 경우엔 빈 목록 + 에러 안내만 표시됨.
+  const loadStaticFallback = async (islandFilter: string) => {
+    const rows = await getStaticFerrySchedules(islandFilter === ALL_FERRY_FILTER ? undefined : islandFilter);
+    const byIsland = new Map<string, StaticFerrySchedule[]>();
+    for (const row of rows) {
+      if (!byIsland.has(row.islandId)) byIsland.set(row.islandId, []);
+      byIsland.get(row.islandId)!.push(row);
+    }
+    const groups: FerryGroup[] = Array.from(byIsland.entries()).map(([islandId, rows]) => {
+      const island = islands.find(i => i.id === islandId);
+      return {
+        islandName: island?.name ?? islandId,
+        schedules: rows.map((r, idx) => toStaticFerrySchedule(r, island, idx)),
+      };
+    });
+    setFerryGroups(groups);
+    setUsingStaticFallback(true);
+  };
+
   useEffect(() => {
     if (islands.length === 0) return;
     setIsFerryLoading(true);
     setFerryError(false);
+    setUsingStaticFallback(false);
 
     if (selectedFerryIsland === ALL_FERRY_FILTER) {
       getFerryScheduleForAllIslands()
@@ -157,7 +194,11 @@ export function Schedule() {
             };
           }));
         })
-        .catch(() => { setFerryError(true); toast.error("여객선 시간표를 불러오지 못했어요"); })
+        .catch(() => {
+          setFerryError(true);
+          toast.error("실시간 운항 정보가 지연되고 있어요 · 정기 시간표를 보여드릴게요");
+          loadStaticFallback(ALL_FERRY_FILTER);
+        })
         .finally(() => setIsFerryLoading(false));
       return;
     }
@@ -170,7 +211,11 @@ export function Schedule() {
           schedules: live.map((l, idx) => toFerrySchedule(l, island, idx)),
         }]);
       })
-      .catch(() => { setFerryError(true); toast.error("여객선 시간표를 불러오지 못했어요"); })
+      .catch(() => {
+        setFerryError(true);
+        toast.error("실시간 운항 정보가 지연되고 있어요 · 정기 시간표를 보여드릴게요");
+        loadStaticFallback(selectedFerryIsland);
+      })
       .finally(() => setIsFerryLoading(false));
   }, [selectedFerryIsland, islands]);
 
@@ -257,11 +302,11 @@ export function Schedule() {
             <div className="px-6 py-4 space-y-4">
               {isFerryLoading ? (
                 <div className="text-center py-12 text-gray-400 text-sm">오늘 운항 정보를 불러오는 중...</div>
-              ) : ferryError ? (
+              ) : ferryError && ferryGroups.length === 0 ? (
                 <div className="text-center py-12">
                   <Ship className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
-                  <p className="text-gray-500 mb-2">지금 운항 정보를 가져오지 못했어요</p>
-                  <p className="text-sm text-gray-400">잠시 후 다시 시도해주세요</p>
+                  <p className="text-gray-500 mb-2">실시간 정보가 지연되고 있고, 정기 시간표도 아직 준비되지 않은 섬이에요</p>
+                  <p className="text-sm text-gray-400">잠시 후 다시 시도하거나 다른 섬을 선택해주세요</p>
                 </div>
               ) : ferryGroups.length === 0 ? (
                 <div className="text-center py-12">
@@ -270,7 +315,14 @@ export function Schedule() {
                   <p className="text-sm text-gray-400">다른 섬을 선택해보세요</p>
                 </div>
               ) : (
-                ferryGroups.map(group => (
+                <>
+                {usingStaticFallback && (
+                  <div className="flex items-start gap-2 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2.5 text-sm text-orange-800">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" strokeWidth={2} />
+                    <span>실시간 운항 정보가 지연되고 있어 정기 시간표를 보여드리고 있어요. 출항 전 실제 운항 여부는 선사에 확인해주세요.</span>
+                  </div>
+                )}
+                {ferryGroups.map(group => (
                   <div key={group.islandName}>
                     {selectedFerryIsland === ALL_FERRY_FILTER && (
                       <div className="px-1 pb-1.5 text-xs font-semibold text-gray-500">{group.islandName}</div>
@@ -281,7 +333,8 @@ export function Schedule() {
                       ))}
                     </div>
                   </div>
-                ))
+                ))}
+                </>
               )}
             </div>
 

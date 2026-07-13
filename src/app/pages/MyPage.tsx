@@ -53,8 +53,9 @@ export function MyPage() {
       setFavoriteCount(favorites.length);
       setGroupCount(groups.length);
       setTripCount(count);
-      setLoading(false);
-    });
+    }).catch(() => {
+      toast.error("정보를 불러오지 못했어요");
+    }).finally(() => setLoading(false));
   }, [user]);
 
   const visitedCount = visitedTrips.length;

@@ -22,9 +22,13 @@ interface Notification {
 export function Notifications() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    notificationService.getAll().then(data => setNotifications(data));
+    notificationService.getAll()
+      .then(data => setNotifications(data))
+      .catch(() => toast.error("알림을 불러오지 못했어요"))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -76,7 +80,11 @@ export function Notifications() {
 
       {/* Notifications List */}
       <div className="">
-        {notifications.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="text-center py-12 px-6">
             <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">

@@ -20,22 +20,27 @@ export function Travel() {
 
   useEffect(() => {
     const load = async () => {
-      const [trip, trips, count, favorites] = await Promise.all([
-        tripService.getUpcomingTrip(),
-        tripService.getVisitedTrips(),
-        tripService.getTripCount(),
-        favoritesService.getFavorites(),
-      ]);
-      if (trip) {
-        setCurrentItinerary({ ...trip, startDate: trip.start_date, islands: trip.islands ?? [] });
-        setCurrentTripId(trip.id);
+      try {
+        const [trip, trips, count, favorites] = await Promise.all([
+          tripService.getUpcomingTrip(),
+          tripService.getVisitedTrips(),
+          tripService.getTripCount(),
+          favoritesService.getFavorites(),
+        ]);
+        if (trip) {
+          setCurrentItinerary({ ...trip, startDate: trip.start_date, islands: trip.islands ?? [] });
+          setCurrentTripId(trip.id);
+        }
+        const progress = await tripService.getChecklistProgress(trip?.id ?? null);
+        setChecklistProgress(progress);
+        setConfirmedTrips(trips);
+        setTripCount(count);
+        setFavorites(favorites);
+      } catch {
+        toast.error("여행 정보를 불러오지 못했어요");
+      } finally {
+        setIsLoading(false);
       }
-      const progress = await tripService.getChecklistProgress(trip?.id ?? null);
-      setChecklistProgress(progress);
-      setConfirmedTrips(trips);
-      setTripCount(count);
-      setFavorites(favorites);
-      setIsLoading(false);
     };
     load();
   }, []);

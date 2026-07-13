@@ -16,8 +16,9 @@ export function GroupJoin() {
     if (!code) { setLoading(false); return; }
     groupTripService.getGroupByInviteCode(code).then(data => {
       setGroup(data);
-      setLoading(false);
-    });
+    }).catch(() => {
+      toast.error("초대 정보를 불러오지 못했어요");
+    }).finally(() => setLoading(false));
   }, [code]);
 
   const handleJoin = async () => {

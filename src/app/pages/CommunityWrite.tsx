@@ -27,20 +27,29 @@ export function CommunityWrite() {
   useEffect(() => {
     if (!editId) return;
     (async () => {
-      const post = await communityService.getPost(editId);
-      if (post) {
-        setTitle(post.title ?? '');
-        setContent(post.content ?? '');
-        setIsland(post.island_name ?? '');
-        if (Array.isArray(post.images) && post.images.length > 0) {
-          setExistingImages(post.images);
-        } else if (post.image_url) {
-          setExistingImages([post.image_url]);
+      try {
+        const post = await communityService.getPost(editId);
+        if (post) {
+          setTitle(post.title ?? '');
+          setContent(post.content ?? '');
+          setIsland(post.island_name ?? '');
+          if (Array.isArray(post.images) && post.images.length > 0) {
+            setExistingImages(post.images);
+          } else if (post.image_url) {
+            setExistingImages([post.image_url]);
+          }
+        } else {
+          toast.error('글을 찾을 수 없어요');
+          navigate('/community', { replace: true });
         }
+      } catch {
+        toast.error('글을 불러오지 못했어요');
+        navigate('/community', { replace: true });
+      } finally {
+        setIsLoadingPost(false);
       }
-      setIsLoadingPost(false);
     })();
-  }, [editId]);
+  }, [editId, navigate]);
 
   const imageCount = existingImages.length + newFiles.length;
 

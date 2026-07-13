@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router";
-import { ChevronLeft, Ship, Clock, MapPin, Camera, Star, Heart, Share2, Waves, Wind, Sun, Users, Bot } from "lucide-react";
+import { ChevronLeft, Ship, Clock, MapPin, Camera, Star, Heart, Share2, Waves, Wind, Sun, Users, Bot, Footprints, Compass } from "lucide-react";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { toast } from "sonner";
 
@@ -7,11 +7,14 @@ const CongestionChart = lazy(() => import("../components/CongestionChart").then(
 import { fetchWeatherForIsland, type WeatherResult } from "../../lib/weatherService";
 import { IslandImage } from "../components/IslandImage";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
+import { TourApiBadge } from "../components/TourApiBadge";
 import { getIslandById, formatFerryPrice, formatAccommodationPrice, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
 import { favoritesService } from "../../lib/favoritesService";
 import { recentlyViewedService } from "../../lib/recentlyViewed";
 import { getFerryScheduleForIsland, type FerrySchedule } from "../../lib/api/ferry";
 import { getIslandCongestion, type IslandCongestionData } from "../../lib/api/congestion";
+import { getCoursesForIsland, type DurunubiCourse } from "../../lib/api/durunubi";
+import { getRelatedByIslandId, type RelatedAttraction } from "../../lib/api/relatedAttractions";
 
 export function IslandDetail() {
   const { id } = useParams();
@@ -27,6 +30,9 @@ export function IslandDetail() {
   const [congestionLoading, setCongestionLoading] = useState(true);
   const [weather, setWeather] = useState<WeatherResult["current"] | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
+  const [durunubiCourses, setDurunubiCourses] = useState<DurunubiCourse[]>([]);
+  const [durunubiLoading, setDurunubiLoading] = useState(true);
+  const [relatedAttractions, setRelatedAttractions] = useState<RelatedAttraction[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -51,10 +57,18 @@ export function IslandDetail() {
           .then((result) => setWeather(result?.current ?? null))
           .catch(() => {})
           .finally(() => setWeatherLoading(false));
+        getCoursesForIsland(id!)
+          .then(setDurunubiCourses)
+          .catch(() => {})
+          .finally(() => setDurunubiLoading(false));
+        getRelatedByIslandId(id!)
+          .then(setRelatedAttractions)
+          .catch(() => {});
       } else {
         setFerryLoading(false);
         setCongestionLoading(false);
         setWeatherLoading(false);
+        setDurunubiLoading(false);
       }
     }).finally(() => setIsLoading(false));
   }, [id]);
@@ -249,6 +263,7 @@ export function IslandDetail() {
             <Users className="w-3.5 h-3.5 text-blue-600" strokeWidth={2.5} />
           </div>
           <h3 className="font-bold text-gray-900">향후 7일 혼잡도 예측</h3>
+          <TourApiBadge />
         </div>
         {congestionLoading ? (
           <div className="h-24 flex items-center justify-center">
@@ -265,6 +280,43 @@ export function IslandDetail() {
           </Suspense>
         )}
       </div>
+
+      {/* 추천 걷기길/트레킹 코스 (두루누비) — 데이터 없는 섬은 섹션째로 숨김 */}
+      {!durunubiLoading && durunubiCourses.length > 0 && (
+        <div className="px-6 py-5 bg-white border-b border-gray-100">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <Footprints className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2.5} />
+            </div>
+            <h3 className="font-bold text-gray-900">추천 걷기길·트레킹 코스</h3>
+            <TourApiBadge />
+          </div>
+          <div className="space-y-3">
+            {durunubiCourses.slice(0, 4).map((course) => (
+              <div key={course.courseId} className="bg-emerald-50/60 rounded-xl p-4 border border-emerald-100">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h4 className="font-semibold text-gray-900">{course.courseName}</h4>
+                  <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                    course.difficulty === "easy" ? "bg-green-100 text-green-700" :
+                    course.difficulty === "medium" ? "bg-orange-100 text-orange-700" :
+                    "bg-red-100 text-red-700"}`}>
+                    {course.difficulty === "easy" ? "쉬움" : course.difficulty === "medium" ? "보통" : "어려움"}
+                  </span>
+                </div>
+                {course.summary && <p className="text-sm text-gray-600 mb-2 line-clamp-2">{course.summary}</p>}
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  {course.distanceKm > 0 && (
+                    <span className="flex items-center gap-1"><Compass className="w-3 h-3" strokeWidth={2} />{course.distanceKm}km</span>
+                  )}
+                  {course.durationMin > 0 && (
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" strokeWidth={2} />약 {Math.round(course.durationMin / 60 * 10) / 10}시간</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="px-6 py-3 bg-white border-b border-gray-200">
         <div className="flex gap-2">
@@ -412,6 +464,39 @@ export function IslandDetail() {
           </div>
         )}
       </div>
+
+      {/* 이 섬과 함께 가면 좋은 곳 (관광공사 연관관광지정보) — 데이터 없는 섬은 섹션째로 숨김 */}
+      {relatedAttractions.length > 0 && (
+        <div className="px-6 py-5 bg-gray-50 border-t border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="font-bold text-gray-900">이 섬과 함께 가면 좋은 곳</h3>
+            <TourApiBadge />
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {relatedAttractions.slice(0, 8).map((r) => (
+              <div key={r.rlatContentId || r.rlatAtsNm} className="w-36 shrink-0 bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="h-24 bg-gray-100">
+                  {r.rlatImage ? (
+                    <img src={r.rlatImage} alt={r.rlatAtsNm} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                      <MapPin className="w-6 h-6" strokeWidth={2} />
+                    </div>
+                  )}
+                </div>
+                <div className="p-2.5">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{r.rlatAtsNm}</p>
+                  {r.rlatDist > 0 && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {r.rlatDist >= 1000 ? `${(r.rlatDist / 1000).toFixed(1)}km` : `${Math.round(r.rlatDist)}m`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="px-6 py-4 bg-white border-t border-gray-200">
         <Link

@@ -1,3 +1,5 @@
+import { supabase } from '../supabase';
+
 const FERRY_API_KEY = import.meta.env.VITE_FERRY_API_KEY as string;
 const BASE_URL = 'https://apis.data.go.kr/B554035/ferry-route-info-v4/get-ferry-route-info-v4';
 
@@ -42,6 +44,17 @@ function todayKst(): string {
   return `${y}${m}${day}`;
 }
 
+// "지금 몇 시 몇 분인지"를 HHMM 정수로 반환 (sail_tm과 같은 포맷이라 직접 비교 가능)
+function nowKstHHMM(): number {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  return d.getHours() * 100 + d.getMinutes();
+}
+
+function todayKstDayOfWeek(): number {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  return d.getDay(); // 0=일 ... 6=토, ferry_schedules.days_of_week와 동일 규칙
+}
+
 function formatTime(t: string | number): string {
   const padded = String(t).padStart(4, '0');
   return `${padded.slice(0, 2)}:${padded.slice(2)}`;
@@ -49,7 +62,9 @@ function formatTime(t: string | number): string {
 
 export interface FerryRouteStatus {
   islandName: string;
-  status: '정상' | '결항' | '운항없음';
+  status: '정상' | '결항' | '운항없음' | '금일마감';
+  // '금일마감'일 때만: 오늘자 데이터 기준 첫 출항 시각(통상 매일 비슷한 시각에 첫 배가 뜨므로 "내일 첫 배" 안내에 근사치로 사용)
+  nextDeparture?: string;
 }
 
 const ALL_ISLANDS = [
@@ -144,6 +159,7 @@ async function fetchAllToday(): Promise<any[]> {
 
 export async function getHomeFerryStatus(): Promise<FerryRouteStatus[]> {
   const items = await fetchAllToday();
+  const nowHHMM = nowKstHHMM();
   return ALL_ISLANDS.map(({ id, name }) => {
     const keyword = ROUTE_KEYWORDS[id];
     const filtered = items.filter((item) =>
@@ -151,8 +167,53 @@ export async function getHomeFerryStatus(): Promise<FerryRouteStatus[]> {
     );
     if (filtered.length === 0) return { islandName: name, status: '운항없음' };
     const hasCancelled = filtered.some((item) => (item.nvg_stts_nm ?? '').includes('결항'));
-    return { islandName: name, status: hasCancelled ? '결항' : '정상' };
+    if (hasCancelled) return { islandName: name, status: '결항' };
+
+    // 오늘자 모든 항차의 출항 시각이 이미 지났으면 "정상"이 아니라 "금일마감"으로 표시
+    const sailTimes = filtered.map((item) => Number(String(item.sail_tm ?? '0').padStart(4, '0')));
+    const lastSail = Math.max(...sailTimes);
+    const firstSail = Math.min(...sailTimes);
+    if (nowHHMM > lastSail) {
+      return { islandName: name, status: '금일마감', nextDeparture: formatTime(firstSail) };
+    }
+    return { islandName: name, status: '정상' };
   });
+}
+
+// ─── 정기 시간표 폴백 (실시간 API 실패 시 사용) ────────────────────────────────
+// ferry_schedules 테이블은 관공서 API 연동 전 초기 데모 시드로 채워졌던 정적 시간표.
+// 지금은 화면에서 안 쓰이고 있었지만(실시간 API로 대체됨), 실시간 API가 죽었을 때
+// "확인 불가" 대신 보여줄 수 있는 유일한 대체 데이터 소스라 여기서 재활용한다.
+// 일부 섬(특히 2026-07 확장분)은 이 테이블에 데이터가 없을 수 있음 — 그 경우 빈 배열 반환.
+export interface StaticFerrySchedule {
+  islandId: string;
+  departurePort: string;
+  departureTime: string;
+  arrivalTime: string | null;
+  ferryName: string | null;
+}
+
+export async function getStaticFerrySchedules(islandId?: string): Promise<StaticFerrySchedule[]> {
+  let query = supabase
+    .from('ferry_schedules')
+    .select('island_id, departure_port, departure_time, arrival_time, ferry_name, days_of_week')
+    .eq('is_active', true)
+    .order('departure_time');
+  if (islandId) query = query.eq('island_id', islandId);
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+
+  const today = todayKstDayOfWeek();
+  return (data as any[])
+    .filter((row) => !Array.isArray(row.days_of_week) || row.days_of_week.includes(today))
+    .map((row) => ({
+      islandId: row.island_id,
+      departurePort: row.departure_port,
+      departureTime: String(row.departure_time).slice(0, 5),
+      arrivalTime: row.arrival_time ? String(row.arrival_time).slice(0, 5) : null,
+      ferryName: row.ferry_name ?? null,
+    }));
 }
 
 function schedulesFromItems(items: any[], keyword: string): FerrySchedule[] {

@@ -51,6 +51,9 @@ export function Itinerary() {
       } else {
         navigate("/travel");
       }
+    }).catch(() => {
+      toast.error("일정을 불러오지 못했어요. 다시 시도해주세요");
+      navigate("/travel");
     });
   }, [id, navigate]);
 
@@ -326,6 +329,23 @@ export function Itinerary() {
           )}
         </div>
       </div>
+
+      {/* AI 일정 데이터 근거 — 관광공사 API 데이터를 실제로 반영했을 때만 표시 */}
+      {!isEditMode && ((itinerary as any).dataBasis?.length > 0) && (
+        <div className="bg-blue-50 border-b border-blue-100 px-6 py-4">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="text-[11px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">관광공사 데이터 근거</span>
+          </div>
+          <ul className="space-y-1">
+            {(itinerary as any).dataBasis.map((line: string, i: number) => (
+              <li key={i} className="text-sm text-blue-900 flex items-start gap-1.5">
+                <span className="text-blue-400 mt-0.5">·</span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Weather/Ferry Risk Banner */}
       {risks.length > 0 && !isEditMode && (
