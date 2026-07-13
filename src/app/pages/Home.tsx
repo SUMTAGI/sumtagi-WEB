@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import {
   Ship, MapPin, Calendar, Sparkles, Shield, Heart,
-  Bell, Camera, Users, DollarSign, Cloud, Waves, ArrowRight, MessageCircle, ThumbsUp, Eye,
+  Bell, Camera, Users, DollarSign, Cloud, Waves, ArrowRight, MessageCircle, ThumbsUp, Eye, Bot,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { WeatherWidget, WeeklyForecast } from "../components/WeatherWidget";
@@ -650,6 +650,15 @@ function DesktopDashboard({
         </div>
 
       </div>
+
+      {/* AI 챗봇 플로팅 버튼 — 고객센터 안에 묻혀 있어 진입성이 낮다는 피드백으로 홈에도 노출 */}
+      <Link
+        to="/support?chat=1"
+        className="fixed bottom-24 right-4 z-40 lg:bottom-8 lg:right-8 w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center active:scale-95 hover:bg-blue-700 transition-all"
+        aria-label="AI 챗봇에게 물어보기"
+      >
+        <Bot className="w-6 h-6 text-white" strokeWidth={2} />
+      </Link>
     </div>
   );
 }
