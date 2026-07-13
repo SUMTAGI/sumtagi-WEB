@@ -38,8 +38,9 @@ async function fetchIslandTourContext(islandName: string): Promise<string> {
   if (!islandId) return "";
 
   const headers = { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` };
-  const fetchTable = async (table: string, select: string, orderBy: string) => {
-    const url = `${supabaseUrl}/rest/v1/${table}?island_id=eq.${islandId}&select=${select}&order=${orderBy}&limit=8`;
+  const fetchTable = async (table: string, select: string, filter: string, orderBy?: string) => {
+    const order = orderBy ? `&order=${orderBy}` : "";
+    const url = `${supabaseUrl}/rest/v1/${table}?${filter}&select=${select}${order}&limit=8`;
     try {
       const res = await fetch(url, { headers });
       if (!res.ok) return [];
@@ -49,15 +50,33 @@ async function fetchIslandTourContext(islandName: string): Promise<string> {
     }
   };
 
-  const [attractions, restaurants, accommodations] = await Promise.all([
-    fetchTable("attractions", "name,category,description", "order_index.asc"),
-    fetchTable("restaurants", "name,cuisine,specialty", "order_index.asc"),
-    fetchTable("accommodations", "name,type", "order_index.asc"),
+  const [islandRows, attractions, restaurants, accommodations] = await Promise.all([
+    fetchTable("islands", "ports,ferry_time,ferry_price,congestion,best_season,features,description", `id=eq.${islandId}`),
+    fetchTable("attractions", "name,category,description", `island_id=eq.${islandId}`, "order_index.asc"),
+    fetchTable("restaurants", "name,cuisine,specialty", `island_id=eq.${islandId}`, "order_index.asc"),
+    fetchTable("accommodations", "name,type", `island_id=eq.${islandId}`, "order_index.asc"),
   ]);
 
-  if (attractions.length === 0 && restaurants.length === 0 && accommodations.length === 0) return "";
-
   const lines: string[] = [];
+
+  // 섬 기본 정보(출발항/소요시간/요금/성수기/혼잡도/특징) — 이건 매일 바뀌는 실시간 상태가 아니라
+  // islands 테이블에 저장된 고정 정보라서 챗봇이 그대로 답변에 써도 됨.
+  const island = islandRows[0];
+  if (island) {
+    const congestionLabel = { low: "한산", medium: "보통", high: "혼잡" }[island.congestion as string] ?? null;
+    const basics: string[] = [];
+    if (island.ports?.length) basics.push(`출발항 ${island.ports.join("/")}`);
+    if (island.ferry_time) basics.push(`소요시간 약 ${island.ferry_time}`);
+    if (typeof island.ferry_price === "number") basics.push(`요금 약 ${island.ferry_price.toLocaleString()}원`);
+    else basics.push(`요금 미확인(고객센터 문의 필요)`);
+    if (island.best_season) basics.push(`추천 시기 ${island.best_season}`);
+    if (congestionLabel) basics.push(`현재 혼잡도 ${congestionLabel}`);
+    if (island.features?.length) basics.push(`특징: ${island.features.join(", ")}`);
+    if (basics.length > 0) {
+      lines.push(`기본 정보: ${basics.join(" · ")}`);
+    }
+  }
+
   if (attractions.length > 0) {
     lines.push(`관광지: ${attractions.map((a: any) => `${a.name}${a.category ? `(${a.category})` : ""}`).join(", ")}`);
   }
@@ -68,7 +87,9 @@ async function fetchIslandTourContext(islandName: string): Promise<string> {
     lines.push(`숙박: ${accommodations.map((a: any) => `${a.name}${a.type ? `(${a.type})` : ""}`).join(", ")}`);
   }
 
-  return `\n[${islandName} 실제 관광지/맛집/숙박 정보 — 질문에 관련 있으면 이 안의 실제 이름을 활용하세요. 목록에 없는 구체적 상호명은 지어내지 마세요.]\n${lines.join("\n")}`;
+  if (lines.length === 0) return "";
+
+  return `\n[${islandName} 실제 정보 — 질문에 관련 있으면 이 안의 실제 정보를 그대로 활용해 답변하세요. "기본 정보"의 출발항/소요시간/요금/혼잡도/특징은 고정 데이터이니 자신 있게 답하세요. 목록에 없는 구체적 상호명·전화번호는 지어내지 마세요.]\n${lines.join("\n")}`;
 }
 
 function detectIslandInText(text: string): string | null {
@@ -96,9 +117,9 @@ function buildPrompt(messages: ChatMessage[], tourContext: string): { system: st
   const system = `당신은 인천 옹진군 섬 여행 서비스 'sumtagi'의 상담 챗봇입니다.
 다음 두 범위 안에서만 답변하세요:
 1) 서비스 이용 방법(예약/취소/결제/그룹여행) — 아래 [FAQ 지식]을 근거로 답변
-2) 인천 옹진군 22개 섬 여행 정보 — [실제 관광지/맛집/숙박 정보]가 주어지면 그 안의 실제 이름만 언급, 없으면 일반적인 조언만 하세요.
-절대로 지어내지 말아야 할 것: 오늘의 실제 여객선 운항 여부, 현재 날씨, 컨텍스트에 없는 구체적 요금·전화번호·영업시간.
-이런 실시간/미확인 정보를 물으면 "교통 시간표 페이지"나 "고객센터(1588-0000)"로 안내하고 직접 답하지 마세요.
+2) 인천 옹진군 22개 섬 여행 정보 — [OO 실제 정보]가 주어지면 "어떻게 가?", "얼마나 걸려?", "얼마야?", "지금 붐벼?" 같은 질문에 그 안의 "기본 정보"(출발항/소요시간/요금/성수기/혼잡도/특징)로 자신 있게 직접 답하세요. 회피하거나 고객센터로 넘기지 마세요. 관광지/맛집/숙박도 목록에 실제로 있으면 이름을 그대로 언급하세요.
+절대로 지어내지 말아야 할 것: 오늘 실제로 배가 뜨는지/결항인지 같은 "지금 이 순간"의 운항 여부, 현재 날씨, 컨텍스트에 없는 구체적 상호명·전화번호·영업시간.
+이런 진짜 실시간/미확인 정보만 "교통 시간표 페이지"나 "고객센터(1588-0000)"로 안내하고, 컨텍스트에 있는 정보까지 그쪽으로 떠넘기지 마세요.
 서비스와 무관한 질문(일반 상식, 다른 지역 여행 등)은 정중히 범위를 벗어난다고 안내하고 거절하세요.
 답변은 2~4문장 이내로 짧고 친근하게, 순수 텍스트로만 작성하세요(마크다운/코드블록 금지).
 

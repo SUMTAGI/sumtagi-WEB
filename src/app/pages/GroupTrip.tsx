@@ -24,10 +24,15 @@ export function GroupTrip() {
   const [newGroup, setNewGroup] = useState({ name: "", destination: "", startDate: "", endDate: "" });
 
   const loadGroups = useCallback(async () => {
-    const data = await groupTripService.getMyGroups();
-    setGroups(data);
-    if (data.length > 0 && !activeGroupId) setActiveGroupId(data[0].id);
-    setLoading(false);
+    try {
+      const data = await groupTripService.getMyGroups();
+      setGroups(data);
+      if (data.length > 0 && !activeGroupId) setActiveGroupId(data[0].id);
+    } catch {
+      toast.error("그룹 정보를 불러오지 못했어요");
+    } finally {
+      setLoading(false);
+    }
   }, [activeGroupId]);
 
   useEffect(() => { loadGroups(); }, []);

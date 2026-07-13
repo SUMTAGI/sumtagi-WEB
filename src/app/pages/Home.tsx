@@ -17,6 +17,7 @@ import { recentlyViewedService, type RecentIsland } from "../../lib/recentlyView
 import { IslandImage } from "../components/IslandImage";
 import { OceanScene } from "../components/OceanScene";
 import { AiIslandSearchBar } from "../components/AiIslandSearchBar";
+import { TourApiBadge } from "../components/TourApiBadge";
 
 // 계절에 맞춰 "오늘의 AI 추천" 스타일을 결정 — 실제 취향 데이터가 쌓이기 전까지의 합리적 기본값
 function seasonalTravelStyle(): string {
@@ -214,17 +215,24 @@ export function Home() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-gray-900">실시간 운항 현황</h3>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <div className={`w-2 h-2 rounded-full ${ferryError ? "bg-gray-300" : "bg-green-500 animate-pulse"}`} />
                 <button onClick={() => setShowFerryModal(true)} className="text-xs text-blue-600 font-medium">전체보기</button>
               </div>
             </div>
             <div className="space-y-2">
-              {(ferryStatus.length > 0
-                ? ferryStatus.slice(0, 3)
-                : ["백령도", "덕적도", "영흥도"].map((name) => ({ islandName: name, status: "확인중" }))
-              ).map((s) => (
-                <MobileStatusItem key={s.islandName} island={s.islandName} status={s.status} />
-              ))}
+              {ferryError ? (
+                <div className="text-center py-2">
+                  <p className="text-sm text-gray-500 mb-1">실시간 정보가 지연되고 있어요</p>
+                  <Link to="/schedule" className="text-xs text-blue-600 font-medium underline">정기 시간표 보기</Link>
+                </div>
+              ) : (
+                (ferryStatus.length > 0
+                  ? ferryStatus.map((s) => ({ islandName: s.islandName, status: s.status as string, nextDeparture: s.nextDeparture }))
+                  : ["백령도", "덕적도", "영흥도"].map((name) => ({ islandName: name, status: "확인중", nextDeparture: undefined as string | undefined }))
+                ).slice(0, 3).map((s) => (
+                  <MobileStatusItem key={s.islandName} island={s.islandName} status={s.status} nextDeparture={s.nextDeparture} />
+                ))
+              )}
             </div>
           </div>
 
@@ -249,19 +257,29 @@ export function Home() {
                 <h3 className="text-lg font-bold text-gray-900">전체 운항 현황</h3>
                 <button onClick={() => setShowFerryModal(false)} className="text-gray-400 text-2xl leading-none">&times;</button>
               </div>
-              <div className="space-y-3">
-                {ferryStatus.map((s) => (
-                  <div key={s.islandName} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                    <span className="text-gray-800 font-medium">{s.islandName}</span>
-                    <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
-                      s.status === "결항" ? "bg-red-100 text-red-700" :
-                      s.status === "운항없음" ? "bg-gray-100 text-gray-400" :
-                      "bg-green-100 text-green-700"}`}>
-                      {s.status === "정상" ? "정상 운항" : s.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {ferryError ? (
+                <div className="text-center py-6">
+                  <p className="text-sm text-gray-500 mb-2">실시간 정보가 지연되고 있어요</p>
+                  <Link to="/schedule" className="text-sm text-blue-600 font-medium underline">정기 시간표 보기</Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {ferryStatus.map((s) => (
+                    <div key={s.islandName} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                      <span className="text-gray-800 font-medium">{s.islandName}</span>
+                      <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
+                        s.status === "결항" ? "bg-red-100 text-red-700" :
+                        s.status === "운항없음" ? "bg-gray-100 text-gray-400" :
+                        s.status === "금일마감" ? "bg-gray-100 text-gray-500" :
+                        "bg-green-100 text-green-700"}`}>
+                        {s.status === "정상" ? "정상 운항" :
+                         s.status === "금일마감" ? `오늘 마감${s.nextDeparture ? ` · 내일 ${s.nextDeparture}` : ""}` :
+                         s.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -295,12 +313,19 @@ function DesktopDashboard({
   const aiRecommendedIslands = getRecommendedIslands(aiStyle);
   const islandByName = new Map(allIslands.map((i) => [i.name, i]));
 
-  const normalCount = ferryStatus.filter((s) => s.status === "정상").length;
+  const normalCount    = ferryStatus.filter((s) => s.status === "정상").length;
+  const cancelledCount = ferryStatus.filter((s) => s.status === "결항").length;
+  const endedCount     = ferryStatus.filter((s) => s.status === "금일마감").length;
   const ferryText =
-    ferryError                        ? "확인 불가" :
-    ferryStatus.length === 0          ? "로딩 중..." :
-    normalCount === ferryStatus.length ? "전 노선 정상 운항" :
-                                         `${normalCount}/${ferryStatus.length}개 노선 정상`;
+    ferryError                                     ? "실시간 정보 지연" :
+    ferryStatus.length === 0                       ? "로딩 중..." :
+    normalCount === ferryStatus.length              ? "전 노선 정상 운항" :
+    normalCount === 0 && cancelledCount === 0 && endedCount > 0 ? "오늘 운항 마감" :
+                                                       `${normalCount}/${ferryStatus.length}개 노선 정상`;
+  const ferrySubtext =
+    ferryError ? "정기 시간표 보기" :
+    normalCount === 0 && cancelledCount === 0 && endedCount > 0 ? "내일 첫 배부터 다시 운항해요" :
+    "오늘 전체 노선 기준";
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
@@ -387,14 +412,16 @@ function DesktopDashboard({
                 <div className={`w-1.5 h-1.5 rounded-full ${
                   ferryError ? "bg-gray-300" :
                   ferryStatus.length === 0 ? "bg-gray-300" :
-                  normalCount === ferryStatus.length ? "bg-green-500 animate-pulse" : "bg-orange-400"
+                  normalCount === ferryStatus.length ? "bg-green-500 animate-pulse" :
+                  normalCount === 0 && cancelledCount === 0 && endedCount > 0 ? "bg-gray-300" :
+                  "bg-orange-400"
                 }`} />
-                <span className="text-[11px] text-gray-400 font-medium">실시간</span>
+                <span className="text-[11px] text-gray-400 font-medium">{ferryError ? "지연" : "실시간"}</span>
               </div>
             </div>
             <p className="text-[11px] text-gray-400 font-semibold mb-1.5 uppercase tracking-wide">운항 현황</p>
             <p className="text-[19px] font-bold text-gray-900 leading-tight">{ferryText}</p>
-            <p className="text-xs text-gray-400 mt-2">오늘 전체 노선 기준</p>
+            <p className="text-xs text-gray-400 mt-2">{ferrySubtext}</p>
           </Link>
 
           {/* 날씨 */}
@@ -499,7 +526,10 @@ function DesktopDashboard({
           {/* 우: 인기 섬 추천 — Airbnb 스타일 3열 이미지 카드 */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[15px] font-bold text-gray-900">인기 섬 추천</h2>
+              <h2 className="text-[15px] font-bold text-gray-900 flex items-center gap-1.5">
+                인기 섬 추천
+                <TourApiBadge />
+              </h2>
               <Link to="/islands"
                 className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
               >
@@ -561,8 +591,13 @@ function DesktopDashboard({
           <div>
             <h2 className="text-[15px] font-bold text-gray-900 mb-3">실시간 운항 현황</h2>
             <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60">
-              {ferryStatus.length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">{ferryError ? "운항 정보를 불러올 수 없어요" : "불러오는 중..."}</p>
+              {ferryError ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-500 mb-1">실시간 정보가 지연되고 있어요</p>
+                  <Link to="/schedule" className="text-xs text-blue-600 font-medium underline">정기 시간표 보기</Link>
+                </div>
+              ) : ferryStatus.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">불러오는 중...</p>
               ) : (
                 <div className="space-y-3">
                   {ferryStatus.slice(0, 4).map((s) => (
@@ -571,8 +606,11 @@ function DesktopDashboard({
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                         s.status === "결항" ? "bg-red-50 text-red-600" :
                         s.status === "운항없음" ? "bg-gray-100 text-gray-400" :
+                        s.status === "금일마감" ? "bg-gray-100 text-gray-500" :
                         "bg-green-50 text-green-700"}`}>
-                        {s.status === "정상" ? "정상 운항" : s.status}
+                        {s.status === "정상" ? "정상 운항" :
+                         s.status === "금일마감" ? `오늘 마감${s.nextDeparture ? ` · 내일 ${s.nextDeparture}` : ""}` :
+                         s.status}
                       </span>
                     </div>
                   ))}
@@ -665,15 +703,17 @@ function DesktopDashboard({
 
 // ─── 모바일 전용 보조 컴포넌트 ───────────────────────────────────────────────
 
-function MobileStatusItem({ island, status }: { island: string; status: string }) {
+function MobileStatusItem({ island, status, nextDeparture }: { island: string; status: string; nextDeparture?: string }) {
   const color =
     status === "결항"    ? "text-red-600"   :
     status === "운항없음" ? "text-gray-400"  :
+    status === "금일마감" ? "text-gray-500"  :
     status === "확인중"  ? "text-gray-400"  : "text-green-600";
   const label =
     status === "정상"    ? "정상 운항" :
     status === "결항"    ? "결항"      :
-    status === "운항없음" ? "운항없음"  : "확인중...";
+    status === "운항없음" ? "운항없음"  :
+    status === "금일마감" ? `오늘 마감${nextDeparture ? ` · 내일 ${nextDeparture}` : ""}` : "확인중...";
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-gray-700">{island}</span>

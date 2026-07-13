@@ -17,6 +17,10 @@ interface ItineraryRequest {
   budget: string;
   specialRequests?: string;
   provider?: LLMProvider;
+  // 관광공사 OpenAPI 컨텍스트 — 클라이언트(aiItinerary.ts의 enrichRequestContext)가 미리 조회해서 보냄
+  routingHints?:  Record<string, string[]>;  // 섬 id → 연관관광지명 목록
+  demandLevels?:  Record<string, string>;    // 섬 id → 수요강도(low/medium/high)
+  specialFilter?: string;                    // "eco" | "barrier_free" | "pet_friendly"
 }
 
 // ─── 배편 컨텍스트 (LLM 환각 방지) ──────────────────────────────────────────
@@ -101,9 +105,51 @@ async function fetchIslandTourContext(islands: string[]): Promise<string> {
   return `\n[참고: 실제 관광지/맛집/숙박 정보 — 아래 실제 이름을 최대한 활용해서 일정을 구성하세요.\n목록에 없는 구체적 상호명은 지어내지 말고, 필요하면 "현지 식당", "민박" 같은 일반적 표현을 쓰세요.]\n${lines.join("\n")}`;
 }
 
+// ─── 클라이언트가 미리 조회해온 관광공사 컨텍스트(연관관광지/수요강도/특수여행) ──
+// aiItinerary.ts의 enrichRequestContext가 섬 id 기준으로 계산해서 보내는데, 이 값들을
+// 실제로 프롬프트에 반영하지 않고 있었던 게 발견됨(요청은 받지만 안 씀) — 여기서 연결.
+
+const SPECIAL_FILTER_LABEL: Record<string, string> = {
+  eco: "생태관광",
+  barrier_free: "무장애여행",
+  pet_friendly: "반려동물동반여행",
+};
+
+function buildDataApiContext(req: ItineraryRequest): string {
+  const idToName: Record<string, string> = {};
+  for (const [name, id] of Object.entries(ISLAND_NAME_TO_ID)) idToName[id] = name;
+
+  const parts: string[] = [];
+
+  if (req.routingHints) {
+    const lines = Object.entries(req.routingHints)
+      .filter(([, names]) => names.length > 0)
+      .map(([islandId, names]) => `${idToName[islandId] ?? islandId}: ${names.slice(0, 5).join(", ")}`);
+    if (lines.length > 0) {
+      parts.push(`[관광공사 연관관광지 정보 — 목적지 섬과 실제로 가까운 관광지입니다. 코스에 활용하면 dataBasis에 근거로 남기세요]\n${lines.join("\n")}`);
+    }
+  }
+
+  if (req.demandLevels) {
+    const levelLabel: Record<string, string> = { low: "한산", medium: "보통", high: "혼잡" };
+    const lines = Object.entries(req.demandLevels)
+      .map(([islandId, level]) => `${idToName[islandId] ?? islandId}: ${levelLabel[level] ?? level}`);
+    if (lines.length > 0) {
+      parts.push(`[관광공사 지역별관광수요강도 — 현재 혼잡도입니다. 혼잡하면 오전/평일 방문을 우선하고, 한산하면 자유롭게 배치하되 그 판단을 dataBasis에 남기세요]\n${lines.join("\n")}`);
+    }
+  }
+
+  if (req.specialFilter) {
+    const label = SPECIAL_FILTER_LABEL[req.specialFilter] ?? req.specialFilter;
+    parts.push(`[사용자가 "${label}" 여행 스타일을 선택했습니다. 관광공사 ${label} 데이터에 해당하는 시설/코스를 일정에 우선 반영하고, 그 사실을 dataBasis에 남기세요]`);
+  }
+
+  return parts.length > 0 ? `\n${parts.join("\n\n")}` : "";
+}
+
 // ─── 프롬프트 생성 ────────────────────────────────────────────────────────────
 
-function buildPrompt(req: ItineraryRequest, tourContext: string): { system: string; user: string } {
+function buildPrompt(req: ItineraryRequest, tourContext: string, dataApiContext: string): { system: string; user: string } {
   const ms = new Date(req.endDate).getTime() - new Date(req.startDate).getTime();
   const numDays = Math.ceil(ms / (1000 * 60 * 60 * 24)) + 1;
 
@@ -114,7 +160,11 @@ function buildPrompt(req: ItineraryRequest, tourContext: string): { system: stri
 일정에 등장하는 모든 장소(숙소·식당·관광지)는 반드시 사용자가 지정한 섬 안에만 있어야 합니다.
 [참고 배편 정보]에 나오지 않는 다른 섬 이름을 절대 등장시키지 마세요.
 [참고: 실제 관광지/맛집/숙박 정보]가 주어지면 그 안의 실제 이름을 우선적으로 활용하세요.
-tips/cautions/highlights는 각각 핵심만 최대 6개로 간결하게 작성하세요. 비슷한 문구를 반복하지 마세요.`;
+tips/cautions/highlights는 각각 핵심만 최대 6개로 간결하게 작성하세요. 비슷한 문구를 반복하지 마세요.
+dataBasis는 "왜 이렇게 짰는지"를 관광공사 데이터에 근거해 설명하는 필드입니다. 아래 [관광공사 연관관광지 정보]/
+[관광공사 지역별관광수요강도]/[여행 스타일] 컨텍스트가 주어지면 그 내용을 실제로 일정에 반영하고, 반영한 이유를
+1문장씩 최대 4개로 적으세요(예: "혼잡도 예측상 오전 방문이 한산해요 (관광공사 수요강도 데이터)"). 이 컨텍스트가
+전혀 주어지지 않으면 dataBasis는 빈 배열로 두고 지어내지 마세요.`;
 
   const user = `다음 조건으로 ${numDays}일 섬 여행 일정을 만들어주세요:
 - 출발 항구: ${req.departurePort}
@@ -128,6 +178,7 @@ ${req.specialRequests ? `- 특별 요청: ${req.specialRequests}` : ""}
 [참고 배편 정보]
 ${buildFerryContext(req.departurePort, req.islands)}
 ${tourContext}
+${dataApiContext}
 
 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
@@ -152,7 +203,8 @@ ${tourContext}
   "tips": ["팁1", "팁2"],
   "cautions": ["주의사항1", "주의사항2"],
   "estimatedTotalCost": 150000,
-  "highlights": ["핵심 볼거리1", "핵심 볼거리2"]
+  "highlights": ["핵심 볼거리1", "핵심 볼거리2"],
+  "dataBasis": ["관광공사 데이터에 근거한 판단 이유1"]
 }`;
 
   return { system, user };
@@ -202,8 +254,9 @@ const ITINERARY_SCHEMA = {
     cautions: { type: "ARRAY", items: { type: "STRING" }, maxItems: 6 },
     estimatedTotalCost: { type: "INTEGER" },
     highlights: { type: "ARRAY", items: { type: "STRING" }, maxItems: 6 },
+    dataBasis: { type: "ARRAY", items: { type: "STRING" }, maxItems: 4 },
   },
-  required: ["title", "days"],
+  required: ["title", "days", "dataBasis"],
 };
 
 async function callGemini(prompt: { system: string; user: string }): Promise<string> {
@@ -369,7 +422,8 @@ serve(async (req: Request) => {
     }
 
     const tourContext = await fetchIslandTourContext(body.islands);
-    const prompt = buildPrompt(body, tourContext);
+    const dataApiContext = buildDataApiContext(body);
+    const prompt = buildPrompt(body, tourContext, dataApiContext);
 
     // LLM 호출 (1회 자동 재시도)
     let raw: string;

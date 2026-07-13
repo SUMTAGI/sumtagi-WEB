@@ -52,6 +52,8 @@ export type GeneratedItineraryWithMeta = GeneratedItinerary & {
   tips?: string[];
   cautions?: string[];
   highlights?: string[];
+  // 관광공사 데이터(연관관광지/수요강도/특수여행)를 근거로 왜 이렇게 짰는지 설명하는 짧은 문장들
+  dataBasis?: string[];
 };
 
 // ─── Edge Function 응답 → GeneratedItinerary 변환 ────────────────────────────
@@ -107,6 +109,7 @@ async function callEdgeFunction(req: AIItineraryRequest): Promise<GeneratedItine
     tips:        data.itinerary.tips       ?? [],
     cautions:    data.itinerary.cautions   ?? [],
     highlights:  data.itinerary.highlights ?? [],
+    dataBasis:   data.itinerary.dataBasis  ?? [],
   };
 }
 
@@ -168,6 +171,7 @@ async function buildScriptItinerary(
   const base = generateItineraryFallback(formData)
 
   // 특수 여행 관광지가 있으면 첫날에 삽입
+  const dataBasis: string[] = []
   if (extraAttractions.length > 0 && base.days.length > 0) {
     const extra = extraAttractions.slice(0, 2).map((a: any, i: number) => ({
       id:          `special-fallback-${i}`,
@@ -180,11 +184,16 @@ async function buildScriptItinerary(
       congestionLevel: 'low' as const,
     }))
     base.days[0].activities.push(...extra)
+
+    const styleLabel: Record<string, string> = { '생태': '생태관광', '무장애': '무장애여행', '반려동물': '반려동물동반여행' }
+    const label = styleLabel[req.travelStyle] ?? req.travelStyle
+    dataBasis.push(`"${req.travelStyle}" 스타일에 맞춰 관광공사 ${label} 데이터의 실제 장소(${extra.map(e => e.title).join(', ')})를 일정에 반영했어요.`)
   }
 
   return {
     ...base,
     generatedBy,
+    dataBasis,
   };
 }
 

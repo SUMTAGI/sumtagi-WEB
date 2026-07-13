@@ -7,12 +7,14 @@ import { IslandImage } from "../components/IslandImage";
 import { Link, useSearchParams } from "react-router";
 import { getIslands, formatFerryPrice, type Island } from "../../lib/api/islands";
 import { getAllIslandsCongestion, type IslandCongestionData } from "../../lib/api/congestion";
+import { getAllIslandsDemand } from "../../lib/api/demandIntensity";
+import { TourApiBadge } from "../components/TourApiBadge";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
 type PortFilter = "all" | "인천항" | "대부도" | "삼목선착장";
 type CongestionFilter = "all" | "low" | "medium" | "high";
-type SortOrder = "default" | "price_asc" | "price_desc";
+type SortOrder = "default" | "price_asc" | "price_desc" | "demand_desc";
 type ViewMode = "list" | "map";
 
 interface Port {
@@ -109,6 +111,7 @@ function InitialBounds({ markers }: { markers: MarkerItem[] }) {
 export function Islands() {
   const [islands, setIslands] = useState<Island[]>([]);
   const [congestionMap, setCongestionMap] = useState<Record<string, IslandCongestionData>>({});
+  const [demandMap, setDemandMap] = useState<Record<string, 'low' | 'medium' | 'high'>>({});
   const [portFilter, setPortFilter] = useState<"all" | "인천항" | "대부도" | "삼목선착장">("all");
   const [congestionFilter, setCongestionFilter] = useState<"all" | "low" | "medium" | "high">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,10 +134,21 @@ export function Islands() {
     getAllIslandsCongestion()
       .then(setCongestionMap)
       .catch(() => {});
+    getAllIslandsDemand()
+      .then(setDemandMap)
+      .catch(() => {});
   }, []);
 
   const effectiveCongestion = (island: Island) =>
     (congestionMap[island.id]?.todayLevel ?? island.congestion);
+
+  // 관광공사 지역별관광수요강도 API 기준 "인기 급상승" — 실시간 데이터가 없는 섬은
+  // 기존 정적 popularity_trend 컬럼으로 폴백(완전히 새 기능이라 실데이터 커버리지가
+  // 100%가 아닐 수 있어, 갑자기 배지가 사라지는 회귀를 피하기 위함).
+  const isTrending = (island: Island) =>
+    demandMap[island.id] ? demandMap[island.id] === "high" : island.popularity_trend === "up";
+
+  const demandRank: Record<string, number> = { high: 2, medium: 1, low: 0 };
 
   const filteredIslands = islands.filter(island => {
     const portMatch = portFilter === "all" || island.ports.includes(portFilter);
@@ -151,8 +165,11 @@ export function Islands() {
     // 요금 미확인(null) 섬은 정렬 방향과 무관하게 항상 맨 뒤로
     if (sortOrder === "price_asc") return arr.sort((a, b) => (a.ferry_price ?? Infinity) - (b.ferry_price ?? Infinity));
     if (sortOrder === "price_desc") return arr.sort((a, b) => (b.ferry_price ?? -Infinity) - (a.ferry_price ?? -Infinity));
+    if (sortOrder === "demand_desc") {
+      return arr.sort((a, b) => (demandRank[demandMap[b.id] ?? ""] ?? -1) - (demandRank[demandMap[a.id] ?? ""] ?? -1));
+    }
     return arr;
-  }, [filteredIslands, sortOrder]);
+  }, [filteredIslands, sortOrder, demandMap]);
 
   const portCount = (port: string) => islands.filter(i => i.ports.includes(port)).length;
   const congestionCount = (level: "low" | "medium" | "high") =>
@@ -259,8 +276,9 @@ export function Islands() {
 
             {/* 혼잡도 */}
             <div className="mb-7">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                 혼잡도
+                <TourApiBadge />
               </p>
               <div className="space-y-0.5">
                 {(
@@ -353,6 +371,7 @@ export function Islands() {
                       className="appearance-none text-sm text-gray-700 bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
                     >
                       <option value="default">기본순</option>
+                      <option value="demand_desc">인기순 (관광공사 수요강도)</option>
                       <option value="price_asc">요금 낮은순</option>
                       <option value="price_desc">요금 높은순</option>
                     </select>
@@ -382,6 +401,7 @@ export function Islands() {
                       key={island.id}
                       island={island}
                       congestionLevel={effectiveCongestion(island)}
+                      trending={isTrending(island)}
                     />
                   ))}
                 </div>
@@ -469,7 +489,7 @@ export function Islands() {
               <div className="space-y-4">
                 {filteredIslands.map((island, index) => (
                   <div key={island.id} className="animate-stagger-item" style={{ animationDelay: `${index * 0.05}s` }}>
-                    <IslandCardMobile island={island} congestionLevel={effectiveCongestion(island)} />
+                    <IslandCardMobile island={island} congestionLevel={effectiveCongestion(island)} trending={isTrending(island)} />
                   </div>
                 ))}
                 {filteredIslands.length === 0 && (
@@ -700,9 +720,11 @@ function MarkerDetailCard({ marker, onClose }: { marker: MarkerItem; onClose: ()
 function IslandCardDesktop({
   island,
   congestionLevel,
+  trending,
 }: {
   island: Island;
   congestionLevel: "low" | "medium" | "high";
+  trending: boolean;
 }) {
   const badge = CONGESTION_CONFIG[congestionLevel];
 
@@ -721,7 +743,7 @@ function IslandCardDesktop({
         >
           {badge.label}
         </span>
-        {island.popularity_trend === "up" && (
+        {trending && (
           <span className="absolute top-3 right-3 flex items-center gap-1 text-xs font-semibold text-white bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
             <TrendingUp className="w-3 h-3" strokeWidth={2.5} />
             인기 급상승
@@ -793,7 +815,7 @@ function FilterButton({
   );
 }
 
-function IslandCardMobile({ island, congestionLevel }: { island: Island; congestionLevel: "low" | "medium" | "high" }) {
+function IslandCardMobile({ island, congestionLevel, trending }: { island: Island; congestionLevel: "low" | "medium" | "high"; trending: boolean }) {
   const getCongestionBadge = () => {
     const config = {
       low:    { label: "여유", color: "bg-green-500 text-white" },
@@ -809,6 +831,12 @@ function IslandCardMobile({ island, congestionLevel }: { island: Island; congest
       <div className="relative h-60">
         <IslandImage src={island.image} alt={island.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+        {trending && (
+          <span className="absolute top-3 right-3 flex items-center gap-1 text-xs font-semibold text-white bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
+            <TrendingUp className="w-3 h-3" strokeWidth={2.5} />
+            인기 급상승
+          </span>
+        )}
         <div className="absolute bottom-3 left-3 right-3">
           <h3 className="text-lg font-bold text-white mb-1">{island.name}</h3>
           {getCongestionBadge()}

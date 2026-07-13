@@ -19,13 +19,16 @@ export function Checklist() {
   const [selectedCategory, setSelectedCategory] = useState("필수품");
   const [tripId, setTripId] = useState<string | null>(null);
   const [tripTitle, setTripTitle] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     tripService.getUpcomingTrip().then(trip => {
       setTripId(trip?.id ?? null);
       setTripTitle(trip?.title ?? null);
-      checklistService.getItems(trip?.id ?? null).then(data => setItems(data as ChecklistItem[]));
-    });
+      return checklistService.getItems(trip?.id ?? null);
+    }).then(data => setItems(data as ChecklistItem[]))
+      .catch(() => toast.error("체크리스트를 불러오지 못했어요"))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const toggleItem = async (item: ChecklistItem) => {
@@ -180,7 +183,13 @@ export function Checklist() {
           );
         })}
 
-        {items.length === 0 && (
+        {isLoading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {!isLoading && items.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">체크리스트가 비어있어요</p>
             <button

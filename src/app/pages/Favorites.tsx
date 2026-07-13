@@ -8,9 +8,13 @@ import { IslandImage } from "../components/IslandImage";
 export function Favorites() {
   const navigate = useNavigate();
   const [favorites, setFavorites] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    favoritesService.getFavorites().then(data => setFavorites(data));
+    favoritesService.getFavorites()
+      .then(data => setFavorites(data))
+      .catch(() => toast.error("찜 목록을 불러오지 못했어요"))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const handleRemove = async (islandId: string) => {
@@ -34,7 +38,11 @@ export function Favorites() {
 
       {/* Content */}
       <div className="px-6 py-6">
-        {favorites.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : favorites.length === 0 ? (
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">찜한 여행지가 없어요</h3>

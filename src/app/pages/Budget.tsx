@@ -23,13 +23,16 @@ export function Budget() {
   const [newExpense, setNewExpense] = useState({ category: "식사" as Category, amount: "", title: "" });
   const [tripId, setTripId] = useState<string | null>(null);
   const [tripTitle, setTripTitle] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     tripService.getUpcomingTrip().then(trip => {
       setTripId(trip?.id ?? null);
       setTripTitle(trip?.title ?? null);
-      budgetService.getExpenses(trip?.id ?? null).then(data => setExpenses(data as Expense[]));
-    });
+      return budgetService.getExpenses(trip?.id ?? null);
+    }).then(data => setExpenses(data as Expense[]))
+      .catch(() => toast.error("지출 내역을 불러오지 못했어요"))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const addExpense = async () => {
@@ -246,7 +249,11 @@ export function Budget() {
 
         {/* Expenses */}
         <div className="space-y-3">
-          {expenses.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : expenses.length === 0 ? (
             <div className="text-center py-12">
               <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" strokeWidth={2} />
               <p className="text-gray-500 mb-4">아직 지출 내역이 없어요</p>

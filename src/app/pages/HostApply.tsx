@@ -53,8 +53,9 @@ export function HostApply() {
         setPhone(app.phone);
         setBusinessRegistrationNumber(app.business_registration_number ?? "");
       }
-      setFetching(false);
-    });
+    }).catch(() => {
+      toast.error("신청 정보를 불러오지 못했어요");
+    }).finally(() => setFetching(false));
   }, [user]);
 
   const validate = () => {
