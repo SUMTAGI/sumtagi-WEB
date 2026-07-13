@@ -72,11 +72,10 @@ export function Support() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, chatLoading]);
 
-  const handleSendChat = async () => {
-    const text = chatInput.trim();
-    if (!text || chatLoading) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || chatLoading) return;
 
-    const nextMessages: ChatMessage[] = [...chatMessages, { role: "user", text }];
+    const nextMessages: ChatMessage[] = [...chatMessages, { role: "user", text: text.trim() }];
     setChatMessages(nextMessages);
     setChatInput("");
     setChatLoading(true);
@@ -90,6 +89,17 @@ export function Support() {
       setChatLoading(false);
     }
   };
+
+  const handleSendChat = () => sendMessage(chatInput);
+
+  // 섬 상세 페이지의 "이 섬에 대해 물어보기"로 진입한 경우 자동으로 첫 질문을 보냄
+  useEffect(() => {
+    const islandParam = searchParams.get("island");
+    if (islandParam && showChatPanel && chatMessages.length === 0) {
+      sendMessage(`${islandParam}에 대해 알려줘`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const categories = ["전체", "예약", "운항", "결제", "기타"];
 
