@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router";
-import { ChevronLeft, Ship, Clock, MapPin, Camera, Star, Heart, Share2, Waves, Wind, Sun, Users } from "lucide-react";
+import { ChevronLeft, Ship, Clock, MapPin, Camera, Star, Heart, Share2, Waves, Wind, Sun, Users, Bot } from "lucide-react";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { toast } from "sonner";
 
@@ -108,6 +108,13 @@ export function IslandDetail() {
         </button>
 
         <div className="absolute top-4 right-4 flex gap-2">
+          <Link
+            to={`/support?chat=1&island=${encodeURIComponent(island.name)}`}
+            className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            aria-label={`${island.name}에 대해 AI에게 물어보기`}
+          >
+            <Bot className="w-5 h-5 text-blue-600" strokeWidth={2} />
+          </Link>
           <button onClick={handleFavorite} className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
             <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-700"}`} strokeWidth={2} />
           </button>

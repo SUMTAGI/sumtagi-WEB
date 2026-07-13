@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { ChevronLeft, MessageCircle, Phone, Mail, ChevronDown, ChevronUp, Send } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router";
+import { ChevronLeft, MessageCircle, Phone, Mail, ChevronDown, ChevronUp, Send, Bot, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { askIslandChat, type ChatMessage } from "../../lib/api/islandChat";
 
 interface FAQ {
   id: string;
@@ -51,6 +52,7 @@ const FAQS: FAQ[] = [
 
 export function Support() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("전체");
   const [showContactForm, setShowContactForm] = useState(false);
@@ -59,6 +61,45 @@ export function Support() {
     title: "",
     content: "",
   });
+
+  const [showChatPanel, setShowChatPanel] = useState(searchParams.get("chat") === "1");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, chatLoading]);
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || chatLoading) return;
+
+    const nextMessages: ChatMessage[] = [...chatMessages, { role: "user", text: text.trim() }];
+    setChatMessages(nextMessages);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      const reply = await askIslandChat(nextMessages);
+      setChatMessages([...nextMessages, { role: "assistant", text: reply }]);
+    } catch {
+      toast.error("지금은 답변이 어려워요. 잠시 후 다시 시도해주세요");
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleSendChat = () => sendMessage(chatInput);
+
+  // 섬 상세 페이지의 "이 섬에 대해 물어보기"로 진입한 경우 자동으로 첫 질문을 보냄
+  useEffect(() => {
+    const islandParam = searchParams.get("island");
+    if (islandParam && showChatPanel && chatMessages.length === 0) {
+      sendMessage(`${islandParam}에 대해 알려줘`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const categories = ["전체", "예약", "운항", "결제", "기타"];
 
@@ -84,6 +125,8 @@ export function Support() {
           onClick={() => {
             if (showContactForm) {
               setShowContactForm(false);
+            } else if (showChatPanel) {
+              setShowChatPanel(false);
             } else {
               navigate(-1);
             }
@@ -97,11 +140,65 @@ export function Support() {
         <p className="text-sm text-blue-100">무엇을 도와드릴까요?</p>
       </div>
 
-      {!showContactForm ? (
+      {showChatPanel ? (
+        /* AI Chat Panel */
+        <div className="flex flex-col" style={{ height: "calc(100vh - 116px)" }}>
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+            {chatMessages.length === 0 && (
+              <div className="text-center text-sm text-gray-400 mt-8">
+                <Bot className="w-8 h-8 mx-auto mb-2 text-blue-300" strokeWidth={1.5} />
+                예약, 취소, 섬 여행 정보 등 무엇이든 물어보세요
+              </div>
+            )}
+            {chatMessages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                    m.role === "user"
+                      ? "bg-blue-600 text-white rounded-br-sm"
+                      : "bg-gray-100 text-gray-800 rounded-bl-sm"
+                  }`}
+                >
+                  {m.text}
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 text-gray-500 px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
+                  답변 작성 중...
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className="px-4 py-3 border-t border-gray-200 flex items-center gap-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSendChat();
+              }}
+              placeholder="궁금한 점을 물어보세요"
+              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handleSendChat}
+              disabled={chatLoading || !chatInput.trim()}
+              className="w-10 h-10 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center active:scale-95 transition-transform disabled:opacity-40"
+            >
+              <Send className="w-4 h-4" strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+      ) : !showContactForm ? (
         <>
           {/* Contact Options */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-2">
               <ContactOption
                 icon={<Phone className="w-5 h-5" strokeWidth={2} />}
                 label="전화 상담"
@@ -124,6 +221,12 @@ export function Support() {
                 label="1:1 문의"
                 value="문의하기"
                 onClick={() => setShowContactForm(true)}
+              />
+              <ContactOption
+                icon={<Bot className="w-5 h-5" strokeWidth={2} />}
+                label="AI 챗봇"
+                value="바로 물어보기"
+                onClick={() => setShowChatPanel(true)}
               />
             </div>
           </div>
