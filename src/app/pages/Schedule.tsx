@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { ChevronLeft, Ship, Clock, MapPin, Bell, Bus, Car, AlertCircle } from "lucide-react";
+import { ChevronLeft, Ship, Clock, MapPin, Bell, Bus, Car, AlertCircle, CalendarClock, X } from "lucide-react";
 import { toast } from "sonner";
 import { getFerryScheduleForIsland, getFerryScheduleForAllIslands, getStaticFerrySchedules, type FerrySchedule as LiveFerrySchedule, type StaticFerrySchedule } from "../../lib/api/ferry";
 import { getIslands, type Island } from "../../lib/api/islands";
@@ -32,7 +32,9 @@ function toFerrySchedule(live: LiveFerrySchedule, island: Island | undefined, id
   };
 }
 
-// 실시간 API 실패 시에만 쓰는 정기 시간표 폴백 — status를 "정기 시간표"로 고정해 실시간 상태와 구분
+// 정기 시간표(ferry_schedules 테이블) — 실시간 API 실패 시 폴백으로도 쓰고,
+// "운항 시간표 보기" 버튼으로 언제든 확인할 수 있게도 함. 상태 배지에 "정기 시간표"처럼
+// 실시간 여부를 드러내는 문구 대신 중립적인 "예정"을 사용한다.
 function toStaticFerrySchedule(row: StaticFerrySchedule, island: Island | undefined, idx: number): FerrySchedule {
   return {
     id: `static_${row.islandId}_${row.departureTime}_${idx}`,
@@ -43,7 +45,7 @@ function toStaticFerrySchedule(row: StaticFerrySchedule, island: Island | undefi
     duration: island?.ferry_time ?? "",
     price: island?.ferry_price ?? 0,
     vessel: row.ferryName ?? "",
-    status: "정기 시간표",
+    status: "예정",
   };
 }
 
@@ -149,75 +151,87 @@ export function Schedule() {
   const [selectedFerryIsland, setSelectedFerryIsland] = useState<string>(ALL_FERRY_FILTER);
   const [ferryGroups, setFerryGroups] = useState<FerryGroup[]>([]);
   const [isFerryLoading, setIsFerryLoading] = useState(true);
-  const [ferryError, setFerryError] = useState(false);
-  const [usingStaticFallback, setUsingStaticFallback] = useState(false);
   const [selectedIsland, setSelectedIsland] = useState<string>("백령도");
+  const [showTimetable, setShowTimetable] = useState(false);
+  const [timetableGroups, setTimetableGroups] = useState<FerryGroup[]>([]);
+  const [isTimetableLoading, setIsTimetableLoading] = useState(false);
+
+  // 배편이 아예 없는 섬(다리로 연결됨)은 여객선 필터에서 제외 — 골라도 항상 결과가 없어 혼란만 줌
+  const ferryIslands = islands.filter(i => i.ferry_price !== 0);
 
   useEffect(() => {
     getIslands().then(setIslands).catch(() => toast.error("섬 정보를 불러오지 못했어요"));
   }, []);
 
-  // 실시간 API가 실패하면 정기 시간표(ferry_schedules 테이블)로 폴백 — 일부 섬은 정기 시간표도
-  // 없을 수 있어(신규 확장 섬), 그 경우엔 빈 목록 + 에러 안내만 표시됨.
-  const loadStaticFallback = async (islandFilter: string) => {
-    const rows = await getStaticFerrySchedules(islandFilter === ALL_FERRY_FILTER ? undefined : islandFilter);
+  const buildStaticGroups = (rows: StaticFerrySchedule[]): FerryGroup[] => {
     const byIsland = new Map<string, StaticFerrySchedule[]>();
     for (const row of rows) {
       if (!byIsland.has(row.islandId)) byIsland.set(row.islandId, []);
       byIsland.get(row.islandId)!.push(row);
     }
-    const groups: FerryGroup[] = Array.from(byIsland.entries()).map(([islandId, rows]) => {
+    return Array.from(byIsland.entries()).map(([islandId, rows]) => {
       const island = islands.find(i => i.id === islandId);
       return {
         islandName: island?.name ?? islandId,
         schedules: rows.map((r, idx) => toStaticFerrySchedule(r, island, idx)),
       };
     });
-    setFerryGroups(groups);
-    setUsingStaticFallback(true);
+  };
+
+  // 실시간 조회가 실패하면 조용히 정기 시간표로 대체 — "실시간 API가 실패했다"는 사실은
+  // 사용자에게 드러내지 않는다(문구/배너 없이 그냥 시간표를 보여줌).
+  const loadStaticFallback = async (islandFilter: string) => {
+    const rows = await getStaticFerrySchedules(islandFilter === ALL_FERRY_FILTER ? undefined : islandFilter);
+    setFerryGroups(buildStaticGroups(rows));
   };
 
   useEffect(() => {
     if (islands.length === 0) return;
     setIsFerryLoading(true);
-    setFerryError(false);
-    setUsingStaticFallback(false);
 
     if (selectedFerryIsland === ALL_FERRY_FILTER) {
       getFerryScheduleForAllIslands()
         .then(groups => {
-          setFerryGroups(groups.map(group => {
+          const mapped = groups.map(group => {
             const island = islands.find(i => i.id === group.islandId);
             return {
               islandName: group.islandName,
               schedules: group.schedules.map((l, idx) => toFerrySchedule(l, island, idx)),
             };
-          }));
+          });
+          // 실시간 조회 자체는 성공했지만 결과가 비어있는 경우(이른 시간대 등)도
+          // 정기 시간표로 채워준다 — "실패했을 때만" 대체하면 이 경우가 빠짐.
+          if (mapped.every(g => g.schedules.length === 0)) {
+            return loadStaticFallback(ALL_FERRY_FILTER);
+          }
+          setFerryGroups(mapped);
         })
-        .catch(() => {
-          setFerryError(true);
-          toast.error("실시간 운항 정보가 지연되고 있어요 · 정기 시간표를 보여드릴게요");
-          loadStaticFallback(ALL_FERRY_FILTER);
-        })
+        .catch(() => loadStaticFallback(ALL_FERRY_FILTER))
         .finally(() => setIsFerryLoading(false));
       return;
     }
 
     getFerryScheduleForIsland(selectedFerryIsland)
       .then(live => {
+        if (live.length === 0) return loadStaticFallback(selectedFerryIsland);
         const island = islands.find(i => i.id === selectedFerryIsland);
         setFerryGroups([{
           islandName: island?.name ?? "",
           schedules: live.map((l, idx) => toFerrySchedule(l, island, idx)),
         }]);
       })
-      .catch(() => {
-        setFerryError(true);
-        toast.error("실시간 운항 정보가 지연되고 있어요 · 정기 시간표를 보여드릴게요");
-        loadStaticFallback(selectedFerryIsland);
-      })
+      .catch(() => loadStaticFallback(selectedFerryIsland))
       .finally(() => setIsFerryLoading(false));
   }, [selectedFerryIsland, islands]);
+
+  // "운항 시간표 보기" 버튼 — 위 목록과 별개로, 실시간 상태와 무관하게 전체 정기 시간표를 보고 싶을 때 사용
+  useEffect(() => {
+    if (!showTimetable || islands.length === 0) return;
+    setIsTimetableLoading(true);
+    getStaticFerrySchedules(selectedFerryIsland === ALL_FERRY_FILTER ? undefined : selectedFerryIsland)
+      .then(rows => setTimetableGroups(buildStaticGroups(rows)))
+      .finally(() => setIsTimetableLoading(false));
+  }, [showTimetable, selectedFerryIsland, islands]);
 
   const setAlarm = (schedule: FerrySchedule) => {
     toast.success(`${schedule.departureTime} 출항 1시간 전에 알림을 드릴게요`);
@@ -282,7 +296,7 @@ export function Schedule() {
                 >
                   전체
                 </button>
-                {islands.map(island => (
+                {ferryIslands.map(island => (
                   <button
                     key={island.id}
                     onClick={() => setSelectedFerryIsland(island.id)}
@@ -298,31 +312,51 @@ export function Schedule() {
               </div>
             </div>
 
+            {/* 운항 시간표 보기 — 실시간 조회 성공 여부와 무관하게 언제든 확인 가능 */}
+            <div className="px-6 pt-4">
+              <button
+                onClick={() => setShowTimetable(prev => !prev)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 active:scale-95 transition-transform"
+              >
+                {showTimetable ? <X className="w-4 h-4" strokeWidth={2} /> : <CalendarClock className="w-4 h-4" strokeWidth={2} />}
+                {showTimetable ? "닫기" : "운항 시간표 보기"}
+              </button>
+              {showTimetable && (
+                <div className="mt-3 space-y-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                  {isTimetableLoading ? (
+                    <div className="text-center py-8 text-gray-400 text-sm">시간표를 불러오는 중...</div>
+                  ) : timetableGroups.length === 0 ? (
+                    <p className="text-center py-8 text-sm text-gray-500">아직 등록된 시간표가 없는 섬이에요</p>
+                  ) : (
+                    timetableGroups.map(group => (
+                      <div key={group.islandName}>
+                        {selectedFerryIsland === ALL_FERRY_FILTER && (
+                          <div className="px-1 pb-1.5 text-xs font-semibold text-gray-500">{group.islandName}</div>
+                        )}
+                        <div className="space-y-2">
+                          {group.schedules.map(schedule => (
+                            <FerryCard key={schedule.id} schedule={schedule} onSetAlarm={setAlarm} />
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Ferry Schedules */}
             <div className="px-6 py-4 space-y-4">
               {isFerryLoading ? (
                 <div className="text-center py-12 text-gray-400 text-sm">오늘 운항 정보를 불러오는 중...</div>
-              ) : ferryError && ferryGroups.length === 0 ? (
-                <div className="text-center py-12">
-                  <Ship className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
-                  <p className="text-gray-500 mb-2">실시간 정보가 지연되고 있고, 정기 시간표도 아직 준비되지 않은 섬이에요</p>
-                  <p className="text-sm text-gray-400">잠시 후 다시 시도하거나 다른 섬을 선택해주세요</p>
-                </div>
               ) : ferryGroups.length === 0 ? (
                 <div className="text-center py-12">
                   <Ship className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={2} />
-                  <p className="text-gray-500 mb-2">오늘 예정된 운항이 없어요</p>
-                  <p className="text-sm text-gray-400">다른 섬을 선택해보세요</p>
+                  <p className="text-gray-500 mb-2">지금은 표시할 출항 정보가 없어요</p>
+                  <p className="text-sm text-gray-400">이른 시간대이거나 오늘 운항이 없을 수 있어요 · 위 "운항 시간표 보기"로 정기 시간을 확인해보세요</p>
                 </div>
               ) : (
-                <>
-                {usingStaticFallback && (
-                  <div className="flex items-start gap-2 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2.5 text-sm text-orange-800">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" strokeWidth={2} />
-                    <span>실시간 운항 정보가 지연되고 있어 정기 시간표를 보여드리고 있어요. 출항 전 실제 운항 여부는 선사에 확인해주세요.</span>
-                  </div>
-                )}
-                {ferryGroups.map(group => (
+                ferryGroups.map(group => (
                   <div key={group.islandName}>
                     {selectedFerryIsland === ALL_FERRY_FILTER && (
                       <div className="px-1 pb-1.5 text-xs font-semibold text-gray-500">{group.islandName}</div>
@@ -333,8 +367,7 @@ export function Schedule() {
                       ))}
                     </div>
                   </div>
-                ))}
-                </>
+                ))
               )}
             </div>
 
