@@ -213,7 +213,7 @@ export function Home() {
         <section className="px-6 py-4 bg-gray-50 space-y-4">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-gray-900">실시간 운항 현황</h3>
+              <h3 className="font-semibold text-gray-900">운항 현황</h3>
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${ferryError ? "bg-gray-300" : "bg-green-500 animate-pulse"}`} />
                 <button onClick={() => setShowFerryModal(true)} className="text-xs text-blue-600 font-medium">전체보기</button>
@@ -222,7 +222,7 @@ export function Home() {
             <div className="space-y-2">
               {ferryError ? (
                 <div className="text-center py-2">
-                  <p className="text-sm text-gray-500 mb-1">실시간 정보가 지연되고 있어요</p>
+                  <p className="text-sm text-gray-500 mb-1">운항 정보를 불러오지 못했어요</p>
                   <Link to="/schedule" className="text-xs text-blue-600 font-medium underline">정기 시간표 보기</Link>
                 </div>
               ) : (
@@ -259,7 +259,7 @@ export function Home() {
               </div>
               {ferryError ? (
                 <div className="text-center py-6">
-                  <p className="text-sm text-gray-500 mb-2">실시간 정보가 지연되고 있어요</p>
+                  <p className="text-sm text-gray-500 mb-2">운항 정보를 불러오지 못했어요</p>
                   <Link to="/schedule" className="text-sm text-blue-600 font-medium underline">정기 시간표 보기</Link>
                 </div>
               ) : (
@@ -285,6 +285,15 @@ export function Home() {
         )}
       </div>
       {/* ── 모바일 레이아웃 끝 ──────────────────────────────────────────── */}
+
+      {/* AI 챗봇 플로팅 버튼 — 고객센터 안에 묻혀 있어 진입성이 낮다는 피드백으로 홈에도 노출. lg:block/lg:hidden 분기 밖에 둬서 모바일·데스크탑 모두에서 보이게 함 */}
+      <Link
+        to="/support?chat=1"
+        className="fixed bottom-24 right-4 z-40 lg:bottom-8 lg:right-8 w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center active:scale-95 hover:bg-blue-700 transition-all"
+        aria-label="AI 챗봇에게 물어보기"
+      >
+        <Bot className="w-6 h-6 text-white" strokeWidth={2} />
+      </Link>
     </div>
   );
 }
@@ -316,16 +325,24 @@ function DesktopDashboard({
   const normalCount    = ferryStatus.filter((s) => s.status === "정상").length;
   const cancelledCount = ferryStatus.filter((s) => s.status === "결항").length;
   const endedCount     = ferryStatus.filter((s) => s.status === "금일마감").length;
+  const allDoneForToday = normalCount === 0 && cancelledCount === 0 && endedCount > 0;
+  // "0/17개 노선 정상" 같은 분수 표기는 대부분 아직 실시간 데이터가 안 잡힌 것뿐인데
+  // 마치 절반 넘게 문제가 있는 것처럼 보여 혼란을 줌 — 실제로 알아야 할 신호(결항)만 강조하고,
+  // 나머지는 "정상 n개"처럼 안심되는 표현이나 "정기 시간표 확인" 유도로 대체한다.
   const ferryText =
-    ferryError                                     ? "실시간 정보 지연" :
-    ferryStatus.length === 0                       ? "로딩 중..." :
-    normalCount === ferryStatus.length              ? "전 노선 정상 운항" :
-    normalCount === 0 && cancelledCount === 0 && endedCount > 0 ? "오늘 운항 마감" :
-                                                       `${normalCount}/${ferryStatus.length}개 노선 정상`;
+    ferryError                        ? "운항 정보 확인 불가" :
+    ferryStatus.length === 0          ? "로딩 중..." :
+    cancelledCount > 0                ? `${cancelledCount}개 노선 결항` :
+    normalCount === ferryStatus.length ? "전 노선 정상 운항" :
+    allDoneForToday                    ? "오늘 운항 마감" :
+    normalCount > 0                    ? `${normalCount}개 노선 정상 운항` :
+                                          "정기 시간표 확인하기";
   const ferrySubtext =
     ferryError ? "정기 시간표 보기" :
-    normalCount === 0 && cancelledCount === 0 && endedCount > 0 ? "내일 첫 배부터 다시 운항해요" :
-    "오늘 전체 노선 기준";
+    cancelledCount > 0 ? "출항 전 다시 확인해주세요" :
+    allDoneForToday ? "내일 첫 배부터 다시 운항해요" :
+    normalCount > 0 ? "오늘 전체 노선 기준" :
+    "탭해서 출항 시간을 확인해보세요";
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
@@ -408,16 +425,15 @@ function DesktopDashboard({
               <div className="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center">
                 <Ship className="w-5 h-5 text-blue-600" strokeWidth={2} />
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${
-                  ferryError ? "bg-gray-300" :
-                  ferryStatus.length === 0 ? "bg-gray-300" :
-                  normalCount === ferryStatus.length ? "bg-green-500 animate-pulse" :
-                  normalCount === 0 && cancelledCount === 0 && endedCount > 0 ? "bg-gray-300" :
-                  "bg-orange-400"
-                }`} />
-                <span className="text-[11px] text-gray-400 font-medium">{ferryError ? "지연" : "실시간"}</span>
-              </div>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                ferryError ? "bg-gray-300" :
+                ferryStatus.length === 0 ? "bg-gray-300" :
+                cancelledCount > 0 ? "bg-red-400" :
+                normalCount === ferryStatus.length ? "bg-green-500 animate-pulse" :
+                allDoneForToday ? "bg-gray-300" :
+                normalCount > 0 ? "bg-green-400" :
+                "bg-gray-300"
+              }`} />
             </div>
             <p className="text-[11px] text-gray-400 font-semibold mb-1.5 uppercase tracking-wide">운항 현황</p>
             <p className="text-[19px] font-bold text-gray-900 leading-tight">{ferryText}</p>
@@ -589,11 +605,11 @@ function DesktopDashboard({
         {/* ── 2단(실시간 관광정보): 운항 현황 + 주간 날씨 ────────────── */}
         <div className="grid grid-cols-2 gap-5 mb-6">
           <div>
-            <h2 className="text-[15px] font-bold text-gray-900 mb-3">실시간 운항 현황</h2>
+            <h2 className="text-[15px] font-bold text-gray-900 mb-3">운항 현황</h2>
             <div className="bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100/60">
               {ferryError ? (
                 <div className="text-center py-4">
-                  <p className="text-sm text-gray-500 mb-1">실시간 정보가 지연되고 있어요</p>
+                  <p className="text-sm text-gray-500 mb-1">운항 정보를 불러오지 못했어요</p>
                   <Link to="/schedule" className="text-xs text-blue-600 font-medium underline">정기 시간표 보기</Link>
                 </div>
               ) : ferryStatus.length === 0 ? (
@@ -688,15 +704,6 @@ function DesktopDashboard({
         </div>
 
       </div>
-
-      {/* AI 챗봇 플로팅 버튼 — 고객센터 안에 묻혀 있어 진입성이 낮다는 피드백으로 홈에도 노출 */}
-      <Link
-        to="/support?chat=1"
-        className="fixed bottom-24 right-4 z-40 lg:bottom-8 lg:right-8 w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center active:scale-95 hover:bg-blue-700 transition-all"
-        aria-label="AI 챗봇에게 물어보기"
-      >
-        <Bot className="w-6 h-6 text-white" strokeWidth={2} />
-      </Link>
     </div>
   );
 }

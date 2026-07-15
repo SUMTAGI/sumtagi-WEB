@@ -157,10 +157,14 @@ async function fetchAllToday(): Promise<any[]> {
   }
 }
 
+// 다리로 연결돼 여객선이 필요 없는 섬 — 운항 현황 집계에 넣으면 항상 '운항없음'만 나와
+// 분모만 왜곡시키므로("0/22개 노선 정상" 같은 오해의 소지) 홈 화면 집계에서 제외한다.
+const BRIDGE_CONNECTED_IDS = new Set(['yeonghung', 'seonjae', 'sido', 'modo', 'soya']);
+
 export async function getHomeFerryStatus(): Promise<FerryRouteStatus[]> {
   const items = await fetchAllToday();
   const nowHHMM = nowKstHHMM();
-  return ALL_ISLANDS.map(({ id, name }) => {
+  return ALL_ISLANDS.filter(({ id }) => !BRIDGE_CONNECTED_IDS.has(id)).map(({ id, name }) => {
     const keyword = ROUTE_KEYWORDS[id];
     const filtered = items.filter((item) =>
       (item.lcns_seawy_nm ?? item.nvg_seawy_nm ?? '').includes(keyword)
@@ -261,9 +265,11 @@ export interface IslandFerrySchedule {
 // 전체 배편을 보여줄 땐 오늘자 데이터를 한 번만 받아서 섬별로 나눠준다.
 export async function getFerryScheduleForAllIslands(): Promise<IslandFerrySchedule[]> {
   const items = await fetchAllToday();
-  return ALL_ISLANDS.map(({ id, name }) => ({
-    islandId: id,
-    islandName: name,
-    schedules: ROUTE_KEYWORDS[id] ? schedulesFromItems(items, ROUTE_KEYWORDS[id]) : [],
-  })).filter((entry) => entry.schedules.length > 0);
+  return ALL_ISLANDS
+    .filter(({ id }) => !BRIDGE_CONNECTED_IDS.has(id))
+    .map(({ id, name }) => ({
+      islandId: id,
+      islandName: name,
+      schedules: ROUTE_KEYWORDS[id] ? schedulesFromItems(items, ROUTE_KEYWORDS[id]) : [],
+    })).filter((entry) => entry.schedules.length > 0);
 }
