@@ -285,6 +285,15 @@ export function Home() {
         )}
       </div>
       {/* ── 모바일 레이아웃 끝 ──────────────────────────────────────────── */}
+
+      {/* AI 챗봇 플로팅 버튼 — 고객센터 안에 묻혀 있어 진입성이 낮다는 피드백으로 홈에도 노출. lg:block/lg:hidden 분기 밖에 둬서 모바일·데스크탑 모두에서 보이게 함 */}
+      <Link
+        to="/support?chat=1"
+        className="fixed bottom-24 right-4 z-40 lg:bottom-8 lg:right-8 w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center active:scale-95 hover:bg-blue-700 transition-all"
+        aria-label="AI 챗봇에게 물어보기"
+      >
+        <Bot className="w-6 h-6 text-white" strokeWidth={2} />
+      </Link>
     </div>
   );
 }
@@ -695,15 +704,6 @@ function DesktopDashboard({
         </div>
 
       </div>
-
-      {/* AI 챗봇 플로팅 버튼 — 고객센터 안에 묻혀 있어 진입성이 낮다는 피드백으로 홈에도 노출 */}
-      <Link
-        to="/support?chat=1"
-        className="fixed bottom-24 right-4 z-40 lg:bottom-8 lg:right-8 w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center active:scale-95 hover:bg-blue-700 transition-all"
-        aria-label="AI 챗봇에게 물어보기"
-      >
-        <Bot className="w-6 h-6 text-white" strokeWidth={2} />
-      </Link>
     </div>
   );
 }
