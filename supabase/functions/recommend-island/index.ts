@@ -95,7 +95,9 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
   // flash-lite: 섬 1개 고르는 정도의 가벼운 작업이라 무료 티어 일일 한도가
   // 훨씬 넉넉한(약 20회 → 약 1,000회) lite 모델로 낮춤. enum 스키마로 이미
   // 유효한 섬/스타일만 나오도록 강제하고 있어 모델을 가볍게 해도 무방함.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+  // 2026-07-28: "-latest" 별칭이 새 세대 모델로 자동 승격되면서 thinkingConfig.thinkingBudget을
+  // 거부(400 INVALID_ARGUMENT)하는 문제 발생 — thinkingBudget을 계속 쓰는 버전으로 고정.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {
     method: "POST",
@@ -108,7 +110,7 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
         responseSchema: RECOMMEND_SCHEMA,
         temperature: 0.8,
         maxOutputTokens: 2048,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: { thinkingLevel: "minimal" },
       },
     }),
   });

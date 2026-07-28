@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { ChevronLeft, Phone, Hospital, Shield, Ship, AlertCircle, ChevronDown, ChevronUp, MapPin } from "lucide-react";
+import { ChevronLeft, Phone, Hospital, Shield, Ship, AlertCircle, ChevronDown, ChevronUp, MapPin, Share2 } from "lucide-react";
+import { toast } from "sonner";
+import { getIslands, type Island } from "../../lib/api/islands";
 
 interface EmergencyContact {
   island: string;
@@ -198,6 +200,11 @@ export function Emergency() {
   const navigate = useNavigate();
   const [selectedIsland, setSelectedIsland] = useState<string>("백령도");
   const [expandedAid, setExpandedAid] = useState<string | null>(null);
+  const [islands, setIslands] = useState<Island[]>([]);
+
+  useEffect(() => {
+    getIslands().then(setIslands).catch(() => {});
+  }, []);
 
   const currentContact = EMERGENCY_CONTACTS.find(c => c.island === selectedIsland);
 
@@ -205,6 +212,32 @@ export function Emergency() {
     if (window.confirm(`${name}(${phone})로 전화하시겠습니까?`)) {
       window.location.href = `tel:${phone}`;
     }
+  };
+
+  const getMyLocation = (onDone: (coords: { lat: number; lng: number } | null) => void) => {
+    if (!navigator.geolocation) { onDone(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => onDone({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => onDone(null),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  };
+
+  const handleShareLocation = () => {
+    getMyLocation((coords) => {
+      if (coords) {
+        navigator.clipboard?.writeText(`https://maps.google.com/?q=${coords.lat},${coords.lng}`);
+        toast.success("내 위치 링크가 복사됐어요. 해경/보호자에게 붙여넣어 전달하세요");
+        return;
+      }
+      const fallback = islands.find(i => i.name === selectedIsland);
+      if (fallback?.lat && fallback?.lng) {
+        navigator.clipboard?.writeText(`https://maps.google.com/?q=${fallback.lat},${fallback.lng}`);
+        toast.error(`위치 확인 실패 — 대신 "${selectedIsland}" 대표 위치를 복사했어요. 정확한 위치는 직접 설명해주세요`);
+      } else {
+        toast.error(`위치 확인 실패 — 신고 시 "${selectedIsland}"에 있다고 말씀해주세요`);
+      }
+    });
   };
 
   return (
@@ -246,6 +279,26 @@ export function Emergency() {
             </div>
           </button>
         </div>
+
+        {/* 122 해양 응급 — 배 사고/조난 등 해상 응급은 119/112와 별도로 눈에 띄게 */}
+        <button
+          onClick={() => handleCall("122", "해양경찰")}
+          className="w-full mt-3 bg-indigo-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-sm"
+        >
+          <Ship className="w-6 h-6" strokeWidth={2} />
+          <div>
+            <div className="text-xs text-indigo-100">해상 조난·사고</div>
+            <div className="text-xl">122 해양경찰 신고</div>
+          </div>
+        </button>
+
+        <button
+          onClick={handleShareLocation}
+          className="w-full mt-2 bg-white border-2 border-indigo-500 text-indigo-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+        >
+          <Share2 className="w-5 h-5" strokeWidth={2} />
+          내 위치 공유하기
+        </button>
       </div>
 
       {/* Island Selector */}

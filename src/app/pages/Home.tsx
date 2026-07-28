@@ -18,6 +18,7 @@ import { IslandImage } from "../components/IslandImage";
 import { OceanScene } from "../components/OceanScene";
 import { AiIslandSearchBar } from "../components/AiIslandSearchBar";
 import { TourApiBadge } from "../components/TourApiBadge";
+import { FerryRiskBanner } from "../components/FerryRiskBanner";
 
 // 계절에 맞춰 "오늘의 AI 추천" 스타일을 결정 — 실제 취향 데이터가 쌓이기 전까지의 합리적 기본값
 function seasonalTravelStyle(): string {
@@ -236,6 +237,11 @@ export function Home() {
             </div>
           </div>
 
+          <FerryRiskBanner
+            windSpeed={weather?.forecast?.[0]?.windSpeed}
+            waveHeight={weather?.forecast?.[0]?.waveHeight}
+          />
+
           <WeatherWidget
             data={{
               island:      "인천 앞바다",
@@ -330,7 +336,7 @@ function DesktopDashboard({
   // 마치 절반 넘게 문제가 있는 것처럼 보여 혼란을 줌 — 실제로 알아야 할 신호(결항)만 강조하고,
   // 나머지는 "정상 n개"처럼 안심되는 표현이나 "정기 시간표 확인" 유도로 대체한다.
   const ferryText =
-    ferryError                        ? "운항 정보 확인 불가" :
+    ferryError                        ? "정기 시간표 보기" :
     ferryStatus.length === 0          ? "로딩 중..." :
     cancelledCount > 0                ? `${cancelledCount}개 노선 결항` :
     normalCount === ferryStatus.length ? "전 노선 정상 운항" :
@@ -338,7 +344,7 @@ function DesktopDashboard({
     normalCount > 0                    ? `${normalCount}개 노선 정상 운항` :
                                           "정기 시간표 확인하기";
   const ferrySubtext =
-    ferryError ? "정기 시간표 보기" :
+    ferryError ? "실시간 정보가 잠시 지연되고 있어요" :
     cancelledCount > 0 ? "출항 전 다시 확인해주세요" :
     allDoneForToday ? "내일 첫 배부터 다시 운항해요" :
     normalCount > 0 ? "오늘 전체 노선 기준" :
@@ -494,6 +500,12 @@ function DesktopDashboard({
             </p>
           </Link>
         </div>
+
+        <FerryRiskBanner
+          windSpeed={weather?.forecast?.[0]?.windSpeed}
+          waveHeight={weather?.forecast?.[0]?.waveHeight}
+          className="mb-6"
+        />
 
         {/* ── 1단(추천): AI 추천 섬 + 인기 섬 ────────────── */}
         <div className="grid grid-cols-2 gap-5 mb-6">
