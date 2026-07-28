@@ -92,6 +92,19 @@ async function fetchIslandTourContext(islandName: string): Promise<string> {
   return `\n[${islandName} 실제 정보 — 질문에 관련 있으면 이 안의 실제 정보를 그대로 활용해 답변하세요. "기본 정보"의 출발항/소요시간/요금/혼잡도/특징은 고정 데이터이니 자신 있게 답하세요. 목록에 없는 구체적 상호명·전화번호는 지어내지 마세요.]\n${lines.join("\n")}`;
 }
 
+// 2026-07-28: gemini-3.1-flash-lite로 교체 후 질문한 섬을 무시하고 다른 섬 정보로
+// 답하는 회귀 발견(예: 백령도 질문 → 덕적도 정보 답변). 답변에 실제로 질문한 섬 이름이
+// 나오는지 사후 검증해서 걸러낸다(generate-itinerary의 validateIslandMatch와 동일 패턴).
+function validateChatIslandMatch(reply: string, mentionedIsland: string | null): boolean {
+  if (!mentionedIsland) return true;
+  if (reply.includes(mentionedIsland)) return true;
+
+  const otherIslandMentioned = Object.keys(ISLAND_NAME_TO_ID)
+    .filter((name) => name !== mentionedIsland)
+    .some((name) => reply.includes(name));
+  return !otherIslandMentioned;
+}
+
 function detectIslandInText(text: string): string | null {
   for (const name of Object.keys(ISLAND_NAME_TO_ID)) {
     if (text.includes(name)) return name;
@@ -144,7 +157,9 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
   if (!apiKey) throw new Error("GEMINI_API_KEY 환경변수가 설정되지 않았습니다");
 
   // flash-lite: 대화형 짧은 응답이라 무거운 모델 불필요, 다른 두 함수와 동일 할당량 풀 공유
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+  // 2026-07-28: "-latest" 별칭이 새 세대 모델로 자동 승격되면서 thinkingConfig.thinkingBudget을
+  // 거부(400 INVALID_ARGUMENT)하는 문제 발생 — thinkingBudget을 계속 쓰는 버전으로 고정.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
 
   const res = await fetch(url, {
     method: "POST",
@@ -155,7 +170,7 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
       generationConfig: {
         temperature: 0.6,
         maxOutputTokens: 512,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: { thinkingLevel: "minimal" },
       },
     }),
   });
@@ -202,18 +217,43 @@ serve(async (req: Request) => {
 
     const prompt = buildPrompt(body.messages, tourContext);
 
-    let reply: string;
-    try {
-      reply = await callGemini(prompt);
-    } catch (firstErr) {
-      console.error("[1차 시도 실패] 1초 후 재시도:", String(firstErr));
-      await new Promise((r) => setTimeout(r, 1000));
-      reply = await callGemini(prompt);
+    let reply = "";
+    let failReason = "";
+    let attemptFailed = true;
+
+    for (let attempt = 1; attempt <= 2 && attemptFailed; attempt++) {
+      attemptFailed = false;
+      try {
+        if (attempt > 1) {
+          console.log(`[재시도] ${attempt}차 LLM 호출 시작 — 이전 사유: ${failReason}`);
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+        reply = await callGemini(prompt);
+      } catch (err) {
+        failReason = `LLM 호출 실패: ${String(err)}`;
+        console.error(`[${attempt}차 시도 실패]`, failReason);
+        attemptFailed = true;
+        continue;
+      }
+
+      if (!reply.trim()) {
+        failReason = "빈 응답";
+        attemptFailed = true;
+        continue;
+      }
+
+      if (!validateChatIslandMatch(reply, mentionedIsland)) {
+        failReason = `질문한 섬(${mentionedIsland}) 불일치 응답`;
+        console.error(`[${attempt}차 섬 불일치]`, failReason, "| reply 앞 100자:", reply.slice(0, 100));
+        attemptFailed = true;
+        continue;
+      }
     }
 
-    if (!reply.trim()) {
+    if (attemptFailed) {
+      console.error(`[최종 실패] 2회 시도 모두 실패 | 사유: ${failReason}`);
       return new Response(
-        JSON.stringify({ error: "LLM_EMPTY_RESPONSE" }),
+        JSON.stringify({ error: "LLM_EMPTY_RESPONSE", reason: failReason }),
         { status: 422, headers: { ...CORS, "Content-Type": "application/json" } }
       );
     }

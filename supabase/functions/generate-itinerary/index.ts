@@ -259,6 +259,21 @@ const ITINERARY_SCHEMA = {
   required: ["title", "days", "dataBasis"],
 };
 
+// ─── 섬 오지정 검증 (2026-07-28: 모델을 gemini-3.1-flash-lite로 바꾼 뒤 요청한 섬을
+// 무시하고 엉뚱한 섬(예: 백령도 요청 → 덕적도 응답)으로 답하는 회귀가 3/3 재현됨.
+// responseSchema는 자유 텍스트 필드(location 등)의 섬 이름까지는 강제 못하므로,
+// 응답에 요청한 섬 이름이 실제로 등장하는지 사후 검증해서 걸러낸다.) ──────────────
+function validateIslandMatch(parsed: any, requestedIslands: string[]): boolean {
+  const serialized = JSON.stringify(parsed);
+  const mentionsRequested = requestedIslands.some((name) => serialized.includes(name));
+  if (mentionsRequested) return true;
+
+  const otherIslandMentioned = Object.keys(ISLAND_NAME_TO_ID)
+    .filter((name) => !requestedIslands.includes(name))
+    .some((name) => serialized.includes(name));
+  return !otherIslandMentioned;
+}
+
 async function callGemini(prompt: { system: string; user: string }): Promise<string> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY 환경변수가 설정되지 않았습니다");
@@ -267,7 +282,9 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
   // responseSchema 강제가 함께 적용된 상태로 백령도/덕적도/연평도/굴업도/승봉도/소청도/풍도,
   // 출발항 2종(인천항/대부도), 1박2일~5박6일+특별요청까지 7/7 정확한 섬으로 생성 확인됨.
   // 무료 티어 일일 한도가 flash-latest(20회)보다 훨씬 넉넉해(약 1,000회) 실사용자 대응에 필요.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+  // 2026-07-28: "-latest" 별칭이 새 세대 모델로 자동 승격되면서 thinkingConfig.thinkingBudget을
+  // 거부(400 INVALID_ARGUMENT)하는 문제 발생 — thinkingBudget을 계속 쓰는 버전으로 고정.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
 
   console.log("[LLM 호출] Gemini API 요청 시작");
   const res = await fetch(url, {
@@ -281,7 +298,7 @@ async function callGemini(prompt: { system: string; user: string }): Promise<str
         responseSchema: ITINERARY_SCHEMA,
         temperature: 0.7,
         maxOutputTokens: 32768,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: { thinkingLevel: "minimal" },
       },
     }),
   });
@@ -425,36 +442,61 @@ serve(async (req: Request) => {
     const dataApiContext = buildDataApiContext(body);
     const prompt = buildPrompt(body, tourContext, dataApiContext);
 
-    // LLM 호출 (1회 자동 재시도)
-    let raw: string;
-    try {
-      raw = await generateItineraryWithLLM(provider, prompt);
-    } catch (firstErr) {
-      console.error("[1차 시도 실패] 2초 후 재시도:", String(firstErr));
-      await new Promise((r) => setTimeout(r, 2000));
-      console.log("[재시도] 2차 LLM 호출 시작");
-      raw = await generateItineraryWithLLM(provider, prompt);
-    }
-
-    // JSON 파싱 검증 (Gemini가 가끔 코드블록을 붙이는 경우 방어 처리)
+    // LLM 호출 + 파싱 + 섬 일치 검증을 한 사이클로 묶어 최대 2회 시도.
+    // 네트워크 오류든, 파싱 실패든, 엉뚱한 섬으로 응답했든 동일하게 한 번 더 시도하고,
+    // 그래도 안 되면 422로 반환해 클라이언트의 규칙 기반 fallback(buildScriptItinerary)이
+    // 항상 요청한 섬으로 정확하게 대체하도록 넘긴다.
     let parsed: any;
-    try {
-      const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-      parsed = JSON.parse(cleaned);
-      console.log(`[파싱 성공] days: ${parsed.days?.length}일 | title: ${parsed.title}`);
-    } catch {
-      console.error(`[파싱 실패] fallback 트리거 | raw 앞 300자: ${raw.slice(0, 300)} | debug: ${JSON.stringify(lastGeminiDebug)}`);
-      return new Response(
-        JSON.stringify({ error: "LLM_PARSE_FAILED", raw, debug: lastGeminiDebug }),
-        { status: 422, headers: { ...CORS, "Content-Type": "application/json" } }
-      );
+    let raw = "";
+    let failReason = "";
+    let attemptFailed = true;
+
+    for (let attempt = 1; attempt <= 2 && attemptFailed; attempt++) {
+      attemptFailed = false;
+      try {
+        if (attempt > 1) {
+          console.log(`[재시도] ${attempt}차 LLM 호출 시작 — 이전 사유: ${failReason}`);
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+        raw = await generateItineraryWithLLM(provider, prompt);
+      } catch (err) {
+        failReason = `LLM 호출 실패: ${String(err)}`;
+        console.error(`[${attempt}차 시도 실패]`, failReason);
+        attemptFailed = true;
+        continue;
+      }
+
+      try {
+        const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+        parsed = JSON.parse(cleaned);
+      } catch {
+        failReason = "JSON 파싱 실패";
+        console.error(`[${attempt}차 파싱 실패] raw 앞 300자: ${raw.slice(0, 300)} | debug: ${JSON.stringify(lastGeminiDebug)}`);
+        attemptFailed = true;
+        continue;
+      }
+
+      if (!Array.isArray(parsed.days) || parsed.days.length === 0) {
+        failReason = "days 배열 없음";
+        console.error(`[${attempt}차 구조 오류]`, failReason);
+        attemptFailed = true;
+        continue;
+      }
+
+      if (!validateIslandMatch(parsed, body.islands)) {
+        failReason = `요청 섬(${body.islands.join(", ")}) 불일치 응답`;
+        console.error(`[${attempt}차 섬 불일치]`, failReason, "| title:", parsed.title);
+        attemptFailed = true;
+        continue;
+      }
+
+      console.log(`[파싱/검증 성공] ${attempt}차 시도 | days: ${parsed.days.length}일 | title: ${parsed.title}`);
     }
 
-    // 최소 필드 검증
-    if (!Array.isArray(parsed.days) || parsed.days.length === 0) {
-      console.error("[구조 오류] days 배열 없음 → fallback 트리거");
+    if (attemptFailed) {
+      console.error(`[최종 실패] 2회 시도 모두 실패 → fallback 트리거 | 사유: ${failReason}`);
       return new Response(
-        JSON.stringify({ error: "LLM_PARSE_FAILED", raw }),
+        JSON.stringify({ error: "LLM_PARSE_FAILED", raw, reason: failReason, debug: lastGeminiDebug }),
         { status: 422, headers: { ...CORS, "Content-Type": "application/json" } }
       );
     }
