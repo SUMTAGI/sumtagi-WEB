@@ -4,6 +4,8 @@ import { ChevronLeft, Ship, Clock, MapPin, Bell, Bus, Car, AlertCircle, Calendar
 import { toast } from "sonner";
 import { getFerryScheduleForIsland, getFerryScheduleForAllIslands, getStaticFerrySchedules, type FerrySchedule as LiveFerrySchedule, type StaticFerrySchedule } from "../../lib/api/ferry";
 import { getIslands, type Island } from "../../lib/api/islands";
+import { fetchWeatherForIsland, type WeatherResult } from "../../lib/weatherService";
+import { FerryRiskBanner } from "../components/FerryRiskBanner";
 
 interface FerrySchedule {
   id: string;
@@ -155,6 +157,7 @@ export function Schedule() {
   const [showTimetable, setShowTimetable] = useState(false);
   const [timetableGroups, setTimetableGroups] = useState<FerryGroup[]>([]);
   const [isTimetableLoading, setIsTimetableLoading] = useState(false);
+  const [islandWeather, setIslandWeather] = useState<WeatherResult | null>(null);
 
   // 배편이 아예 없는 섬(다리로 연결됨)은 여객선 필터에서 제외 — 골라도 항상 결과가 없어 혼란만 줌
   const ferryIslands = islands.filter(i => i.ferry_price !== 0);
@@ -222,6 +225,16 @@ export function Schedule() {
       })
       .catch(() => loadStaticFallback(selectedFerryIsland))
       .finally(() => setIsFerryLoading(false));
+  }, [selectedFerryIsland, islands]);
+
+  // "내일 결항 위험" 배지용 예보 — 섬 하나를 골랐을 때만 조회(전체 선택 시엔 비용 대비 실익이 낮아 생략)
+  useEffect(() => {
+    if (selectedFerryIsland === ALL_FERRY_FILTER) {
+      setIslandWeather(null);
+      return;
+    }
+    const island = islands.find(i => i.id === selectedFerryIsland);
+    fetchWeatherForIsland(selectedFerryIsland, island?.lat, island?.lng).then(setIslandWeather).catch(() => setIslandWeather(null));
   }, [selectedFerryIsland, islands]);
 
   // "운항 시간표 보기" 버튼 — 위 목록과 별개로, 실시간 상태와 무관하게 전체 정기 시간표를 보고 싶을 때 사용
@@ -310,6 +323,13 @@ export function Schedule() {
                   </button>
                 ))}
               </div>
+              {selectedFerryIsland !== ALL_FERRY_FILTER && (
+                <FerryRiskBanner
+                  windSpeed={islandWeather?.forecast?.[0]?.windSpeed}
+                  waveHeight={islandWeather?.forecast?.[0]?.waveHeight}
+                  className="mt-3"
+                />
+              )}
             </div>
 
             {/* 운항 시간표 보기 — 실시간 조회 성공 여부와 무관하게 언제든 확인 가능 */}

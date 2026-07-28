@@ -8,6 +8,7 @@ import { fetchWeatherForIsland, type WeatherResult } from "../../lib/weatherServ
 import { IslandImage } from "../components/IslandImage";
 import { DetailHeaderSkeleton } from "../components/SkeletonLoader";
 import { TourApiBadge } from "../components/TourApiBadge";
+import { FerryRiskBanner } from "../components/FerryRiskBanner";
 import { getIslandById, formatFerryPrice, formatAccommodationPrice, type IslandDetail as IslandDetailType } from "../../lib/api/islands";
 import { favoritesService } from "../../lib/favoritesService";
 import { recentlyViewedService } from "../../lib/recentlyViewed";
@@ -28,7 +29,7 @@ export function IslandDetail() {
   const [ferryError, setFerryError] = useState(false);
   const [congestion, setCongestion] = useState<IslandCongestionData | null>(null);
   const [congestionLoading, setCongestionLoading] = useState(true);
-  const [weather, setWeather] = useState<WeatherResult["current"] | null>(null);
+  const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [durunubiCourses, setDurunubiCourses] = useState<DurunubiCourse[]>([]);
   const [durunubiLoading, setDurunubiLoading] = useState(true);
@@ -54,7 +55,7 @@ export function IslandDetail() {
           .catch(() => {})
           .finally(() => setCongestionLoading(false));
         fetchWeatherForIsland(id!, islandData.lat, islandData.lng)
-          .then((result) => setWeather(result?.current ?? null))
+          .then((result) => setWeather(result ?? null))
           .catch(() => {})
           .finally(() => setWeatherLoading(false));
         getCoursesForIsland(id!)
@@ -156,7 +157,7 @@ export function IslandDetail() {
               <div>
                 <div className="text-xs text-gray-600">날씨</div>
                 <div className="font-semibold text-gray-900">
-                  {weatherLoading ? "-" : weather ? `${weather.temp}°C ${weather.condition}` : "정보 없음"}
+                  {weatherLoading ? "-" : weather ? `${weather.current.temp}°C ${weather.current.condition}` : "정보 없음"}
                 </div>
               </div>
             </div>
@@ -164,27 +165,34 @@ export function IslandDetail() {
               <Waves className="w-5 h-5 text-blue-600" strokeWidth={2} />
               <div>
                 <div className="text-xs text-gray-600">파고</div>
-                <div className="font-semibold text-gray-900">{weatherLoading ? "-" : weather ? `${weather.waveHeight}m` : "정보 없음"}</div>
+                <div className="font-semibold text-gray-900">{weatherLoading ? "-" : weather ? `${weather.current.waveHeight}m` : "정보 없음"}</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Wind className="w-5 h-5 text-gray-500" strokeWidth={2} />
               <div>
                 <div className="text-xs text-gray-600">풍속</div>
-                <div className="font-semibold text-gray-900">{weatherLoading ? "-" : weather ? `${weather.windSpeed}m/s` : "정보 없음"}</div>
+                <div className="font-semibold text-gray-900">{weatherLoading ? "-" : weather ? `${weather.current.windSpeed}m/s` : "정보 없음"}</div>
               </div>
             </div>
           </div>
           {!weatherLoading && weather && (
             <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${
-              weather.ferryStatus === "정상" ? "bg-green-100 text-green-700" :
-              weather.ferryStatus === "지연" ? "bg-orange-100 text-orange-700" :
+              weather.current.ferryStatus === "정상" ? "bg-green-100 text-green-700" :
+              weather.current.ferryStatus === "지연" ? "bg-orange-100 text-orange-700" :
               "bg-red-100 text-red-700"
             }`}>
-              {weather.ferryStatus}
+              {weather.current.ferryStatus}
             </div>
           )}
         </div>
+        {!weatherLoading && weather && (
+          <FerryRiskBanner
+            windSpeed={weather.forecast?.[0]?.windSpeed}
+            waveHeight={weather.forecast?.[0]?.waveHeight}
+            className="mt-3"
+          />
+        )}
       </div>
 
       <div className="px-6 py-4 bg-white border-b border-gray-200">
