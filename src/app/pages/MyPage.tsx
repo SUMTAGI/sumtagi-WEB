@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Calendar, ChevronRight, Bell, HelpCircle, LogOut,
   CreditCard, Heart, Users, AlertCircle, Clock, Sparkles, MapPinned, Compass,
-  Building2, ClipboardCheck, CheckCircle2, XCircle, ShieldCheck,
+  Building2, ClipboardCheck, CheckCircle2, XCircle, ShieldCheck, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
@@ -20,6 +20,8 @@ const UTILITY_MENU = [
 const SETTINGS_MENU = [
   { icon: Bell, label: "알림 설정", path: "/notification-settings" },
   { icon: HelpCircle, label: "고객센터", path: "/support" },
+  { icon: FileText, label: "이용약관", path: "/terms" },
+  { icon: ShieldCheck, label: "개인정보 처리방침", path: "/privacy" },
 ];
 
 const TOOL_CARDS = [
