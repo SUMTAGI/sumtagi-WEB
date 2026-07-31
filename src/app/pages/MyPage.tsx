@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Calendar, ChevronRight, Bell, HelpCircle, LogOut,
   CreditCard, Heart, Users, AlertCircle, Clock, Sparkles, MapPinned, Compass,
-  Building2, ClipboardCheck, CheckCircle2, XCircle, ShieldCheck,
+  Building2, ClipboardCheck, CheckCircle2, XCircle, ShieldCheck, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
@@ -20,6 +20,8 @@ const UTILITY_MENU = [
 const SETTINGS_MENU = [
   { icon: Bell, label: "알림 설정", path: "/notification-settings" },
   { icon: HelpCircle, label: "고객센터", path: "/support" },
+  { icon: FileText, label: "이용약관", path: "/terms" },
+  { icon: ShieldCheck, label: "개인정보 처리방침", path: "/privacy" },
 ];
 
 const TOOL_CARDS = [
@@ -65,6 +67,19 @@ export function MyPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("로그아웃됐어요. 다음에 또 만나요!");
+    navigate("/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("탈퇴하면 여행 일정, 즐겨찾기, 커뮤니티 게시물 등 모든 데이터가 삭제되고 복구할 수 없어요.\n정말 탈퇴하시겠어요?")) return;
+
+    const { error } = await supabase.functions.invoke("delete-account");
+    if (error) {
+      toast.error("탈퇴 처리 중 오류가 발생했어요. 다시 시도해주세요");
+      return;
+    }
+    await supabase.auth.signOut();
+    toast.success("회원 탈퇴가 완료됐어요");
     navigate("/login");
   };
 
@@ -322,7 +337,13 @@ export function MyPage() {
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-4 lg:mt-6">버전 1.0.0</p>
+        <button
+          onClick={handleDeleteAccount}
+          className="w-full text-center text-xs text-gray-400 hover:text-gray-600 mt-4 lg:mt-6 underline underline-offset-2"
+        >
+          회원 탈퇴
+        </button>
+        <p className="text-center text-xs text-gray-400 mt-2">버전 1.0.0</p>
       </div>
     </div>
   );
