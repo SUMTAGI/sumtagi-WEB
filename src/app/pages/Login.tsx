@@ -174,7 +174,7 @@ export function Login() {
               <div className="flex-1 h-px bg-gray-200" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={handleKakaoLogin}
@@ -183,16 +183,6 @@ export function Login() {
                 <img src="/icons/kakao.svg" alt="Kakao" className="w-5 h-5 sm:w-4 sm:h-4" />
                 <span className="sm:hidden">카카오로 시작하기</span>
                 <span className="hidden sm:inline">카카오</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => toast.info("Apple 로그인은 추후 지원 예정입니다.")}
-                className="bg-black hover:bg-gray-900 text-white py-3 rounded-xl font-semibold text-[15px] sm:text-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                <img src="/icons/apple.svg" alt="Apple" className="w-5 h-5 sm:w-4 sm:h-4" />
-                <span className="sm:hidden">Apple로 로그인</span>
-                <span className="hidden sm:inline">Apple</span>
               </button>
 
               <button
