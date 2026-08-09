@@ -89,6 +89,7 @@ export function CreateTrip() {
     travelType: "",
     islands: [] as string[],
     budget: "보통",
+    totalBudget: "",
     specialRequests: "",
   });
   const [generationMode, setGenerationMode] = useState<"ai" | "quick">("quick");
@@ -204,6 +205,7 @@ export function CreateTrip() {
         travelers:     formData.travelers,
         travelStyle:   formData.travelType,
         budget:        formData.budget,
+        totalBudgetCap: formData.totalBudget.trim() ? Number(formData.totalBudget) : undefined,
         specialRequests: formData.specialRequests.trim() || undefined,
         provider:      "gemini" as const,
       };
@@ -220,7 +222,8 @@ export function CreateTrip() {
         formData.startDate,
         formData.endDate,
         formData.islands,
-        itinerary
+        itinerary,
+        request.totalBudgetCap
       );
 
       if (!trip) {
@@ -229,6 +232,9 @@ export function CreateTrip() {
       }
 
       localStorage.setItem(`plan_${trip.id}`, JSON.stringify(itinerary));
+      if (itinerary.budgetCapExceeded) {
+        toast.warning("가장 저렴한 숙소로도 설정하신 총예산을 넘어요. 일정을 확인해보세요.");
+      }
       toast.success(itinerary.generatedBy === "llm" ? "AI 일정이 생성됐어요! 🎉" : "일정이 생성됐어요!");
       setShowConfetti(true);
       setTimeout(() => { navigate(`/itinerary/${trip.id}`); }, 2000);
@@ -444,6 +450,21 @@ export function CreateTrip() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-gray-700 mb-3">총 예산 (선택)</h3>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={10000}
+          placeholder="예: 300000"
+          value={formData.totalBudget}
+          onChange={(e) => setFormData({ ...formData, totalBudget: e.target.value })}
+          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-600 outline-none"
+        />
+        <p className="text-xs text-gray-500 mt-1.5">입력하면 이 금액에 맞춰 숙소 등급을 자동으로 조정하고, 경비관리 화면의 총예산으로도 저장돼요.</p>
       </div>
 
       <div>
@@ -844,6 +865,21 @@ export function CreateTrip() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="mb-7">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">총 예산 (선택)</h3>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={10000}
+          placeholder="예: 300000"
+          value={formData.totalBudget}
+          onChange={(e) => setFormData({ ...formData, totalBudget: e.target.value })}
+          className="w-full max-w-xs px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-600 outline-none transition-colors"
+        />
+        <p className="text-xs text-gray-500 mt-1.5">입력하면 이 금액에 맞춰 숙소 등급을 자동으로 조정하고, 경비관리 화면의 총예산으로도 저장돼요.</p>
       </div>
 
       <div className="mb-7">

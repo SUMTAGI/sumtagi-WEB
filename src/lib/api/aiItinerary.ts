@@ -37,6 +37,7 @@ export interface AIItineraryRequest {
   travelers: number;
   travelStyle: string;       // "관광" | "휴양" | "체험" | "사진" | "생태" | "무장애" | "반려동물"
   budget: string;            // "알뜰" | "보통" | "여유"
+  totalBudgetCap?: number;   // 경비관리에서 설정한 여행 총예산 상한(원)
   specialRequests?: string;
   provider?: LLMProvider;    // 기본값: "gemini"
   // 관광공사 OpenAPI 컨텍스트 (Edge Function에서 프롬프트 강화에 사용)
@@ -102,6 +103,13 @@ async function callEdgeFunction(req: AIItineraryRequest): Promise<GeneratedItine
   }
 
   const base = transformResponse(data.itinerary, req);
+  const dataBasis: string[] = data.itinerary.dataBasis ?? [];
+
+  if (req.totalBudgetCap && req.totalBudgetCap > 0 && base.totalCost > req.totalBudgetCap) {
+    dataBasis.push(
+      `AI가 생성한 예상 총비용(₩${base.totalCost.toLocaleString()})이 설정하신 총예산(₩${req.totalBudgetCap.toLocaleString()})을 초과해요. 일정을 검토해보세요.`
+    );
+  }
 
   return {
     ...base,
@@ -109,7 +117,8 @@ async function callEdgeFunction(req: AIItineraryRequest): Promise<GeneratedItine
     tips:        data.itinerary.tips       ?? [],
     cautions:    data.itinerary.cautions   ?? [],
     highlights:  data.itinerary.highlights ?? [],
-    dataBasis:   data.itinerary.dataBasis  ?? [],
+    dataBasis,
+    budgetCapExceeded: !!(req.totalBudgetCap && req.totalBudgetCap > 0 && base.totalCost > req.totalBudgetCap),
   };
 }
 
@@ -166,6 +175,7 @@ async function buildScriptItinerary(
     travelType:    req.travelStyle,
     islands:       req.islands,
     budget:        req.budget,
+    totalBudgetCap: req.totalBudgetCap,
   };
 
   const base = generateItineraryFallback(formData)
@@ -188,6 +198,12 @@ async function buildScriptItinerary(
     const styleLabel: Record<string, string> = { '생태': '생태관광', '무장애': '무장애여행', '반려동물': '반려동물동반여행' }
     const label = styleLabel[req.travelStyle] ?? req.travelStyle
     dataBasis.push(`"${req.travelStyle}" 스타일에 맞춰 관광공사 ${label} 데이터의 실제 장소(${extra.map(e => e.title).join(', ')})를 일정에 반영했어요.`)
+  }
+
+  if (base.budgetAdjustedTier) {
+    dataBasis.push(`설정하신 총예산(₩${req.totalBudgetCap?.toLocaleString()})에 맞춰 숙소 등급을 "${base.budgetAdjustedTier}"로 자동 조정했어요.`)
+  } else if (base.budgetCapExceeded) {
+    dataBasis.push(`가장 저렴한 숙소로도 설정하신 총예산(₩${req.totalBudgetCap?.toLocaleString()})을 넘어요. 일정을 줄이거나 예산을 조정해보세요.`)
   }
 
   return {

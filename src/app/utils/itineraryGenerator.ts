@@ -11,6 +11,8 @@ export interface TripFormData {
   travelType: string;
   islands: string[];
   budget: string;
+  // 경비관리에서 설정한 여행 총예산 상한(원). 있으면 이 금액을 넘지 않도록 숙소 등급을 자동 하향 조정한다.
+  totalBudgetCap?: number;
 }
 
 export interface FerrySchedule {
@@ -63,6 +65,10 @@ export interface GeneratedItinerary {
   totalCost: number;
   islands: string[];
   confirmed?: boolean;
+  // totalBudgetCap 적용 결과: 숙소 등급을 낮춰 예산에 맞췄으면 최종 등급명, 총예산을 못 맞췄으면 budgetCapExceeded
+  // (AI 생성 경로에서는 totalCost가 totalBudgetCap을 초과했다는 의미로만 사용, 등급 재시도는 규칙기반 경로에서만 일어남)
+  budgetAdjustedTier?: string;
+  budgetCapExceeded?: boolean;
 }
 
 const FERRY_SCHEDULES: FerrySchedule[] = [
@@ -434,7 +440,35 @@ export async function prefetchSpecialTourData(travelType: string, islandIds: str
   }))
 }
 
+const BUDGET_TIER_ORDER = ["여유", "보통", "알뜰"];
+
+function normalizeBudgetTier(b: string): string {
+  if (b === "여유있게") return "여유";
+  if (b === "경제적") return "알뜰";
+  return b;
+}
+
 export function generateItinerary(formData: TripFormData): GeneratedItinerary {
+  const result = generateItineraryCore(formData);
+
+  const cap = formData.totalBudgetCap;
+  if (!cap || cap <= 0 || result.totalCost <= cap) return result;
+
+  // 총예산 초과: 숙소 등급을 여유→보통→알뜰 순으로 낮춰가며 예산 내로 맞춰본다
+  let tierIdx = BUDGET_TIER_ORDER.indexOf(normalizeBudgetTier(formData.budget));
+  let best = result;
+  while (tierIdx < BUDGET_TIER_ORDER.length - 1 && best.totalCost > cap) {
+    tierIdx++;
+    best = generateItineraryCore({ ...formData, budget: BUDGET_TIER_ORDER[tierIdx] });
+  }
+
+  if (best.totalCost <= cap) {
+    return { ...best, budgetAdjustedTier: best === result ? undefined : BUDGET_TIER_ORDER[tierIdx] };
+  }
+  return { ...best, budgetCapExceeded: true };
+}
+
+function generateItineraryCore(formData: TripFormData): GeneratedItinerary {
   const ferries = _cachedFerries ?? FERRY_SCHEDULES
   const allAttractions = _cachedAttractions ?? ATTRACTIONS
   const numDays = getDaysBetween(formData.startDate, formData.endDate);

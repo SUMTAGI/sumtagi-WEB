@@ -20,8 +20,6 @@ const Notifications = lazy(() => import("./pages/Notifications").then(m => ({ de
 const CreateTrip = lazy(() => import("./pages/CreateTrip").then(m => ({ default: m.CreateTrip })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.NotFound })));
 const IslandDetail = lazy(() => import("./pages/IslandDetail").then(m => ({ default: m.IslandDetail })));
-const Experiences = lazy(() => import("./pages/Experiences").then(m => ({ default: m.Experiences })));
-const ExperienceDetail = lazy(() => import("./pages/Experiences").then(m => ({ default: m.ExperienceDetail })));
 const Checklist = lazy(() => import("./pages/Checklist").then(m => ({ default: m.Checklist })));
 const Budget = lazy(() => import("./pages/Budget").then(m => ({ default: m.Budget })));
 const Community = lazy(() => import("./pages/Community").then(m => ({ default: m.Community })));
@@ -60,8 +58,6 @@ export const router = createBrowserRouter([
       { index: true, element: <Suspense fallback={<Fallback />}><Home /></Suspense> },
       { path: "islands", element: <Suspense fallback={<Fallback />}><Islands /></Suspense> },
       { path: "island/:id", element: <Suspense fallback={<Fallback />}><IslandDetail /></Suspense> },
-      { path: "experiences", element: <Suspense fallback={<Fallback />}><Experiences /></Suspense> },
-      { path: "experience/:id", element: <Suspense fallback={<Fallback />}><ExperienceDetail /></Suspense> },
       { path: "community", element: <Suspense fallback={<Fallback />}><Community /></Suspense> },
       { path: "emergency", element: <Suspense fallback={<Fallback />}><Emergency /></Suspense> },
       { path: "schedule", element: <Suspense fallback={<Fallback />}><Schedule /></Suspense> },
