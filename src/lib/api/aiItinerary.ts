@@ -24,7 +24,7 @@ const ISLAND_NAME_TO_ID: Record<string, string> = {
   '승봉도': 'seungbong',   '대이작도': 'daeijak',   '소이작도': 'soijak',
   '영흥도': 'yeonghung',   '풍도': 'pungdo',        '굴업도': 'guleop',
   '육도': 'yukdo',         '선재도': 'seonjae',
-  '신도': 'sindo',         '시도': 'sido',          '모도': 'modo',
+  '신시모도': 'sindo',     '신도': 'sindo',         '시도': 'sido',          '모도': 'modo',
   '장봉도': 'jangbongdo',  '소야도': 'soya',        '문갑도': 'mungap',
   '백아도': 'baegado',     '울도': 'uldo',
 }

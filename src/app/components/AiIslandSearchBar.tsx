@@ -25,7 +25,8 @@ export function AiIslandSearchBar({ variant = "card", placeholder }: Props) {
     try {
       const { island, travelStyle, reason } = await recommendIsland(trimmed);
       toast.success(reason || `${island} 추천드려요!`);
-      navigate(`/create-trip?name=${encodeURIComponent(island)}&style=${encodeURIComponent(travelStyle)}`);
+      const reasonParam = reason ? `&reason=${encodeURIComponent(reason)}` : "";
+      navigate(`/create-trip?name=${encodeURIComponent(island)}&style=${encodeURIComponent(travelStyle)}${reasonParam}`);
     } catch {
       toast.error("추천에 실패했어요. 다시 시도해주세요.");
     } finally {
