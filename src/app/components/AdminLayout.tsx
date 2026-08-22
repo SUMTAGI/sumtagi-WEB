@@ -25,24 +25,25 @@ const TOASTER_STYLE = {
 // 일반 사용자 Layout(상단 홈/섬탐색/여행계획/커뮤니티 네비 + 하단 탭바)과는
 // 완전히 분리된, /admin 전용 최상위 레이아웃. routes.tsx에서 Layout이 아니라
 // 이 컴포넌트를 루트로 써서 일반 화면 네비게이션이 관리자 화면에 전혀
-// 섞이지 않게 한다(요구사항: "관리자 전용 콘솔로 분리").
+// 섞이지 않게 한다(요구사항: "관리자 전용 콘솔로 분리"). 색상은 사이트
+// 기본 톤(흰 배경 + 파란 포인트)을 그대로 따르고, ADMIN 배지로만 구분한다.
 export function AdminLayout() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-center" toastOptions={{ style: TOASTER_STYLE }} />
 
-      <header className="bg-gray-900 text-white">
+      <header className="bg-white border-b border-gray-200">
         <div className="max-w-[1200px] mx-auto px-4 lg:px-8 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
               <Ship className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
-            <span className="text-sm font-bold tracking-tight">섬타기</span>
-            <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-1.5 py-0.5 rounded-full">ADMIN</span>
+            <span className="text-sm font-bold text-gray-900 tracking-tight">섬타기</span>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">ADMIN</span>
           </div>
           <Link
             to="/my"
-            className="flex items-center gap-1.5 text-xs lg:text-sm text-gray-300 hover:text-white transition-colors shrink-0"
+            className="flex items-center gap-1.5 text-xs lg:text-sm text-gray-500 hover:text-gray-900 transition-colors shrink-0"
           >
             <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2} />
             <span className="hidden sm:inline">일반 화면으로 돌아가기</span>
@@ -50,7 +51,7 @@ export function AdminLayout() {
           </Link>
         </div>
 
-        <nav className="border-t border-white/10 overflow-x-auto">
+        <nav className="border-t border-gray-100 overflow-x-auto">
           <div className="max-w-[1200px] mx-auto flex gap-1 px-3 lg:px-8 py-2">
             {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
               <NavLink
@@ -59,7 +60,7 @@ export function AdminLayout() {
                 end={end}
                 className={({ isActive }) =>
                   `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    isActive ? "bg-white/10 text-white" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    isActive ? "bg-blue-50 text-blue-700" : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                   }`
                 }
               >
