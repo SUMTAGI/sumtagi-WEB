@@ -17,6 +17,13 @@ const FILTERS: { key: "all" | HostStatus; label: string }[] = [
   { key: "rejected", label: "반려" },
 ];
 
+const REJECTION_TEMPLATES = [
+  "제출하신 사업자등록번호를 확인할 수 없습니다. 정확한 번호로 다시 신청해주세요.",
+  "대표자명과 사업자등록증상의 이름이 일치하지 않습니다. 확인 후 다시 신청해주세요.",
+  "연락처로 연결이 되지 않습니다. 통화 가능한 번호로 다시 신청해주세요.",
+  "이미 등록된 사업자등록번호입니다. 중복 신청 여부를 확인해주세요.",
+];
+
 const STATUS_META: Record<HostStatus, { label: string; badgeClass: string; icon: LucideIcon }> = {
   pending: { label: "검토 중", badgeClass: "bg-amber-50 text-amber-700 border-amber-200", icon: ClipboardCheck },
   approved: { label: "승인", badgeClass: "bg-blue-50 text-blue-700 border-blue-200", icon: CheckCircle2 },
@@ -149,7 +156,7 @@ export function AdminHostApplications() {
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
-        <button onClick={() => navigate("/my")} className="active:scale-95 transition-transform shrink-0" aria-label="마이페이지로 돌아가기">
+        <button onClick={() => navigate("/admin")} className="active:scale-95 transition-transform shrink-0" aria-label="관리자 홈으로 돌아가기">
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
         <div>
@@ -336,6 +343,18 @@ export function AdminHostApplications() {
             <p className="text-sm text-gray-500 leading-relaxed mb-4">
               반려 사유는 신청자에게 그대로 전달돼요. 구체적으로 작성해주세요.
             </p>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {REJECTION_TEMPLATES.map((template, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => { setRejectReason(template); if (rejectError) setRejectError(""); }}
+                  className="text-[11px] text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full transition-colors text-left"
+                >
+                  {template.length > 20 ? `${template.slice(0, 20)}…` : template}
+                </button>
+              ))}
+            </div>
             <textarea
               ref={rejectTextareaRef}
               value={rejectReason}
