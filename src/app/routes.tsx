@@ -89,27 +89,35 @@ export const router = createBrowserRouter([
           { path: "group-trip", element: <Suspense fallback={<Fallback />}><GroupTrip /></Suspense> },
           { path: "group-join/:code", element: <Suspense fallback={<Fallback />}><GroupJoin /></Suspense> },
           { path: "host/apply", element: <Suspense fallback={<Fallback />}><HostApply /></Suspense> },
+        ],
+      },
+      { path: "*", element: <Suspense fallback={<Fallback />}><NotFound /></Suspense> },
+    ],
+  },
+  // /admin은 일반 사용자용 Layout(상단/하단 네비) 밖에 있는 별도 루트다 —
+  // 관리자 화면이 일반 화면 네비게이션과 섞이지 않게 하기 위함. 로그인
+  // 여부(ProtectedRoute)와 admin 권한(AdminRoute) 검사는 그대로 재사용한다.
+  {
+    path: "/admin",
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <AdminRoute />,
+        children: [
           {
-            element: <AdminRoute />,
+            Component: AdminLayout,
             children: [
-              {
-                path: "admin",
-                Component: AdminLayout,
-                children: [
-                  { index: true, element: <Suspense fallback={<Fallback />}><AdminDashboard /></Suspense> },
-                  { path: "users", element: <Suspense fallback={<Fallback />}><AdminUsers /></Suspense> },
-                  { path: "hosts", element: <Suspense fallback={<Fallback />}><AdminHostApplications /></Suspense> },
-                  { path: "islands", element: <Suspense fallback={<Fallback />}><AdminIslands /></Suspense> },
-                  { path: "notices", element: <Suspense fallback={<Fallback />}><AdminNotices /></Suspense> },
-                  { path: "community", element: <Suspense fallback={<Fallback />}><AdminCommunity /></Suspense> },
-                  { path: "logs", element: <Suspense fallback={<Fallback />}><AdminAuditLogs /></Suspense> },
-                ],
-              },
+              { index: true, element: <Suspense fallback={<Fallback />}><AdminDashboard /></Suspense> },
+              { path: "users", element: <Suspense fallback={<Fallback />}><AdminUsers /></Suspense> },
+              { path: "hosts", element: <Suspense fallback={<Fallback />}><AdminHostApplications /></Suspense> },
+              { path: "islands", element: <Suspense fallback={<Fallback />}><AdminIslands /></Suspense> },
+              { path: "notices", element: <Suspense fallback={<Fallback />}><AdminNotices /></Suspense> },
+              { path: "community", element: <Suspense fallback={<Fallback />}><AdminCommunity /></Suspense> },
+              { path: "logs", element: <Suspense fallback={<Fallback />}><AdminAuditLogs /></Suspense> },
             ],
           },
         ],
       },
-      { path: "*", element: <Suspense fallback={<Fallback />}><NotFound /></Suspense> },
     ],
   },
 ]);
