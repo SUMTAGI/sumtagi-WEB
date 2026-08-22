@@ -31,6 +31,7 @@ const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m
 const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
 const HostApply = lazy(() => import("./pages/HostApply").then(m => ({ default: m.HostApply })));
 const AdminHostApplications = lazy(() => import("./pages/AdminHostApplications").then(m => ({ default: m.AdminHostApplications })));
+const AdminIslands = lazy(() => import("./pages/AdminIslands").then(m => ({ default: m.AdminIslands })));
 const Privacy = lazy(() => import("./pages/Privacy").then(m => ({ default: m.Privacy })));
 const Terms = lazy(() => import("./pages/Terms").then(m => ({ default: m.Terms })));
 
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
             element: <AdminRoute />,
             children: [
               { path: "admin/hosts", element: <Suspense fallback={<Fallback />}><AdminHostApplications /></Suspense> },
+              { path: "admin/islands", element: <Suspense fallback={<Fallback />}><AdminIslands /></Suspense> },
             ],
           },
         ],
