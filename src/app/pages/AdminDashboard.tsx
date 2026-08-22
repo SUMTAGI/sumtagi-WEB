@@ -9,6 +9,7 @@ import { adminUserService, type AdminUserRow } from "../../lib/adminUserService"
 import { adminHostService, type HostApplicationWithProfile } from "../../lib/adminHostService";
 import { adminIslandService } from "../../lib/adminIslandService";
 import { CardGridSkeleton } from "../components/SkeletonLoader";
+import { useAuth } from "../../lib/useAuth";
 
 interface Stats {
   totalUsers: number;
@@ -37,6 +38,7 @@ function formatDate(iso: string) {
 }
 
 export function AdminDashboard() {
+  const { displayName } = useAuth();
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [hosts, setHosts] = useState<HostApplicationWithProfile[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -83,8 +85,8 @@ export function AdminDashboard() {
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-5 lg:py-8">
       <div className="mb-5 lg:mb-6">
-        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">관리자 대시보드</h1>
-        <p className="text-sm text-gray-500 mt-0.5">섬타기 운영 현황을 한눈에 확인해요</p>
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{displayName}님 환영합니다</h1>
+        <p className="text-sm text-gray-500 mt-0.5">섬타기 운영 현황을 확인하고 콘텐츠를 관리하세요</p>
       </div>
 
       {error ? (
