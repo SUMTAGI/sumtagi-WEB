@@ -22,6 +22,7 @@ export const communityService = {
     let query = supabase
       .from('community_posts').select()
       .eq('post_type', type)
+      .is('hidden_at', null)
     if (options?.islandFilter) query = query.eq('island_name', options.islandFilter)
     if (options?.search?.trim()) {
       const s = options.search.trim()
@@ -32,8 +33,11 @@ export const communityService = {
     return data ?? []
   },
 
+  // 관리자가 숨긴 게시글은 일반 사용자가 직접 링크로 접근해도 보이면 안 되므로
+  // 여기서도 hidden_at 필터를 건다(관리자 화면은 adminCommunityService를
+  // 따로 쓰므로 이 함수와 겹치지 않는다).
   getPost: async (id: string) => {
-    const { data } = await supabase.from('community_posts').select().eq('id', id).single()
+    const { data } = await supabase.from('community_posts').select().eq('id', id).is('hidden_at', null).single()
     return data
   },
 
