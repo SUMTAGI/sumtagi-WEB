@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
 import {
   ChevronLeft, User, Phone, Hash, Calendar, Clock, CheckCircle2, XCircle,
   ClipboardCheck, X, Loader2, AlertCircle, Inbox, RefreshCw,
@@ -15,6 +14,13 @@ const FILTERS: { key: "all" | HostStatus; label: string }[] = [
   { key: "pending", label: "검토 중" },
   { key: "approved", label: "승인" },
   { key: "rejected", label: "반려" },
+];
+
+const REJECTION_TEMPLATES = [
+  "제출하신 사업자등록번호를 확인할 수 없습니다. 정확한 번호로 다시 신청해주세요.",
+  "대표자명과 사업자등록증상의 이름이 일치하지 않습니다. 확인 후 다시 신청해주세요.",
+  "연락처로 연결이 되지 않습니다. 통화 가능한 번호로 다시 신청해주세요.",
+  "이미 등록된 사업자등록번호입니다. 중복 신청 여부를 확인해주세요.",
 ];
 
 const STATUS_META: Record<HostStatus, { label: string; badgeClass: string; icon: LucideIcon }> = {
@@ -53,8 +59,6 @@ function DetailRow({ icon: Icon, label, value }: { icon: LucideIcon; label: stri
 }
 
 export function AdminHostApplications() {
-  const navigate = useNavigate();
-
   const [applications, setApplications] = useState<HostApplicationWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,149 +150,140 @@ export function AdminHostApplications() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
-        <button onClick={() => navigate("/my")} className="active:scale-95 transition-transform shrink-0" aria-label="마이페이지로 돌아가기">
-          <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
-        </button>
-        <div>
-          <h1 className="text-lg lg:text-xl font-bold text-gray-900">숙소 운영자 신청 관리</h1>
-          <p className="text-xs lg:text-sm text-gray-500">신청서를 검토하고 승인 또는 반려해요</p>
-        </div>
+    <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-5 lg:py-8">
+      <div className="mb-5 lg:mb-6">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">숙소 운영자 신청 관리</h1>
+        <p className="text-sm text-gray-500 mt-0.5">신청서를 검토하고 승인 또는 반려해요</p>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-5 lg:py-8">
+      {/* 필터 */}
+      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+        {FILTERS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
+              filter === key ? "bg-blue-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:border-blue-200"
+            }`}
+          >
+            {label} <span className={filter === key ? "text-blue-100" : "text-gray-400"}>{counts[key]}</span>
+          </button>
+        ))}
+      </div>
 
-        {/* 필터 */}
-        <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
-          {FILTERS.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                filter === key ? "bg-blue-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:border-blue-200"
-              }`}
-            >
-              {label} <span className={filter === key ? "text-blue-100" : "text-gray-400"}>{counts[key]}</span>
-            </button>
-          ))}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+        {/* 목록 (40%) */}
+        <div className="lg:col-span-2 space-y-2.5">
+          {error ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+              <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" strokeWidth={2} />
+              <p className="text-sm text-gray-600 mb-4">{error}</p>
+              <button onClick={load} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                <RefreshCw className="w-4 h-4" strokeWidth={2} /> 다시 시도
+              </button>
+            </div>
+          ) : loading ? (
+            <div className="space-y-2.5">
+              {[...Array(4)].map((_, i) => <ListItemSkeleton key={i} />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+              <Inbox className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />
+              <p className="text-sm text-gray-500">
+                {filter === "pending" ? "검토 대기 중인 신청이 없어요" : "해당하는 신청이 없어요"}
+              </p>
+            </div>
+          ) : (
+            filtered.map((app) => (
+              <button
+                key={app.id}
+                onClick={() => setSelectedId(app.id)}
+                aria-label={`${app.business_name} 신청서 상세 보기`}
+                className={`w-full text-left bg-white rounded-2xl border p-4 transition-colors ${
+                  selectedId === app.id ? "border-blue-300 bg-blue-50/40" : "border-gray-100 hover:border-blue-200 hover:bg-blue-50/20"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <p className="font-semibold text-sm text-gray-900 truncate">{app.business_name}</p>
+                  <StatusBadge status={app.status} />
+                </div>
+                <p className="text-xs text-gray-500 truncate">
+                  {app.representative_name || "대표자 미입력"} · {app.phone}
+                </p>
+                <p className="text-[11px] text-gray-400 mt-1.5">{formatDateTime(app.created_at)} 신청</p>
+              </button>
+            ))
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          {/* 목록 (40%) */}
-          <div className="lg:col-span-2 space-y-2.5">
-            {error ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-                <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" strokeWidth={2} />
-                <p className="text-sm text-gray-600 mb-4">{error}</p>
-                <button onClick={load} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
-                  <RefreshCw className="w-4 h-4" strokeWidth={2} /> 다시 시도
-                </button>
-              </div>
-            ) : loading ? (
-              <div className="space-y-2.5">
-                {[...Array(4)].map((_, i) => <ListItemSkeleton key={i} />)}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                <Inbox className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />
-                <p className="text-sm text-gray-500">
-                  {filter === "pending" ? "검토 대기 중인 신청이 없어요" : "해당하는 신청이 없어요"}
-                </p>
-              </div>
-            ) : (
-              filtered.map((app) => (
-                <button
-                  key={app.id}
-                  onClick={() => setSelectedId(app.id)}
-                  aria-label={`${app.business_name} 신청서 상세 보기`}
-                  className={`w-full text-left bg-white rounded-2xl border p-4 transition-colors ${
-                    selectedId === app.id ? "border-blue-300 bg-blue-50/40" : "border-gray-100 hover:border-blue-200 hover:bg-blue-50/20"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <p className="font-semibold text-sm text-gray-900 truncate">{app.business_name}</p>
-                    <StatusBadge status={app.status} />
-                  </div>
-                  <p className="text-xs text-gray-500 truncate">
-                    {app.representative_name || "대표자 미입력"} · {app.phone}
-                  </p>
-                  <p className="text-[11px] text-gray-400 mt-1.5">{formatDateTime(app.created_at)} 신청</p>
-                </button>
-              ))
-            )}
-          </div>
+        {/* 상세 (60%) — 모바일에서는 selectedId가 있을 때만 전체화면 오버레이 */}
+        <div
+          className={`${selectedId ? "fixed inset-0 z-40 bg-white overflow-y-auto px-4 py-4" : "hidden"} lg:static lg:z-auto lg:block lg:bg-transparent lg:overflow-visible lg:px-0 lg:py-0 lg:col-span-3`}
+        >
+          {selected ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:p-6 lg:sticky lg:top-6">
+              <button
+                onClick={() => setSelectedId(null)}
+                className="lg:hidden mb-4 inline-flex items-center gap-1 text-sm text-gray-500"
+              >
+                <ChevronLeft className="w-4 h-4" strokeWidth={2} /> 목록으로
+              </button>
 
-          {/* 상세 (60%) — 모바일에서는 selectedId가 있을 때만 전체화면 오버레이 */}
-          <div
-            className={`${selectedId ? "fixed inset-0 z-40 bg-white overflow-y-auto px-4 py-4" : "hidden"} lg:static lg:z-auto lg:block lg:bg-transparent lg:overflow-visible lg:px-0 lg:py-0 lg:col-span-3`}
-          >
-            {selected ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:p-6 lg:sticky lg:top-6">
-                <button
-                  onClick={() => setSelectedId(null)}
-                  className="lg:hidden mb-4 inline-flex items-center gap-1 text-sm text-gray-500"
-                >
-                  <ChevronLeft className="w-4 h-4" strokeWidth={2} /> 목록으로
-                </button>
+              <div className="flex items-start justify-between gap-3 mb-5">
+                <h2 className="text-lg font-bold text-gray-900">{selected.business_name}</h2>
+                <StatusBadge status={selected.status} />
+              </div>
 
-                <div className="flex items-start justify-between gap-3 mb-5">
-                  <h2 className="text-lg font-bold text-gray-900">{selected.business_name}</h2>
-                  <StatusBadge status={selected.status} />
+              <div className="mb-6">
+                <DetailRow icon={User} label="신청자" value={selected.profiles?.nickname ?? "알 수 없음"} />
+                <DetailRow icon={User} label="대표자명" value={selected.representative_name ?? "-"} />
+                <DetailRow icon={Phone} label="연락처" value={selected.phone} />
+                <DetailRow icon={Hash} label="사업자등록번호" value={selected.business_registration_number ?? "-"} />
+                <DetailRow icon={Calendar} label="신청일" value={formatDateTime(selected.created_at)} />
+                <DetailRow icon={Clock} label="최근 수정일" value={formatDateTime(selected.updated_at)} />
+              </div>
+
+              {selected.status === "rejected" && selected.rejection_reason && (
+                <div className="mb-6 bg-red-50 border border-red-100 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-red-600 mb-1">반려 사유</p>
+                  <p className="text-sm text-red-700 leading-relaxed">{selected.rejection_reason}</p>
                 </div>
+              )}
 
-                <div className="mb-6">
-                  <DetailRow icon={User} label="신청자" value={selected.profiles?.nickname ?? "알 수 없음"} />
-                  <DetailRow icon={User} label="대표자명" value={selected.representative_name ?? "-"} />
-                  <DetailRow icon={Phone} label="연락처" value={selected.phone} />
-                  <DetailRow icon={Hash} label="사업자등록번호" value={selected.business_registration_number ?? "-"} />
-                  <DetailRow icon={Calendar} label="신청일" value={formatDateTime(selected.created_at)} />
-                  <DetailRow icon={Clock} label="최근 수정일" value={formatDateTime(selected.updated_at)} />
+              {selected.status === "pending" ? (
+                <div className="flex gap-2.5">
+                  <button
+                    aria-label="신청 승인"
+                    onClick={() => setConfirmApprove(true)}
+                    disabled={processingId === selected.id}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    승인
+                  </button>
+                  <button
+                    aria-label="신청 반려"
+                    onClick={() => { setRejectReason(""); setRejectError(""); setRejectModalOpen(true); }}
+                    disabled={processingId === selected.id}
+                    className="flex-1 bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    반려
+                  </button>
                 </div>
-
-                {selected.status === "rejected" && selected.rejection_reason && (
-                  <div className="mb-6 bg-red-50 border border-red-100 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-red-600 mb-1">반려 사유</p>
-                    <p className="text-sm text-red-700 leading-relaxed">{selected.rejection_reason}</p>
-                  </div>
-                )}
-
-                {selected.status === "pending" ? (
-                  <div className="flex gap-2.5">
-                    <button
-                      aria-label="신청 승인"
-                      onClick={() => setConfirmApprove(true)}
-                      disabled={processingId === selected.id}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      승인
-                    </button>
-                    <button
-                      aria-label="신청 반려"
-                      onClick={() => { setRejectReason(""); setRejectError(""); setRejectModalOpen(true); }}
-                      disabled={processingId === selected.id}
-                      className="flex-1 bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      반려
-                    </button>
-                  </div>
-                ) : selected.status === "approved" ? (
-                  <div className="flex items-center gap-2 bg-blue-50 text-blue-700 rounded-xl px-4 py-3 text-sm font-medium">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" strokeWidth={2} /> 승인 완료된 신청이에요
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 bg-gray-50 text-gray-500 rounded-xl px-4 py-3 text-sm font-medium">
-                    <XCircle className="w-4 h-4 shrink-0" strokeWidth={2} /> 반려된 신청이에요. 재신청하면 다시 검토 목록에 나타나요.
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="hidden lg:flex bg-white rounded-2xl border border-gray-100 p-10 text-center items-center justify-center min-h-[280px]">
-                <p className="text-sm text-gray-400">왼쪽 목록에서 신청서를 선택해주세요</p>
-              </div>
-            )}
-          </div>
+              ) : selected.status === "approved" ? (
+                <div className="flex items-center gap-2 bg-blue-50 text-blue-700 rounded-xl px-4 py-3 text-sm font-medium">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" strokeWidth={2} /> 승인 완료된 신청이에요
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-gray-50 text-gray-500 rounded-xl px-4 py-3 text-sm font-medium">
+                  <XCircle className="w-4 h-4 shrink-0" strokeWidth={2} /> 반려된 신청이에요. 재신청하면 다시 검토 목록에 나타나요.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="hidden lg:flex bg-white rounded-2xl border border-gray-100 p-10 text-center items-center justify-center min-h-[280px]">
+              <p className="text-sm text-gray-400">왼쪽 목록에서 신청서를 선택해주세요</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -336,6 +331,18 @@ export function AdminHostApplications() {
             <p className="text-sm text-gray-500 leading-relaxed mb-4">
               반려 사유는 신청자에게 그대로 전달돼요. 구체적으로 작성해주세요.
             </p>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {REJECTION_TEMPLATES.map((template, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => { setRejectReason(template); if (rejectError) setRejectError(""); }}
+                  className="text-[11px] text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full transition-colors text-left"
+                >
+                  {template.length > 20 ? `${template.slice(0, 20)}…` : template}
+                </button>
+              ))}
+            </div>
             <textarea
               ref={rejectTextareaRef}
               value={rejectReason}

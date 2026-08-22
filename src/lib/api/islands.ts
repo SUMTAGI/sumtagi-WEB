@@ -1,5 +1,7 @@
 import { supabase } from '../supabase'
 
+export type IslandStatus = 'active' | 'inactive'
+
 export interface Island {
   id: string
   name: string
@@ -14,6 +16,8 @@ export interface Island {
   ports: string[]
   lat?: number
   lng?: number
+  status: IslandStatus
+  order_index: number
 }
 
 // ferry_price: 0 = 다리로 연결돼 배가 필요 없음, null = 배는 있지만 정확한 요금 미확인
@@ -83,10 +87,16 @@ export interface IslandDetail extends Island {
   photo_spots: PhotoSpot[]
 }
 
+// 일반 사용자 화면 전용 — 비활성화된 섬은 절대 여기 섞이면 안 되므로, RLS가
+// 이미 status='active'만 걸러주더라도 client에서 한 번 더 명시적으로 걸러
+// 관리자 세션으로 이 화면을 열었을 때도 동일하게 동작하도록 한다(관리자
+// 전용 조회는 adminIslandService.getAllIslands를 따로 쓴다).
 export async function getIslands(): Promise<Island[]> {
   const { data, error } = await supabase
     .from('islands')
     .select('*')
+    .eq('status', 'active')
+    .order('order_index')
     .order('name')
 
   if (error) throw error
@@ -127,6 +137,7 @@ export async function getIslandById(id: string): Promise<IslandDetail | null> {
       photo_spots(*)
     `)
     .eq('id', id)
+    .eq('status', 'active')
     .single()
 
   if (error) return null

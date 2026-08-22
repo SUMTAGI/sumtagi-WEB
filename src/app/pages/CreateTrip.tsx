@@ -12,7 +12,7 @@ import { tripService } from "../../lib/tripService";
 const ALL_ISLANDS = [
   "백령도", "대청도", "소청도", "연평도",
   "덕적도", "자월도", "승봉도", "대이작도",
-  "소이작도", "풍도", "육도", "신도", "장봉도",
+  "소이작도", "풍도", "육도", "신시모도", "장봉도",
   "영흥도", "선재도", "굴업도", "시도", "모도", "소야도",
   "문갑도", "백아도", "울도",
 ];
@@ -21,7 +21,7 @@ const ISLAND_PORT_MAP: Record<string, string> = {
   "백령도": "인천항", "대청도": "인천항", "소청도": "인천항", "연평도": "인천항",
   "덕적도": "인천항", "자월도": "인천항", "승봉도": "인천항", "대이작도": "인천항",
   "소이작도": "대부도", "풍도": "대부도", "육도": "대부도",
-  "신도": "삼목항", "장봉도": "삼목항",
+  "신시모도": "삼목항", "장봉도": "삼목항",
   // 다리로 연결돼 여객선이 필요 없는 섬 (자동차로 이동)
   "영흥도": "육로 이동", "선재도": "육로 이동", "시도": "육로 이동",
   "모도": "육로 이동", "소야도": "육로 이동",
@@ -89,6 +89,7 @@ export function CreateTrip() {
     travelType: "",
     islands: [] as string[],
     budget: "보통",
+    totalBudget: "",
     specialRequests: "",
   });
   const [generationMode, setGenerationMode] = useState<"ai" | "quick">("quick");
@@ -97,6 +98,7 @@ export function CreateTrip() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [preSelectedIsland, setPreSelectedIsland] = useState<string | null>(null);
+  const [recommendReason, setRecommendReason] = useState<string | null>(null);
   const [realIslands, setRealIslands] = useState<Island[]>([]);
   const [islandSearch, setIslandSearch] = useState("");
 
@@ -105,10 +107,12 @@ export function CreateTrip() {
     getIslands().then(setRealIslands).catch(() => {});
     const islandName = searchParams.get("name");
     const styleParam = searchParams.get("style");
+    const reasonParam = searchParams.get("reason");
     if (islandName) {
-      // IslandDetail의 "일정 만들기"(?name=) 또는 홈 검색창 AI 추천(?name=&style=)에서 진입
+      // IslandDetail의 "일정 만들기"(?name=) 또는 홈 검색창 AI 추천(?name=&style=&reason=)에서 진입
       setPreSelectedIsland(islandName);
       setFormData(prev => ({ ...prev, islands: [islandName], travelType: styleParam || prev.travelType }));
+      if (reasonParam) setRecommendReason(reasonParam);
     }
   }, [searchParams]);
 
@@ -204,6 +208,7 @@ export function CreateTrip() {
         travelers:     formData.travelers,
         travelStyle:   formData.travelType,
         budget:        formData.budget,
+        totalBudgetCap: formData.totalBudget.trim() ? Number(formData.totalBudget) : undefined,
         specialRequests: formData.specialRequests.trim() || undefined,
         provider:      "gemini" as const,
       };
@@ -220,7 +225,8 @@ export function CreateTrip() {
         formData.startDate,
         formData.endDate,
         formData.islands,
-        itinerary
+        itinerary,
+        request.totalBudgetCap
       );
 
       if (!trip) {
@@ -229,6 +235,9 @@ export function CreateTrip() {
       }
 
       localStorage.setItem(`plan_${trip.id}`, JSON.stringify(itinerary));
+      if (itinerary.budgetCapExceeded) {
+        toast.warning("가장 저렴한 숙소로도 설정하신 총예산을 넘어요. 일정을 확인해보세요.");
+      }
       toast.success(itinerary.generatedBy === "llm" ? "AI 일정이 생성됐어요! 🎉" : "일정이 생성됐어요!");
       setShowConfetti(true);
       setTimeout(() => { navigate(`/itinerary/${trip.id}`); }, 2000);
@@ -297,6 +306,11 @@ export function CreateTrip() {
         <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
           <p className="text-sm font-semibold text-blue-900 mb-1">선택된 섬</p>
           <p className="text-lg font-bold text-blue-700">{preSelectedIsland}</p>
+          {recommendReason && (
+            <p className="text-sm text-blue-800 mt-2 pt-2 border-t border-blue-200">
+              ✨ {recommendReason}
+            </p>
+          )}
         </div>
       )}
 
@@ -444,6 +458,21 @@ export function CreateTrip() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-gray-700 mb-3">총 예산 (선택)</h3>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={10000}
+          placeholder="예: 300000"
+          value={formData.totalBudget}
+          onChange={(e) => setFormData({ ...formData, totalBudget: e.target.value })}
+          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-600 outline-none"
+        />
+        <p className="text-xs text-gray-500 mt-1.5">입력하면 이 금액에 맞춰 숙소 등급을 자동으로 조정하고, 경비관리 화면의 총예산으로도 저장돼요.</p>
       </div>
 
       <div>
@@ -653,6 +682,11 @@ export function CreateTrip() {
         <div className="bg-blue-50 rounded-xl p-4 border border-blue-200 mb-5">
           <p className="text-sm font-semibold text-blue-900 mb-1">선택된 섬</p>
           <p className="text-lg font-bold text-blue-700">{preSelectedIsland}</p>
+          {recommendReason && (
+            <p className="text-sm text-blue-800 mt-2 pt-2 border-t border-blue-200">
+              ✨ {recommendReason}
+            </p>
+          )}
         </div>
       )}
 
@@ -844,6 +878,21 @@ export function CreateTrip() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="mb-7">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">총 예산 (선택)</h3>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={10000}
+          placeholder="예: 300000"
+          value={formData.totalBudget}
+          onChange={(e) => setFormData({ ...formData, totalBudget: e.target.value })}
+          className="w-full max-w-xs px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-600 outline-none transition-colors"
+        />
+        <p className="text-xs text-gray-500 mt-1.5">입력하면 이 금액에 맞춰 숙소 등급을 자동으로 조정하고, 경비관리 화면의 총예산으로도 저장돼요.</p>
       </div>
 
       <div className="mb-7">

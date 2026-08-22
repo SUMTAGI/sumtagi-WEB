@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { AuthLayout } from "./components/AuthLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
+import { AdminLayout } from "./components/AdminLayout";
 
 const Home = lazy(() => import("./pages/Home").then(m => ({ default: m.Home })));
 const Travel = lazy(() => import("./pages/Travel").then(m => ({ default: m.Travel })));
@@ -20,8 +21,6 @@ const Notifications = lazy(() => import("./pages/Notifications").then(m => ({ de
 const CreateTrip = lazy(() => import("./pages/CreateTrip").then(m => ({ default: m.CreateTrip })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.NotFound })));
 const IslandDetail = lazy(() => import("./pages/IslandDetail").then(m => ({ default: m.IslandDetail })));
-const Experiences = lazy(() => import("./pages/Experiences").then(m => ({ default: m.Experiences })));
-const ExperienceDetail = lazy(() => import("./pages/Experiences").then(m => ({ default: m.ExperienceDetail })));
 const Checklist = lazy(() => import("./pages/Checklist").then(m => ({ default: m.Checklist })));
 const Budget = lazy(() => import("./pages/Budget").then(m => ({ default: m.Budget })));
 const Community = lazy(() => import("./pages/Community").then(m => ({ default: m.Community })));
@@ -32,7 +31,13 @@ const GroupTrip = lazy(() => import("./pages/GroupTrip").then(m => ({ default: m
 const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m.GroupJoin })));
 const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
 const HostApply = lazy(() => import("./pages/HostApply").then(m => ({ default: m.HostApply })));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard").then(m => ({ default: m.AdminDashboard })));
+const AdminUsers = lazy(() => import("./pages/AdminUsers").then(m => ({ default: m.AdminUsers })));
 const AdminHostApplications = lazy(() => import("./pages/AdminHostApplications").then(m => ({ default: m.AdminHostApplications })));
+const AdminIslands = lazy(() => import("./pages/AdminIslands").then(m => ({ default: m.AdminIslands })));
+const AdminNotices = lazy(() => import("./pages/AdminNotices").then(m => ({ default: m.AdminNotices })));
+const AdminCommunity = lazy(() => import("./pages/AdminCommunity").then(m => ({ default: m.AdminCommunity })));
+const AdminAuditLogs = lazy(() => import("./pages/AdminAuditLogs").then(m => ({ default: m.AdminAuditLogs })));
 const Privacy = lazy(() => import("./pages/Privacy").then(m => ({ default: m.Privacy })));
 const Terms = lazy(() => import("./pages/Terms").then(m => ({ default: m.Terms })));
 
@@ -60,8 +65,6 @@ export const router = createBrowserRouter([
       { index: true, element: <Suspense fallback={<Fallback />}><Home /></Suspense> },
       { path: "islands", element: <Suspense fallback={<Fallback />}><Islands /></Suspense> },
       { path: "island/:id", element: <Suspense fallback={<Fallback />}><IslandDetail /></Suspense> },
-      { path: "experiences", element: <Suspense fallback={<Fallback />}><Experiences /></Suspense> },
-      { path: "experience/:id", element: <Suspense fallback={<Fallback />}><ExperienceDetail /></Suspense> },
       { path: "community", element: <Suspense fallback={<Fallback />}><Community /></Suspense> },
       { path: "emergency", element: <Suspense fallback={<Fallback />}><Emergency /></Suspense> },
       { path: "schedule", element: <Suspense fallback={<Fallback />}><Schedule /></Suspense> },
@@ -86,15 +89,35 @@ export const router = createBrowserRouter([
           { path: "group-trip", element: <Suspense fallback={<Fallback />}><GroupTrip /></Suspense> },
           { path: "group-join/:code", element: <Suspense fallback={<Fallback />}><GroupJoin /></Suspense> },
           { path: "host/apply", element: <Suspense fallback={<Fallback />}><HostApply /></Suspense> },
+        ],
+      },
+      { path: "*", element: <Suspense fallback={<Fallback />}><NotFound /></Suspense> },
+    ],
+  },
+  // /admin은 일반 사용자용 Layout(상단/하단 네비) 밖에 있는 별도 루트다 —
+  // 관리자 화면이 일반 화면 네비게이션과 섞이지 않게 하기 위함. 로그인
+  // 여부(ProtectedRoute)와 admin 권한(AdminRoute) 검사는 그대로 재사용한다.
+  {
+    path: "/admin",
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <AdminRoute />,
+        children: [
           {
-            element: <AdminRoute />,
+            Component: AdminLayout,
             children: [
-              { path: "admin/hosts", element: <Suspense fallback={<Fallback />}><AdminHostApplications /></Suspense> },
+              { index: true, element: <Suspense fallback={<Fallback />}><AdminDashboard /></Suspense> },
+              { path: "users", element: <Suspense fallback={<Fallback />}><AdminUsers /></Suspense> },
+              { path: "hosts", element: <Suspense fallback={<Fallback />}><AdminHostApplications /></Suspense> },
+              { path: "islands", element: <Suspense fallback={<Fallback />}><AdminIslands /></Suspense> },
+              { path: "notices", element: <Suspense fallback={<Fallback />}><AdminNotices /></Suspense> },
+              { path: "community", element: <Suspense fallback={<Fallback />}><AdminCommunity /></Suspense> },
+              { path: "logs", element: <Suspense fallback={<Fallback />}><AdminAuditLogs /></Suspense> },
             ],
           },
         ],
       },
-      { path: "*", element: <Suspense fallback={<Fallback />}><NotFound /></Suspense> },
     ],
   },
 ]);

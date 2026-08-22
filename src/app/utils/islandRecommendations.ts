@@ -164,7 +164,7 @@ const ISLAND_PROFILES = {
   },
   sindo: {
     id: "sindo",
-    name: "신도",
+    name: "신시모도",
     image: "https://images.unsplash.com/photo-1628412071389-6e8f7a7a4e6e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600",
     styles: { 힐링: 6, 액티비티: 6, 맛집탐방: 5, 자연관광: 6, 반려동물동반: 7 },
     features: ["신도선착장", "삼목항 접근성", "신시모도 관문"],

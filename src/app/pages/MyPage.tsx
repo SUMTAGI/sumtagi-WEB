@@ -204,6 +204,27 @@ export function MyPage() {
           </div>
         </div>
 
+        {/* 관리자 전용 — 일반 기능 카드와 섞이지 않도록 독립된 배너로 둔다.
+            여기서 클릭하면 관리자 콘솔(/admin)로 완전히 넘어가고, 관리자
+            관련 다른 메뉴는 마이페이지에 두지 않는다. */}
+        {isAdmin && (
+          <button
+            onClick={() => go("/admin")}
+            className="w-full flex items-center justify-between gap-3 rounded-2xl px-5 py-4 lg:px-6 lg:py-5 mb-4 lg:mb-6 bg-blue-600 hover:bg-blue-700 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3 lg:gap-4 min-w-0">
+              <div className="w-9 h-9 lg:w-12 lg:h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-4 h-4 lg:w-6 lg:h-6 text-white" strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm lg:text-base text-white">관리자로 전환</p>
+                <p className="text-xs lg:text-sm mt-0.5 text-blue-100 truncate">관리자 콘솔에서 운영 현황을 확인하고 콘텐츠를 관리하세요</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 text-blue-100" strokeWidth={2} />
+          </button>
+        )}
+
         {/* 최근 여행 */}
         {!loading && visitedTrips.length > 0 && (
           <div className="mb-4 lg:mb-6">
@@ -271,25 +292,6 @@ export function MyPage() {
               </div>
               <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 text-gray-300" strokeWidth={2} />
             </button>
-
-            {isAdmin && (
-              <button
-                onClick={() => go("/admin/hosts")}
-                className="w-full flex items-center gap-3 lg:gap-4 rounded-2xl px-4 py-3 lg:px-5 lg:py-4 transition-colors text-left border bg-white border-gray-100 hover:border-blue-200 hover:bg-blue-50/30"
-              >
-                <div className="w-9 h-9 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 bg-blue-50">
-                  <ShieldCheck className="w-4 h-4 lg:w-6 lg:h-6 text-blue-600" strokeWidth={2} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm lg:text-base text-gray-900 flex items-center gap-1.5">
-                    관리자 계정
-                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">ADMIN</span>
-                  </p>
-                  <p className="text-xs lg:text-sm mt-0.5 text-gray-400">호스트 심사 관리</p>
-                </div>
-                <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 text-gray-300" strokeWidth={2} />
-              </button>
-            )}
           </div>
         </div>
 

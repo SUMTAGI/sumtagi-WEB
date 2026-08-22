@@ -29,6 +29,7 @@ export function Budget() {
     tripService.getUpcomingTrip().then(trip => {
       setTripId(trip?.id ?? null);
       setTripTitle(trip?.title ?? null);
+      setTotalBudget(typeof trip?.total_budget === "number" && trip.total_budget > 0 ? trip.total_budget : 500000);
       return budgetService.getExpenses(trip?.id ?? null);
     }).then(data => setExpenses(data as Expense[]))
       .catch(() => toast.error("지출 내역을 불러오지 못했어요"))
@@ -53,6 +54,15 @@ export function Budget() {
 
   const updateBudget = (newB: number) => {
     setTotalBudget(newB);
+  };
+
+  const commitBudget = async () => {
+    if (!tripId) return;
+    try {
+      await tripService.updateTotalBudget(tripId, totalBudget);
+    } catch {
+      toast.error("총예산 저장에 실패했어요");
+    }
   };
 
   const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -113,10 +123,14 @@ export function Budget() {
               type="number"
               value={totalBudget}
               onChange={(e) => updateBudget(parseInt(e.target.value) || 0)}
+              onBlur={commitBudget}
               className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-3 py-2 text-2xl font-bold text-white w-full focus:outline-none focus:ring-2 focus:ring-white/50"
             />
             <span className="text-xl font-bold">원</span>
           </div>
+          {!tripId && (
+            <p className="text-xs text-blue-100 mt-1.5">예정된 여행이 없어 이 총예산은 저장되지 않아요. 여행을 만들면 총예산이 자동 저장되고, 다음 일정 생성 시에도 반영돼요.</p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">

@@ -38,6 +38,8 @@ export function useAuth() {
   useEffect(() => {
     let cancelled = false
 
+    if (sessionLoading) return
+
     if (!user) {
       setProfile(null)
       setHostApplication(null)
@@ -59,7 +61,7 @@ export function useAuth() {
     })
 
     return () => { cancelled = true }
-  }, [user?.id])
+  }, [user?.id, sessionLoading])
 
   const nickname = profile?.nickname ?? (user?.user_metadata?.nickname as string | undefined)
   const displayName = nickname ?? user?.email?.split('@')[0] ?? '사용자'

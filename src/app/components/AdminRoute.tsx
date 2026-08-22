@@ -6,12 +6,15 @@ import { useAuth } from "../../lib/useAuth";
 // 로직을 중복 구현하지 않기 위함). 실제 승인/반려 권한의 최종 보안선은
 // approve_host_application/reject_host_application RPC 내부의 auth.uid()
 // 검증이며, 이 라우트 가드는 어디까지나 UI 노출을 막는 역할일 뿐이다.
+//
+// /admin은 일반 화면 Layout(고정 헤더) 밖의 독립 루트라 헤더 높이를 뺄
+// 필요가 없어 스피너는 항상 화면 전체 높이를 채운다.
 export function AdminRoute() {
   const { isAdmin, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="h-[calc(100dvh-64px)] lg:h-[calc(100vh-72px)] flex items-center justify-center bg-white">
+      <div className="h-screen flex items-center justify-center bg-white">
         <div
           className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"
           role="status"

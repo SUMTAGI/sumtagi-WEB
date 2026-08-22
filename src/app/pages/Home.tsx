@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import {
   Ship, MapPin, Calendar, Sparkles, Shield, Heart,
-  Bell, Camera, Users, DollarSign, Cloud, Waves, ArrowRight, MessageCircle, ThumbsUp, Eye, Bot,
+  Bell, Users, DollarSign, Cloud, Waves, ArrowRight, MessageCircle, ThumbsUp, Eye, Bot,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { WeatherWidget, WeeklyForecast } from "../components/WeatherWidget";
@@ -203,8 +203,7 @@ export function Home() {
         </section>
 
         <section className="px-6 py-4 bg-white">
-          <div className="grid grid-cols-4 gap-2">
-            <Link to="/experiences"><FeatureCardMobile icon={<Camera className="w-5 h-5 text-blue-600" strokeWidth={2} />} title="체험" /></Link>
+          <div className="grid grid-cols-3 gap-2">
             <Link to="/community"><FeatureCardMobile icon={<Users className="w-5 h-5 text-blue-600" strokeWidth={2} />} title="리뷰" /></Link>
             <Link to="/checklist"><FeatureCardMobile icon={<Shield className="w-5 h-5 text-blue-600" strokeWidth={2} />} title="체크리스트" /></Link>
             <Link to="/budget"><FeatureCardMobile icon={<DollarSign className="w-5 h-5 text-blue-600" strokeWidth={2} />} title="경비관리" /></Link>

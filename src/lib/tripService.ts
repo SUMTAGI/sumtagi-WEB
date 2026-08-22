@@ -3,12 +3,13 @@ import { supabase } from './supabase'
 const uid = async () => (await supabase.auth.getUser()).data.user?.id
 
 export const tripService = {
-  createTrip: async (title: string, startDate: string, endDate: string, islands: string[], plan?: object) => {
+  createTrip: async (title: string, startDate: string, endDate: string, islands: string[], plan?: object, totalBudget?: number) => {
     const id = await uid()
     if (!id) return null
     const { data, error } = await supabase.from('trips').insert({
       user_id: id, title, start_date: startDate, end_date: endDate,
       islands, confirmed: false,
+      total_budget: totalBudget && totalBudget > 0 ? totalBudget : null,
     }).select().single()
     if (error) {
       console.error('createTrip error:', error)
@@ -22,6 +23,10 @@ export const tripService = {
 
   updateTripPlan: async (tripId: string, plan: object) => {
     await supabase.from('trips').update({ plan }).eq('id', tripId)
+  },
+
+  updateTotalBudget: async (tripId: string, totalBudget: number) => {
+    await supabase.from('trips').update({ total_budget: totalBudget }).eq('id', tripId)
   },
 
   confirmTrip: async (tripId: string) => {

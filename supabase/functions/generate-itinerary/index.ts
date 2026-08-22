@@ -15,6 +15,7 @@ interface ItineraryRequest {
   travelers: number;
   travelStyle: string;
   budget: string;
+  totalBudgetCap?: number;  // 경비관리에서 설정한 여행 총예산 상한(원) — 클라이언트(aiItinerary.ts)가 함께 보냄
   specialRequests?: string;
   provider?: LLMProvider;
   // 관광공사 OpenAPI 컨텍스트 — 클라이언트(aiItinerary.ts의 enrichRequestContext)가 미리 조회해서 보냄
@@ -173,6 +174,7 @@ dataBasis는 "왜 이렇게 짰는지"를 관광공사 데이터에 근거해 �
 - 인원: ${req.travelers}명
 - 여행 스타일: ${req.travelStyle}
 - 예산: ${req.budget} (알뜰=민박·분식, 보통=펜션·식당, 여유=리조트·해산물)
+${req.totalBudgetCap && req.totalBudgetCap > 0 ? `- 총예산 상한: ${req.totalBudgetCap.toLocaleString()}원 (전체 activities의 estimatedCost 합, 즉 estimatedTotalCost가 반드시 이 금액 이하가 되도록 숙소·식사 등급을 조정하세요. 도저히 불가능하면 dataBasis에 그 사실을 명시하세요)` : ""}
 ${req.specialRequests ? `- 특별 요청: ${req.specialRequests}` : ""}
 
 [참고 배편 정보]
@@ -427,7 +429,7 @@ serve(async (req: Request) => {
     const provider: LLMProvider = body.provider ?? "gemini";
 
     console.log(`[Provider 선택] ${provider}`);
-    console.log(`[요청 내용] 섬: ${body.islands?.join(", ")} | 기간: ${body.startDate}~${body.endDate} | 인원: ${body.travelers}명 | 스타일: ${body.travelStyle} | 예산: ${body.budget}`);
+    console.log(`[요청 내용] 섬: ${body.islands?.join(", ")} | 기간: ${body.startDate}~${body.endDate} | 인원: ${body.travelers}명 | 스타일: ${body.travelStyle} | 예산: ${body.budget}${body.totalBudgetCap ? ` | 총예산상한: ${body.totalBudgetCap}` : ""}`);
 
     // 입력 유효성 검사
     if (!body.islands?.length || !body.startDate || !body.endDate || !body.departurePort) {
