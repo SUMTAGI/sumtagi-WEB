@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
 import {
-  ChevronLeft, Plus, Pencil, Trash2, Eye, EyeOff, X, Loader2,
+  Plus, Pencil, Trash2, Eye, EyeOff, X, Loader2,
   AlertCircle, Inbox, RefreshCw, ImageOff, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -86,8 +85,6 @@ function suggestSlug(name: string): string {
 }
 
 export function AdminIslands() {
-  const navigate = useNavigate();
-
   const [islands, setIslands] = useState<Island[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -258,9 +255,6 @@ export function AdminIslands() {
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
-        <button onClick={() => navigate("/admin")} className="active:scale-95 transition-transform shrink-0" aria-label="관리자 홈으로 돌아가기">
-          <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
-        </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-lg lg:text-xl font-bold text-gray-900">섬 종류 관리</h1>
           <p className="text-xs lg:text-sm text-gray-500">섬을 추가·수정하고 노출 여부를 관리해요</p>

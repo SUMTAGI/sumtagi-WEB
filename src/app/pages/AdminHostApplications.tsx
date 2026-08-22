@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
 import {
   ChevronLeft, User, Phone, Hash, Calendar, Clock, CheckCircle2, XCircle,
   ClipboardCheck, X, Loader2, AlertCircle, Inbox, RefreshCw,
@@ -60,8 +59,6 @@ function DetailRow({ icon: Icon, label, value }: { icon: LucideIcon; label: stri
 }
 
 export function AdminHostApplications() {
-  const navigate = useNavigate();
-
   const [applications, setApplications] = useState<HostApplicationWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,14 +152,9 @@ export function AdminHostApplications() {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
-        <button onClick={() => navigate("/admin")} className="active:scale-95 transition-transform shrink-0" aria-label="관리자 홈으로 돌아가기">
-          <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
-        </button>
-        <div>
-          <h1 className="text-lg lg:text-xl font-bold text-gray-900">숙소 운영자 신청 관리</h1>
-          <p className="text-xs lg:text-sm text-gray-500">신청서를 검토하고 승인 또는 반려해요</p>
-        </div>
+      <div className="px-6 py-4 bg-white border-b border-gray-200">
+        <h1 className="text-lg lg:text-xl font-bold text-gray-900">숙소 운영자 신청 관리</h1>
+        <p className="text-xs lg:text-sm text-gray-500">신청서를 검토하고 승인 또는 반려해요</p>
       </div>
 
       <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-5 lg:py-8">
