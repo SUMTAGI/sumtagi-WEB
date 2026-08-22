@@ -252,12 +252,11 @@ export function AdminIslands() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg lg:text-xl font-bold text-gray-900">섬 종류 관리</h1>
-          <p className="text-xs lg:text-sm text-gray-500">섬을 추가·수정하고 노출 여부를 관리해요</p>
+    <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-5 lg:py-8">
+      <div className="flex items-center justify-between mb-5 lg:mb-6 gap-3">
+        <div>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">섬 종류 관리</h1>
+          <p className="text-sm text-gray-500 mt-0.5">섬을 추가·수정하고 노출 여부를 관리해요</p>
         </div>
         <button
           onClick={openCreate}
@@ -268,114 +267,112 @@ export function AdminIslands() {
         </button>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-5 lg:py-8">
-        {error ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-            <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" strokeWidth={2} />
-            <p className="text-sm text-gray-600 mb-4">{error}</p>
-            <button onClick={load} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
-              <RefreshCw className="w-4 h-4" strokeWidth={2} /> 다시 시도
-            </button>
-          </div>
-        ) : loading ? (
-          <CardGridSkeleton count={6} />
-        ) : islands.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-            <Inbox className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-gray-500 mb-4">등록된 섬이 없어요</p>
-            <button onClick={openCreate} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
-              <Plus className="w-4 h-4" strokeWidth={2} /> 첫 섬 추가하기
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {islands.map((island, idx) => (
-              <div
-                key={island.id}
-                className={`bg-white rounded-2xl border overflow-hidden transition-opacity ${
-                  island.status === "inactive" ? "border-gray-100 opacity-60" : "border-gray-100"
-                }`}
-              >
-                <div className="relative aspect-[16/9]">
-                  <IslandImage src={island.image} alt={island.name} className="w-full h-full object-cover" />
-                  <span
-                    className={`absolute top-2.5 left-2.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                      island.status === "active"
-                        ? "bg-blue-50 text-blue-700 border-blue-200"
-                        : "bg-gray-100 text-gray-500 border-gray-200"
-                    }`}
+      {error ? (
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+          <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" strokeWidth={2} />
+          <p className="text-sm text-gray-600 mb-4">{error}</p>
+          <button onClick={load} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+            <RefreshCw className="w-4 h-4" strokeWidth={2} /> 다시 시도
+          </button>
+        </div>
+      ) : loading ? (
+        <CardGridSkeleton count={6} />
+      ) : islands.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+          <Inbox className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />
+          <p className="text-sm text-gray-500 mb-4">등록된 섬이 없어요</p>
+          <button onClick={openCreate} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+            <Plus className="w-4 h-4" strokeWidth={2} /> 첫 섬 추가하기
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {islands.map((island, idx) => (
+            <div
+              key={island.id}
+              className={`bg-white rounded-2xl border overflow-hidden transition-opacity ${
+                island.status === "inactive" ? "border-gray-100 opacity-60" : "border-gray-100"
+              }`}
+            >
+              <div className="relative aspect-[16/9]">
+                <IslandImage src={island.image} alt={island.name} className="w-full h-full object-cover" />
+                <span
+                  className={`absolute top-2.5 left-2.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                    island.status === "active"
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "bg-gray-100 text-gray-500 border-gray-200"
+                  }`}
+                >
+                  {island.status === "active" ? "활성" : "비활성"}
+                </span>
+                <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-black/40 rounded-full px-1 py-1">
+                  <button
+                    onClick={() => handleMove(island, "up")}
+                    disabled={idx === 0 || processingId === island.id}
+                    aria-label={`${island.name} 순서 위로`}
+                    className="w-5 h-5 flex items-center justify-center text-white disabled:opacity-30"
                   >
-                    {island.status === "active" ? "활성" : "비활성"}
-                  </span>
-                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-black/40 rounded-full px-1 py-1">
-                    <button
-                      onClick={() => handleMove(island, "up")}
-                      disabled={idx === 0 || processingId === island.id}
-                      aria-label={`${island.name} 순서 위로`}
-                      className="w-5 h-5 flex items-center justify-center text-white disabled:opacity-30"
-                    >
-                      <ChevronUp className="w-3.5 h-3.5" strokeWidth={2.5} />
-                    </button>
-                    <span className="text-xs font-medium text-white px-0.5">{island.order_index}</span>
-                    <button
-                      onClick={() => handleMove(island, "down")}
-                      disabled={idx === islands.length - 1 || processingId === island.id}
-                      aria-label={`${island.name} 순서 아래로`}
-                      className="w-5 h-5 flex items-center justify-center text-white disabled:opacity-30"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-1 truncate">{island.name}</h3>
-                  <p className="text-xs text-gray-500 mb-3 line-clamp-2 min-h-[2rem]">{island.description || "설명이 없어요"}</p>
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {island.ports.length === 0 && island.features.length === 0 && (
-                      <span className="text-[11px] text-gray-300">등록된 특징/항구 없음</span>
-                    )}
-                    {island.ports.slice(0, 2).map((p) => (
-                      <span key={p} className="text-[11px] text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{p}</span>
-                    ))}
-                    {island.features.slice(0, 2).map((f) => (
-                      <span key={f} className="text-[11px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{f}</span>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => openEdit(island)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5" strokeWidth={2} /> 수정
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (island.status === "active") setConfirmAction({ type: "deactivate", island });
-                        else handleToggleStatus(island);
-                      }}
-                      disabled={processingId === island.id}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors disabled:opacity-60"
-                    >
-                      {island.status === "active"
-                        ? <><EyeOff className="w-3.5 h-3.5" strokeWidth={2} /> 비활성화</>
-                        : <><Eye className="w-3.5 h-3.5" strokeWidth={2} /> 활성화</>}
-                    </button>
-                    <button
-                      onClick={() => setConfirmAction({ type: "delete", island })}
-                      disabled={processingId === island.id}
-                      aria-label={`${island.name} 완전 삭제`}
-                      title="연결된 데이터가 있으면 삭제할 수 없어요 — 비활성화를 권장해요"
-                      className="p-2 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-60"
-                    >
-                      <Trash2 className="w-4 h-4" strokeWidth={2} />
-                    </button>
-                  </div>
+                    <ChevronUp className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  </button>
+                  <span className="text-xs font-medium text-white px-0.5">{island.order_index}</span>
+                  <button
+                    onClick={() => handleMove(island, "down")}
+                    disabled={idx === islands.length - 1 || processingId === island.id}
+                    aria-label={`${island.name} 순서 아래로`}
+                    className="w-5 h-5 flex items-center justify-center text-white disabled:opacity-30"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <div className="p-4">
+                <h3 className="font-semibold text-gray-900 mb-1 truncate">{island.name}</h3>
+                <p className="text-xs text-gray-500 mb-3 line-clamp-2 min-h-[2rem]">{island.description || "설명이 없어요"}</p>
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {island.ports.length === 0 && island.features.length === 0 && (
+                    <span className="text-[11px] text-gray-300">등록된 특징/항구 없음</span>
+                  )}
+                  {island.ports.slice(0, 2).map((p) => (
+                    <span key={p} className="text-[11px] text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{p}</span>
+                  ))}
+                  {island.features.slice(0, 2).map((f) => (
+                    <span key={f} className="text-[11px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{f}</span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openEdit(island)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" strokeWidth={2} /> 수정
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (island.status === "active") setConfirmAction({ type: "deactivate", island });
+                      else handleToggleStatus(island);
+                    }}
+                    disabled={processingId === island.id}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold bg-gray-50 hover:bg-gray-100 text-gray-700 transition-colors disabled:opacity-60"
+                  >
+                    {island.status === "active"
+                      ? <><EyeOff className="w-3.5 h-3.5" strokeWidth={2} /> 비활성화</>
+                      : <><Eye className="w-3.5 h-3.5" strokeWidth={2} /> 활성화</>}
+                  </button>
+                  <button
+                    onClick={() => setConfirmAction({ type: "delete", island })}
+                    disabled={processingId === island.id}
+                    aria-label={`${island.name} 완전 삭제`}
+                    title="연결된 데이터가 있으면 삭제할 수 없어요 — 비활성화를 권장해요"
+                    className="p-2 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-60"
+                  >
+                    <Trash2 className="w-4 h-4" strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 추가/수정 폼 */}
       {formOpen && (
