@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   ChevronLeft, Plus, Pencil, Trash2, Eye, EyeOff, X, Loader2,
-  AlertCircle, Inbox, RefreshCw, ImageOff,
+  AlertCircle, Inbox, RefreshCw, ImageOff, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { IslandImage } from "../components/IslandImage";
@@ -11,6 +11,7 @@ import type { Island } from "../../lib/api/islands";
 import {
   adminIslandService, validateIslandId, validateIslandInput, type IslandInput,
 } from "../../lib/adminIslandService";
+import { logAdminAction } from "../../lib/adminAuditLogService";
 
 const PORT_OPTIONS = ["인천항", "대부도", "삼목선착장"];
 
@@ -66,6 +67,24 @@ type ConfirmAction =
   | { type: "deactivate"; island: Island }
   | { type: "delete"; island: Island };
 
+const DIACRITICS_RE = new RegExp("[\\u0300-\\u036f]", "g");
+
+// 이름에서 slug를 자동 제안한다. 로마자 이름은 그대로 슬러그화되고,
+// 한글 이름은 별도 음역 로직 없이 짧은 랜덤 접미사로 대체한다 — 완전
+// 자동 생성은 아니지만 관리자가 빈 칸을 채우지 않고 바로 수정만 하면
+// 되게끔 최소한의 제안을 준다("자동 제안" 요구사항).
+function suggestSlug(name: string): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(DIACRITICS_RE, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (slug) return slug.slice(0, 40);
+  return `island-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export function AdminIslands() {
   const navigate = useNavigate();
 
@@ -79,6 +98,7 @@ export function AdminIslands() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<IslandInput>(EMPTY_FORM);
   const [slugId, setSlugId] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -119,6 +139,7 @@ export function AdminIslands() {
     setEditingId(null);
     setForm(EMPTY_FORM);
     setSlugId("");
+    setSlugTouched(false);
     setFormError(null);
     setFormOpen(true);
   };
@@ -128,8 +149,19 @@ export function AdminIslands() {
     setEditingId(island.id);
     setForm(toInput(island));
     setSlugId(island.id);
+    setSlugTouched(true); // 수정 모드에서는 이름이 바뀌어도 기존 slug를 절대 자동으로 덮어쓰지 않는다
     setFormError(null);
     setFormOpen(true);
+  };
+
+  const handleNameChange = (name: string) => {
+    setForm((f) => ({ ...f, name }));
+    if (formMode === "create" && !slugTouched) setSlugId(suggestSlug(name));
+  };
+
+  const handleSlugChange = (value: string) => {
+    setSlugTouched(true);
+    setSlugId(value);
   };
 
   const togglePort = (port: string) => {
@@ -166,7 +198,7 @@ export function AdminIslands() {
   const handleToggleStatus = async (island: Island) => {
     setProcessingId(island.id);
     const nextStatus = island.status === "active" ? "inactive" : "active";
-    const result = await adminIslandService.setIslandStatus(island.id, nextStatus);
+    const result = await adminIslandService.setIslandStatus(island.id, nextStatus, island.name);
     setProcessingId(null);
     setConfirmAction(null);
     if (!result.success) {
@@ -179,7 +211,7 @@ export function AdminIslands() {
 
   const handleDelete = async (island: Island) => {
     setProcessingId(island.id);
-    const result = await adminIslandService.deleteIsland(island.id);
+    const result = await adminIslandService.deleteIsland(island.id, island.name);
     setProcessingId(null);
     setConfirmAction(null);
     if (!result.success) {
@@ -190,11 +222,43 @@ export function AdminIslands() {
     toast.success("섬을 완전히 삭제했어요");
   };
 
+  // 현재 정렬 순서상 바로 앞/뒤 섬과 order_index를 맞바꾼다. 목록은 이미
+  // order_index → 이름 순으로 정렬돼 오므로, 화면에 보이는 순서 그대로
+  // 이웃을 찾으면 된다.
+  const handleMove = async (island: Island, direction: "up" | "down") => {
+    const index = islands.findIndex((i) => i.id === island.id);
+    const neighborIndex = direction === "up" ? index - 1 : index + 1;
+    if (neighborIndex < 0 || neighborIndex >= islands.length) return;
+    const neighbor = islands[neighborIndex];
+
+    setProcessingId(island.id);
+    const [r1, r2] = await Promise.all([
+      adminIslandService.setIslandOrder(island.id, neighbor.order_index),
+      adminIslandService.setIslandOrder(neighbor.id, island.order_index),
+    ]);
+    setProcessingId(null);
+
+    if (!r1.success || !r2.success) {
+      toast.error(r1.error || r2.error || "순서 변경에 실패했어요");
+      return;
+    }
+    setIslands((prev) => {
+      const next = [...prev];
+      next[index] = { ...island, order_index: neighbor.order_index };
+      next[neighborIndex] = { ...neighbor, order_index: island.order_index };
+      return next.sort((a, b) => a.order_index - b.order_index || a.name.localeCompare(b.name));
+    });
+    void logAdminAction({
+      action: "island_reorder", targetTable: "islands", targetId: island.id,
+      summary: `노출 순서 변경: ${island.name} ↔ ${neighbor.name}`,
+    });
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
-        <button onClick={() => navigate("/my")} className="active:scale-95 transition-transform shrink-0" aria-label="마이페이지로 돌아가기">
+        <button onClick={() => navigate("/admin")} className="active:scale-95 transition-transform shrink-0" aria-label="관리자 홈으로 돌아가기">
           <ChevronLeft className="w-6 h-6 text-gray-700" strokeWidth={2} />
         </button>
         <div className="flex-1 min-w-0">
@@ -231,7 +295,7 @@ export function AdminIslands() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {islands.map((island) => (
+            {islands.map((island, idx) => (
               <div
                 key={island.id}
                 className={`bg-white rounded-2xl border overflow-hidden transition-opacity ${
@@ -249,9 +313,25 @@ export function AdminIslands() {
                   >
                     {island.status === "active" ? "활성" : "비활성"}
                   </span>
-                  <span className="absolute top-2.5 right-2.5 text-xs font-medium px-2 py-1 rounded-full bg-black/40 text-white">
-                    순서 {island.order_index}
-                  </span>
+                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-black/40 rounded-full px-1 py-1">
+                    <button
+                      onClick={() => handleMove(island, "up")}
+                      disabled={idx === 0 || processingId === island.id}
+                      aria-label={`${island.name} 순서 위로`}
+                      className="w-5 h-5 flex items-center justify-center text-white disabled:opacity-30"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </button>
+                    <span className="text-xs font-medium text-white px-0.5">{island.order_index}</span>
+                    <button
+                      onClick={() => handleMove(island, "down")}
+                      disabled={idx === islands.length - 1 || processingId === island.id}
+                      aria-label={`${island.name} 순서 아래로`}
+                      className="w-5 h-5 flex items-center justify-center text-white disabled:opacity-30"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </button>
+                  </div>
                 </div>
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-900 mb-1 truncate">{island.name}</h3>
@@ -290,7 +370,8 @@ export function AdminIslands() {
                       onClick={() => setConfirmAction({ type: "delete", island })}
                       disabled={processingId === island.id}
                       aria-label={`${island.name} 완전 삭제`}
-                      className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60"
+                      title="연결된 데이터가 있으면 삭제할 수 없어요 — 비활성화를 권장해요"
+                      className="p-2 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-60"
                     >
                       <Trash2 className="w-4 h-4" strokeWidth={2} />
                     </button>
@@ -318,26 +399,26 @@ export function AdminIslands() {
             </div>
 
             <div className="space-y-4">
+              <Field label="이름">
+                <input
+                  ref={nameInputRef}
+                  value={form.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="백령도"
+                  className={inputClass}
+                />
+              </Field>
+
               {formMode === "create" && (
-                <Field label="고유 ID" hint="영문 소문자·숫자·하이픈만, 생성 후 변경 불가 (예: baengnyeong)">
+                <Field label="고유 ID" hint="영문 소문자·숫자·하이픈만, 생성 후 변경 불가 (이름을 입력하면 자동 제안돼요)">
                   <input
                     value={slugId}
-                    onChange={(e) => setSlugId(e.target.value)}
+                    onChange={(e) => handleSlugChange(e.target.value)}
                     placeholder="baengnyeong"
                     className={inputClass}
                   />
                 </Field>
               )}
-
-              <Field label="이름">
-                <input
-                  ref={nameInputRef}
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="백령도"
-                  className={inputClass}
-                />
-              </Field>
 
               <Field label="설명">
                 <textarea

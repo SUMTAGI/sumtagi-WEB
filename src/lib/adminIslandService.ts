@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { Island, IslandStatus } from './api/islands'
+import { logAdminAction } from './adminAuditLogService'
 
 export interface ServiceResult<T = void> {
   success: boolean
@@ -21,6 +22,9 @@ export interface IslandInput {
   popularity_trend: Island['popularity_trend']
   congestion: Island['congestion']
   best_season: string
+  // 지금은 URL 문자열만 받는다. 추후 Supabase Storage 업로드를 붙일 땐
+  // communityService.uploadImage와 같은 패턴으로 별도 버킷에 올리고 그
+  // public URL을 여기 그대로 넣으면 되므로, 이 필드 자체는 바뀔 필요 없다.
   image: string | null
   ports: string[]
   lat: number | null
@@ -106,6 +110,10 @@ export const adminIslandService = {
       }
       return { success: false, error: error.message }
     }
+    await logAdminAction({
+      action: 'island_create', targetTable: 'islands', targetId: data.id,
+      summary: `섬 추가: ${data.name}`,
+    })
     return { success: true, data }
   },
 
@@ -124,16 +132,35 @@ export const adminIslandService = {
       console.error('updateIsland error:', error)
       return { success: false, error: error.message }
     }
+    await logAdminAction({
+      action: 'island_update', targetTable: 'islands', targetId: id,
+      summary: `섬 수정: ${data.name}`,
+    })
     return { success: true, data }
   },
 
   // 활성/비활성 전환 — 사용자 데이터와 연결됐을 가능성이 있는 섬을 안전하게
   // 내리는 기본 방법. 사용자 화면(getIslands/getIslandById)은 status='active'만
   // 보여주므로 이 한 번의 UPDATE로 즉시 노출/비노출이 반영된다.
-  setIslandStatus: async (id: string, status: IslandStatus): Promise<ServiceResult> => {
+  setIslandStatus: async (id: string, status: IslandStatus, name: string): Promise<ServiceResult> => {
     const { error } = await supabase.from('islands').update({ status }).eq('id', id)
     if (error) {
       console.error('setIslandStatus error:', error)
+      return { success: false, error: error.message }
+    }
+    await logAdminAction({
+      action: 'island_status_change', targetTable: 'islands', targetId: id,
+      summary: `섬 ${status === 'active' ? '활성화' : '비활성화'}: ${name}`, metadata: { status },
+    })
+    return { success: true }
+  },
+
+  // 목록에서 바로 쓰는 순서 변경 전용 경로 — 전체 폼 검증 없이 order_index만
+  // 빠르게 바꾼다(위/아래 이동 버튼용).
+  setIslandOrder: async (id: string, orderIndex: number): Promise<ServiceResult> => {
+    const { error } = await supabase.from('islands').update({ order_index: orderIndex }).eq('id', id)
+    if (error) {
+      console.error('setIslandOrder error:', error)
       return { success: false, error: error.message }
     }
     return { success: true }
@@ -142,7 +169,7 @@ export const adminIslandService = {
   // 완전 삭제 — attractions/restaurants/accommodations/photo_spots나 찜/여행
   // 데이터가 이 섬을 참조 중이면 FK 제약에 걸려 실패한다. 그 경우 삭제 대신
   // 비활성화를 안내한다(요구사항: "삭제가 안전한 경우에만 삭제 기능 제공").
-  deleteIsland: async (id: string): Promise<ServiceResult> => {
+  deleteIsland: async (id: string, name: string): Promise<ServiceResult> => {
     const { error } = await supabase.from('islands').delete().eq('id', id)
     if (error) {
       console.error('deleteIsland error:', error)
@@ -154,6 +181,10 @@ export const adminIslandService = {
       }
       return { success: false, error: error.message }
     }
+    await logAdminAction({
+      action: 'island_delete', targetTable: 'islands', targetId: id,
+      summary: `섬 완전 삭제: ${name}`,
+    })
     return { success: true }
   },
 }
