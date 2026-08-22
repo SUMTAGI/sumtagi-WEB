@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Calendar, ChevronRight, Bell, HelpCircle, LogOut,
   CreditCard, Heart, Users, AlertCircle, Clock, Sparkles, MapPinned, Compass,
-  Building2, ClipboardCheck, CheckCircle2, XCircle, ShieldCheck, FileText, Map,
+  Building2, ClipboardCheck, CheckCircle2, XCircle, ShieldCheck, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../lib/useAuth";
@@ -274,7 +274,7 @@ export function MyPage() {
 
             {isAdmin && (
               <Link
-                to="/admin/hosts"
+                to="/admin"
                 className="w-full flex items-center gap-3 lg:gap-4 rounded-2xl px-4 py-3 lg:px-5 lg:py-4 transition-colors text-left border bg-white border-gray-100 hover:border-blue-200 hover:bg-blue-50/30"
               >
                 <div className="w-9 h-9 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 bg-blue-50">
@@ -282,29 +282,10 @@ export function MyPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm lg:text-base text-gray-900 flex items-center gap-1.5">
-                    관리자 계정
+                    관리자 홈
                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">ADMIN</span>
                   </p>
-                  <p className="text-xs lg:text-sm mt-0.5 text-gray-400">숙박 신청 관리</p>
-                </div>
-                <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 text-gray-300" strokeWidth={2} />
-              </Link>
-            )}
-
-            {isAdmin && (
-              <Link
-                to="/admin/islands"
-                className="w-full flex items-center gap-3 lg:gap-4 rounded-2xl px-4 py-3 lg:px-5 lg:py-4 transition-colors text-left border bg-white border-gray-100 hover:border-blue-200 hover:bg-blue-50/30"
-              >
-                <div className="w-9 h-9 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 bg-blue-50">
-                  <Map className="w-4 h-4 lg:w-6 lg:h-6 text-blue-600" strokeWidth={2} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm lg:text-base text-gray-900 flex items-center gap-1.5">
-                    관리자 계정
-                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">ADMIN</span>
-                  </p>
-                  <p className="text-xs lg:text-sm mt-0.5 text-gray-400">섬 종류 관리</p>
+                  <p className="text-xs lg:text-sm mt-0.5 text-gray-400">사용자·숙박·섬·공지·커뮤니티 관리</p>
                 </div>
                 <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 text-gray-300" strokeWidth={2} />
               </Link>

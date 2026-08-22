@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { AuthLayout } from "./components/AuthLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
+import { AdminLayout } from "./components/AdminLayout";
 
 const Home = lazy(() => import("./pages/Home").then(m => ({ default: m.Home })));
 const Travel = lazy(() => import("./pages/Travel").then(m => ({ default: m.Travel })));
@@ -30,8 +31,13 @@ const GroupTrip = lazy(() => import("./pages/GroupTrip").then(m => ({ default: m
 const GroupJoin = lazy(() => import("./pages/GroupJoin").then(m => ({ default: m.GroupJoin })));
 const Support = lazy(() => import("./pages/Support").then(m => ({ default: m.Support })));
 const HostApply = lazy(() => import("./pages/HostApply").then(m => ({ default: m.HostApply })));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard").then(m => ({ default: m.AdminDashboard })));
+const AdminUsers = lazy(() => import("./pages/AdminUsers").then(m => ({ default: m.AdminUsers })));
 const AdminHostApplications = lazy(() => import("./pages/AdminHostApplications").then(m => ({ default: m.AdminHostApplications })));
 const AdminIslands = lazy(() => import("./pages/AdminIslands").then(m => ({ default: m.AdminIslands })));
+const AdminNotices = lazy(() => import("./pages/AdminNotices").then(m => ({ default: m.AdminNotices })));
+const AdminCommunity = lazy(() => import("./pages/AdminCommunity").then(m => ({ default: m.AdminCommunity })));
+const AdminAuditLogs = lazy(() => import("./pages/AdminAuditLogs").then(m => ({ default: m.AdminAuditLogs })));
 const Privacy = lazy(() => import("./pages/Privacy").then(m => ({ default: m.Privacy })));
 const Terms = lazy(() => import("./pages/Terms").then(m => ({ default: m.Terms })));
 
@@ -86,8 +92,19 @@ export const router = createBrowserRouter([
           {
             element: <AdminRoute />,
             children: [
-              { path: "admin/hosts", element: <Suspense fallback={<Fallback />}><AdminHostApplications /></Suspense> },
-              { path: "admin/islands", element: <Suspense fallback={<Fallback />}><AdminIslands /></Suspense> },
+              {
+                path: "admin",
+                Component: AdminLayout,
+                children: [
+                  { index: true, element: <Suspense fallback={<Fallback />}><AdminDashboard /></Suspense> },
+                  { path: "users", element: <Suspense fallback={<Fallback />}><AdminUsers /></Suspense> },
+                  { path: "hosts", element: <Suspense fallback={<Fallback />}><AdminHostApplications /></Suspense> },
+                  { path: "islands", element: <Suspense fallback={<Fallback />}><AdminIslands /></Suspense> },
+                  { path: "notices", element: <Suspense fallback={<Fallback />}><AdminNotices /></Suspense> },
+                  { path: "community", element: <Suspense fallback={<Fallback />}><AdminCommunity /></Suspense> },
+                  { path: "logs", element: <Suspense fallback={<Fallback />}><AdminAuditLogs /></Suspense> },
+                ],
+              },
             ],
           },
         ],
